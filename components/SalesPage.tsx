@@ -86,13 +86,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                         A Nova Era da Fotografia Pessoal
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 max-w-5xl mx-auto">
-                        PARE DE USAR FOTOS AMADORAS. <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-600">TENHA RETRATOS PROFISSIONAIS COM IA EM MINUTOS.</span>
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 max-w-5xl mx-auto">
+                        PARE DE USAR FOTOS&nbsp;AMADORAS. <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-600">TENHA RETRATOS PROFISSIONAIS COM&nbsp;IA&nbsp;EM&nbsp;MINUTOS.</span>
                     </h1>
 
                     <p className="text-lg md:text-xl text-white/40 max-w-2xl mx-auto leading-relaxed">
-                        Transforme selfies comuns em fotos de estúdio ultra-realistas, prontas para LinkedIn, currículo, redes sociais, aniversário ou perfil profissional.
+                        Transforme selfies comuns em fotos de estúdio ultra-realistas, prontas para LinkedIn, currículo, redes sociais, aniversário ou&nbsp;perfil&nbsp;profissional.
                     </p>
                     <p className="text-sm font-bold text-white/60 uppercase tracking-widest">
                         Sem estúdio. Sem complicação. Só resultado.
