@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CheckCircle, Mail, ArrowRight, Sparkles } from 'lucide-react';
 
 interface CheckoutSuccessProps {
@@ -6,6 +6,18 @@ interface CheckoutSuccessProps {
 }
 
 export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin }) => {
+    // Fire Meta Pixel Purchase event on mount
+    useEffect(() => {
+        if (typeof (window as any).fbq === 'function') {
+            const params = new URLSearchParams(window.location.search);
+            const amount = parseFloat(params.get('payment_amount') || '0');
+            (window as any).fbq('track', 'Purchase', {
+                value: amount,
+                currency: 'BRL',
+            });
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6">
             {/* Background Effects */}

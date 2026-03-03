@@ -111,6 +111,18 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
 
             const data = await response.json();
 
+            // Fire Meta Pixel InitiateCheckout event
+            const plan = PLANS[selectedPlan];
+            if (typeof (window as any).fbq === 'function') {
+                (window as any).fbq('track', 'InitiateCheckout', {
+                    value: plan.price,
+                    currency: 'BRL',
+                    content_name: plan.name,
+                    content_ids: [plan.id],
+                    num_items: plan.credits,
+                });
+            }
+
             // Redirecionar para o Mercado Pago
             window.location.href = data.init_point;
         } catch (err: any) {
