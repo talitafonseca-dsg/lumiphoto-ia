@@ -522,12 +522,176 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                 </div>
             </section>
 
-            {/* FOOTER */}
-            <footer className="py-12 border-t border-white/5 bg-black text-center">
-                <div className="mb-8">
-                    <img src="/logo-gold.png" alt="LumiphotoIA" className="h-12 w-auto mx-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all" />
+            {/* FOOTER - CREDIBILITY */}
+            <footer className="border-t border-white/5 bg-[#030303]">
+                {/* Trust Bar */}
+                <div className="border-b border-white/5 py-8">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                            {/* Security Shield */}
+                            <div className="flex flex-col items-center text-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white/80 uppercase tracking-wider">Compra Segura</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Ambiente 100% protegido</p>
+                                </div>
+                            </div>
+
+                            {/* SSL */}
+                            <div className="flex flex-col items-center text-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white/80 uppercase tracking-wider">Certificado SSL</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Dados criptografados</p>
+                                </div>
+                            </div>
+
+                            {/* Privacy */}
+                            <div className="flex flex-col items-center text-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white/80 uppercase tracking-wider">Privacidade</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Suas fotos são suas</p>
+                                </div>
+                            </div>
+
+                            {/* Satisfaction */}
+                            <div className="flex flex-col items-center text-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white/80 uppercase tracking-wider">Satisfação</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">+10.000 clientes satisfeitos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <p className="text-white/20 text-xs uppercase tracking-widest">© 2024 LumiphotoIA. Todos os direitos reservados.</p>
+
+                {/* Payment Methods */}
+                <div className="border-b border-white/5 py-8">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-white/30 mb-6">Formas de Pagamento</p>
+                        <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
+                            {/* PIX */}
+                            <div className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg flex items-center gap-2 hover:border-white/20 transition-colors">
+                                <svg width="20" height="20" viewBox="0 0 512 512" fill="none"><path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-22l76.693-76.692c5.385-5.404 14.765-5.384 20.15 0l76.886 76.886c14.192 14.192 33.064 22 53.12 22h15.064l-97.835-97.835c-18.858-18.858-49.573-18.858-68.431 0l-97.836 97.835h15.064zm0 0" fill="#4DB6AC" /><path d="M392.54 120.81c-20.056 0-38.928 7.808-53.12 22l-76.886 76.886c-5.557 5.557-14.593 5.557-20.15 0l-76.693-76.692c-14.192-14.192-33.064-22-53.12-22H97.505l97.836 97.835c18.858 18.858 49.573 18.858 68.431 0l97.835-97.836h-15.064zm0 0" fill="#4DB6AC" /><path d="M467.95 218.65l-48.792-48.791c-1.484 1.346-2.857 2.804-4.342 4.288l-76.886 76.886c-8.22 8.22-19.088 12.74-30.597 12.74-11.509 0-22.377-4.52-30.597-12.74l-76.693-76.692c-1.484-1.484-2.857-2.942-4.342-4.288l-48.79 48.79c-24.263 24.264-24.263 63.66 0 87.924l48.79 48.791c1.485-1.346 2.858-2.804 4.342-4.288l76.693-76.692c16.44-16.44 44.753-16.44 61.194 0l76.886 76.886c1.485 1.484 2.858 2.942 4.342 4.288l48.791-48.791c24.264-24.264 24.264-63.66 0-87.924zm0 0" fill="#4DB6AC" /></svg>
+                                <span className="text-xs font-bold text-white/70">PIX</span>
+                            </div>
+
+                            {/* Visa */}
+                            <div className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg flex items-center gap-2 hover:border-white/20 transition-colors">
+                                <svg width="32" height="20" viewBox="0 0 48 32" fill="none"><rect width="48" height="32" rx="4" fill="#1A1F71" /><path d="M19.5 21.5h-3.3l2.1-13h3.3l-2.1 13zm13.8-12.7c-.7-.3-1.7-.5-3-.5-3.3 0-5.6 1.8-5.6 4.3 0 1.9 1.7 2.9 2.9 3.5 1.3.6 1.7 1 1.7 1.6 0 .9-1 1.3-2 1.3-1.3 0-2-.2-3.1-.7l-.4-.2-.5 2.8c.8.4 2.2.7 3.7.7 3.5 0 5.8-1.7 5.8-4.4 0-1.5-.9-2.6-2.8-3.5-1.2-.6-1.9-1-1.9-1.6 0-.5.6-1.1 1.9-1.1 1.1 0 1.9.2 2.5.5l.3.1.5-2.8zm8.6-.3h-2.6c-.8 0-1.4.2-1.7 1l-4.9 11.7h3.5l.7-1.9h4.2l.4 1.9h3.1l-2.7-12.7zm-4.1 8.2l1.7-4.7.5 2.3.6 2.4h-2.8zM16 8.5L12.7 17l-.4-1.8c-.6-2.1-2.6-4.4-4.8-5.5l3 11.3h3.5l5.2-12.5H16z" fill="white" /><path d="M9.5 8.5H4.1l-.1.3C8 9.8 10.7 12.3 11.6 15.2l-1-5c-.2-.8-.7-1.6-1.1-1.7z" fill="#F7A600" /></svg>
+                                <span className="text-xs font-bold text-white/70">Visa</span>
+                            </div>
+
+                            {/* Mastercard */}
+                            <div className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg flex items-center gap-2 hover:border-white/20 transition-colors">
+                                <svg width="32" height="20" viewBox="0 0 48 32" fill="none"><rect width="48" height="32" rx="4" fill="#252525" /><circle cx="19" cy="16" r="8" fill="#EB001B" /><circle cx="29" cy="16" r="8" fill="#F79E1B" /><path d="M24 10.3a8 8 0 0 1 0 11.4 8 8 0 0 1 0-11.4z" fill="#FF5F00" /></svg>
+                                <span className="text-xs font-bold text-white/70">Mastercard</span>
+                            </div>
+
+                            {/* Boleto */}
+                            <div className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg flex items-center gap-2 hover:border-white/20 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/60"><rect x="2" y="4" width="20" height="16" rx="2" /><line x1="6" y1="8" x2="6" y2="16" /><line x1="10" y1="8" x2="10" y2="16" /><line x1="14" y1="8" x2="14" y2="16" /><line x1="18" y1="8" x2="18" y2="16" /></svg>
+                                <span className="text-xs font-bold text-white/70">Boleto</span>
+                            </div>
+
+                            {/* Elo */}
+                            <div className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg flex items-center gap-2 hover:border-white/20 transition-colors">
+                                <div className="w-8 h-5 bg-gradient-to-r from-yellow-400 via-red-500 to-blue-600 rounded text-[8px] font-black text-white flex items-center justify-center">ELO</div>
+                                <span className="text-xs font-bold text-white/70">Elo</span>
+                            </div>
+                        </div>
+
+                        {/* Mercado Pago Badge */}
+                        <div className="mt-6 flex items-center justify-center gap-3">
+                            <div className="px-5 py-2.5 bg-[#009ee3]/10 border border-[#009ee3]/20 rounded-xl flex items-center gap-3">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#009ee3" /><path d="M7 12.5C7 10 9 8 12 8s5 2 5 4.5S15 17 12 17 7 15 7 12.5z" fill="white" /><path d="M10 11.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm4 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" fill="#009ee3" /></svg>
+                                <div>
+                                    <p className="text-xs font-bold text-[#009ee3]">Mercado Pago</p>
+                                    <p className="text-[9px] text-white/30">Pagamento processado com segurança</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Footer Content */}
+                <div className="py-10">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+                            {/* Brand */}
+                            <div className="space-y-4">
+                                <img src="/logo-gold.png" alt="LumiphotoIA" className="h-10 w-auto object-contain" />
+                                <p className="text-sm text-white/30 leading-relaxed max-w-xs">
+                                    Transforme suas selfies em fotos profissionais de estúdio com inteligência artificial avançada.
+                                </p>
+                                <div className="flex items-center gap-1 text-amber-500">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <Star key={i} size={14} fill="currentColor" />
+                                    ))}
+                                    <span className="text-xs text-white/40 ml-2">4.9/5 (10.000+ avaliações)</span>
+                                </div>
+                            </div>
+
+                            {/* Links */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Links Úteis</h4>
+                                <ul className="space-y-2">
+                                    <li><button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm text-white/30 hover:text-amber-400 transition-colors">Planos e Preços</button></li>
+                                    <li><a href="mailto:suporte@lumiphotoia.online" className="text-sm text-white/30 hover:text-amber-400 transition-colors">Suporte</a></li>
+                                    <li><span className="text-sm text-white/30">Política de Privacidade</span></li>
+                                    <li><span className="text-sm text-white/30">Termos de Uso</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Contact & Guarantees */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Garantias</h4>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center gap-2">
+                                        <Check size={14} className="text-green-500 flex-shrink-0" />
+                                        <span className="text-sm text-white/30">Pagamento 100% seguro</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Check size={14} className="text-green-500 flex-shrink-0" />
+                                        <span className="text-sm text-white/30">Suporte por email</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Check size={14} className="text-green-500 flex-shrink-0" />
+                                        <span className="text-sm text-white/30">Acesso imediato após pagamento</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Check size={14} className="text-green-500 flex-shrink-0" />
+                                        <span className="text-sm text-white/30">Fotos em alta resolução 4K</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Bar */}
+                <div className="border-t border-white/5 py-6">
+                    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <p className="text-white/15 text-[10px] uppercase tracking-widest text-center md:text-left">
+                            © {new Date().getFullYear()} LumiphotoIA. Todos os direitos reservados.
+                        </p>
+                        <div className="flex items-center gap-4 text-white/15 text-[10px]">
+                            <span>suporte@lumiphotoia.online</span>
+                            <span className="hidden md:inline">•</span>
+                            <span className="hidden md:inline">www.lumiphotoia.online</span>
+                        </div>
+                    </div>
+                </div>
             </footer>
         </div>
     );
