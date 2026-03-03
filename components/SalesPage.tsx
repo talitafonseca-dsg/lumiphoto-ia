@@ -445,24 +445,24 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                                 </div>
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-1.jpg" alt="Resultado 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-1.jpg" alt="Resultado 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-2.jpg" alt="Resultado 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-2.jpg" alt="Resultado 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-3.jpg" alt="Resultado 3" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-3.jpg" alt="Resultado 3" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-3 mt-3">
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-4.jpg" alt="Resultado 4" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-4.jpg" alt="Resultado 4" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-5.jpg" alt="Resultado 5" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-5.jpg" alt="Resultado 5" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-zinc-800 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-                                        <img src="/showcase-result-6.jpg" alt="Resultado 6" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                        <img loading="lazy" src="/showcase-result-6.jpg" alt="Resultado 6" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                     </div>
                                 </div>
                                 <p className="text-center text-amber-400/80 text-xs mt-4 uppercase tracking-widest font-bold">6 Variações Profissionais Geradas</p>
@@ -504,7 +504,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                         {/* Step 1 */}
                         <div className="rounded-3xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-all duration-500 group overflow-hidden flex flex-col">
                             <div className="aspect-[4/3] overflow-hidden bg-zinc-900 flex items-center justify-center p-0">
-                                <img src="/step-1-upload.png" alt="Envie sua foto" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+                                <img loading="lazy" src="/step-1-upload.png" alt="Envie sua foto" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                             </div>
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-center gap-3 mb-3">
@@ -518,7 +518,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                         {/* Step 2 */}
                         <div className="rounded-3xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-all duration-500 group overflow-hidden flex flex-col">
                             <div className="aspect-[4/3] overflow-hidden bg-zinc-900 flex items-center justify-center p-4">
-                                <img src="/step-2-styles.png" alt="Escolha o estilo" className="w-auto h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-xl" />
+                                <img loading="lazy" src="/step-2-styles.png" alt="Escolha o estilo" className="w-auto h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-xl" />
                             </div>
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-center gap-3 mb-3">
@@ -532,7 +532,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                         {/* Step 3 */}
                         <div className="rounded-3xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-all duration-500 group overflow-hidden flex flex-col">
                             <div className="aspect-[4/3] overflow-hidden bg-zinc-900 flex items-center justify-center p-2">
-                                <img src="/step-3-results.png" alt="Receba em minutos" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-xl" />
+                                <img loading="lazy" src="/step-3-results.png" alt="Receba em minutos" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 rounded-xl" />
                             </div>
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-center gap-3 mb-3">
@@ -589,8 +589,8 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
 
                         <div className="relative">
                             <div className="grid grid-cols-2 gap-4">
-                                <img src="/showcase/results-1.jpg" className="rounded-2xl shadow-2xl border border-white/10 translate-y-8" />
-                                <img src="/showcase/results-2.jpg" className="rounded-2xl shadow-2xl border border-white/10" />
+                                <img loading="lazy" src="/showcase/results-1.jpg" className="rounded-2xl shadow-2xl border border-white/10 translate-y-8" />
+                                <img loading="lazy" src="/showcase/results-2.jpg" className="rounded-2xl shadow-2xl border border-white/10" />
                             </div>
                             {/* Floating Badge */}
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl text-center">
@@ -712,17 +712,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                             <div className="grid grid-cols-2 md:grid-cols-12 gap-4 relative z-10">
                                 {/* Column 1 */}
                                 <div className="col-span-4 space-y-4 pt-8">
-                                    <img src="/use-case-1.png" className="w-full aspect-video object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
-                                    <img src="/use-case-2.jpg" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
+                                    <img loading="lazy" src="/use-case-1.png" className="w-full aspect-video object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
+                                    <img loading="lazy" src="/use-case-2.jpg" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
                                 </div>
                                 {/* Column 2 - Center focused */}
                                 <div className="col-span-4 space-y-4">
-                                    <img src="/use-case-3.png" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-2xl hover:scale-105 transition-transform duration-500" />
-                                    <img src="/use-case-5.jpg" className="w-full aspect-square object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
+                                    <img loading="lazy" src="/use-case-3.png" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-2xl hover:scale-105 transition-transform duration-500" />
+                                    <img loading="lazy" src="/use-case-5.jpg" className="w-full aspect-square object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
                                 </div>
                                 {/* Column 3 */}
                                 <div className="col-span-4 space-y-4 pt-12">
-                                    <img src="/use-case-4.jpg" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
+                                    <img loading="lazy" src="/use-case-4.jpg" className="w-full aspect-[3/4] object-cover rounded-2xl border border-white/10 shadow-lg hover:scale-105 transition-transform duration-500" />
                                     {/* Decoration box */}
                                     <div className="p-6 bg-zinc-900/80 backdrop-blur border border-amber-500/20 rounded-2xl shadow-xl">
                                         <p className="text-amber-500 font-black text-2xl">100%</p>
