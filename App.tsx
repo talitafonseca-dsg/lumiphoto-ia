@@ -1214,27 +1214,79 @@ const App: React.FC = () => {
                     <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-600/10 rounded-full blur-[80px] group-hover:bg-amber-600/20 transition-all duration-1000"></div>
 
                     <div className="relative space-y-6">
-                      <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-amber-500/40 rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                        <ShoppingBag size={40} className="text-black" strokeWidth={2.5} />
-                      </div>
+                      {credits > 0 ? (
+                        <>
+                          {/* STEP-BY-STEP GUIDE FOR USERS WITH CREDITS */}
+                          <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-amber-500/40 rotate-12 group-hover:rotate-0 transition-transform duration-500">
+                            <Camera size={40} className="text-black" strokeWidth={2.5} />
+                          </div>
 
-                      <div className="space-y-4">
-                        <h3 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase leading-tight">
-                          {t.studio.buy_credits_msg}
-                        </h3>
-                        <p className="text-white/40 text-xs md:text-sm font-medium uppercase tracking-[0.3em] max-w-lg mx-auto leading-relaxed">
-                          Desbloqueie o poder da inteligência artificial aplicada ao seu negócio
-                        </p>
-                      </div>
+                          <div className="space-y-3">
+                            <h3 className="text-2xl md:text-4xl font-black tracking-tight text-white uppercase leading-tight">
+                              Crie seu ensaio fotográfico
+                            </h3>
+                            <p className="text-white/40 text-xs md:text-sm font-medium uppercase tracking-[0.2em] max-w-lg mx-auto leading-relaxed">
+                              Siga os passos abaixo para gerar suas fotos profissionais com IA
+                            </p>
+                          </div>
 
-                      <button
-                        onClick={() => setShowPaywall(true)}
-                        className="group/btn relative px-8 md:px-12 py-4 md:py-6 bg-white text-black rounded-2xl font-black uppercase text-xs md:text-sm tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.2)] hover:shadow-[0_25px_50px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-500 flex items-center gap-4 mx-auto"
-                      >
-                        <Zap size={18} fill="currentColor" />
-                        {t.studio.buy_credits_btn}
-                        <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto pt-4">
+                            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 font-black text-black text-lg">1</div>
+                              <div>
+                                <p className="text-white font-bold text-sm">Envie sua foto</p>
+                                <p className="text-white/40 text-[11px] mt-0.5">No painel à esquerda, clique em "Sua Foto" e faça o upload</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 font-black text-black text-lg">2</div>
+                              <div>
+                                <p className="text-white font-bold text-sm">Selecione o formato</p>
+                                <p className="text-white/40 text-[11px] mt-0.5">Escolha entre 1:1, 4:5, 9:16 ou 16:9 conforme sua necessidade</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 font-black text-black text-lg">3</div>
+                              <div>
+                                <p className="text-white font-bold text-sm">Escolha o estilo do ensaio</p>
+                                <p className="text-white/40 text-[11px] mt-0.5">Navegue pelas categorias e selecione o preset que mais combina</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-500/30 transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 font-black text-black text-lg">4</div>
+                              <div>
+                                <p className="text-white font-bold text-sm">Clique em "Gerar Imagens"</p>
+                                <p className="text-white/40 text-[11px] mt-0.5">A IA criará suas fotos profissionais em segundos!</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* BUY CREDITS CTA FOR USERS WITHOUT CREDITS */}
+                          <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-amber-500/40 rotate-12 group-hover:rotate-0 transition-transform duration-500">
+                            <ShoppingBag size={40} className="text-black" strokeWidth={2.5} />
+                          </div>
+
+                          <div className="space-y-4">
+                            <h3 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase leading-tight">
+                              {t.studio.buy_credits_msg}
+                            </h3>
+                            <p className="text-white/40 text-xs md:text-sm font-medium uppercase tracking-[0.3em] max-w-lg mx-auto leading-relaxed">
+                              Desbloqueie o poder da inteligência artificial aplicada ao seu negócio
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() => setShowPaywall(true)}
+                            className="group/btn relative px-8 md:px-12 py-4 md:py-6 bg-white text-black rounded-2xl font-black uppercase text-xs md:text-sm tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.2)] hover:shadow-[0_25px_50px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-500 flex items-center gap-4 mx-auto"
+                          >
+                            <Zap size={18} fill="currentColor" />
+                            {t.studio.buy_credits_btn}
+                            <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
