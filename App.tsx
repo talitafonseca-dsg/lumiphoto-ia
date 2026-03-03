@@ -750,7 +750,7 @@ const App: React.FC = () => {
     if (showAuth) {
       return <AuthScreen onLogin={() => { }} />;
     }
-    return <SalesPage onGetStarted={() => setShowSalesPage(false)} onLogin={() => setShowAuth(true)} />;
+    return <SalesPage onGetStarted={() => navigateTo('/checkout')} onLogin={() => setShowAuth(true)} />;
   }
 
   return (
