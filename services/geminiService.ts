@@ -1825,6 +1825,16 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
     ${style === VisualStyle.DESIGNI_PD_PRO ? `- PRODUCT FIDELITY (CRITICAL): DO NOT CHANGE THE PRODUCT. IF A NOTEBOOK IS UPLOADED, USE THAT EXACT COVER ART. DO NOT GENERATE A GENERIC CARTOON NOTEBOOK. USE THE IMAGE 2.` : ''}
   `;
 
+  // SHOT TYPE / FRAMING
+  if (config.shotType) {
+    const shotInstructions: Record<string, string> = {
+      closeup: 'FRAMING: Close-up portrait shot. Frame from the chest/shoulders up. Focus on the face and upper body only. Do NOT show legs or full body.',
+      american: 'FRAMING: American shot (medium shot). Frame from approximately mid-thigh up. Show the upper body and hands but cut off below the knees.',
+      fullbody: 'FRAMING: Full body shot. Show the entire person from head to toe. Include the full body, legs, and feet in the frame.',
+    };
+    prompt += `\n\n=== PHOTO FRAMING (MANDATORY) ===\n${shotInstructions[config.shotType]}\n=== END FRAMING ===\n`;
+  }
+
   // USER CUSTOM INSTRUCTIONS
   if (config.customInstructions && config.customInstructions.trim() !== '') {
     prompt += `\n\n=== USER CUSTOM INSTRUCTIONS (TOP PRIORITY) ===

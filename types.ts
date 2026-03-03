@@ -791,6 +791,7 @@ export interface GenerationConfig {
   customEnvironment?: string;
   ugcModel?: UGCModel;
   designCount?: number;
+  shotType?: 'closeup' | 'american' | 'fullbody'; // Optional photo framing
   slideCount?: number;
   useAiAvatar?: boolean;
   avatarType?: string; // Type of AI avatar to generate (woman_young, man_young, etc.)

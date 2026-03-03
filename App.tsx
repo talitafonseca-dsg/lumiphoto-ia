@@ -1025,6 +1025,28 @@ const App: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* SHOT TYPE SELECTOR */}
+                    <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-3">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-white/60">Plano da Foto <span className="text-white/30">(opcional)</span></p>
+                      <div className="flex gap-2">
+                        {[
+                          { value: undefined, label: 'Auto', emoji: '✨' },
+                          { value: 'closeup', label: 'Close-up', emoji: '🔍' },
+                          { value: 'american', label: 'Americano', emoji: '👤' },
+                          { value: 'fullbody', label: 'Corpo Inteiro', emoji: '🧍' },
+                        ].map((shot) => (
+                          <button
+                            key={shot.label}
+                            onClick={() => setConfig(prev => ({ ...prev, shotType: shot.value as any }))}
+                            className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all flex flex-col items-center gap-1 ${config.shotType === shot.value ? 'bg-amber-500 text-black' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
+                          >
+                            <span>{shot.emoji}</span>
+                            {shot.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* RESULT COUNT SELECTOR */}
                     <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-3">
                       <p className="text-[9px] font-black uppercase tracking-wider text-white/60">{t.studio.image_quantity}</p>
