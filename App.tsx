@@ -1143,14 +1143,21 @@ const App: React.FC = () => {
                     </div>
                   )}
 
-                  {/* CUSTOM INSTRUCTIONS BOX */}
-                  <div className="p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-white/60">{t.studio.additional_instructions}</p>
+                  {/* CUSTOM INSTRUCTIONS BOX - HIGHLIGHTED */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-purple-500/10 border border-amber-500/30 space-y-3 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-400 text-sm">✨</span>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">Crie fotos únicas com sua imaginação</p>
+                    </div>
+                    <p className="text-[9px] text-white/50 leading-relaxed">
+                      Descreva qualquer cenário, roupa, fundo ou atmosfera. A IA vai criar exatamente o que você imaginar!
+                    </p>
                     <textarea
                       value={config.customInstructions || ''}
                       onChange={(e) => setConfig(prev => ({ ...prev, customInstructions: e.target.value }))}
-                      placeholder={t.studio.additional_instructions_placeholder}
-                      className="w-full h-20 p-3 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-white/20 focus:border-amber-500 focus:bg-black/60 outline-none resize-none transition-all"
+                      placeholder={"Ex: Fundo de escritório moderno com plantas, usando blazer azul marinho e sorriso confiante\n\nEx: Na praia ao pôr do sol, roupa branca casual, luz dourada\n\nEx: Estúdio com fundo cinza, iluminação dramática lateral"}
+                      className="w-full h-28 p-3 rounded-lg bg-black/50 border border-amber-500/20 text-xs text-white placeholder-white/25 focus:border-amber-500 focus:bg-black/60 focus:shadow-[0_0_15px_rgba(245,158,11,0.1)] outline-none resize-none transition-all"
                     />
                   </div>
                 </div>
