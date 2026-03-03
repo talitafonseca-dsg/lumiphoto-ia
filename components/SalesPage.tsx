@@ -265,6 +265,120 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                 </div>
             </section>
 
+            {/* PERSUASIVE - PROBLEM / SOLUTION */}
+            <section className="py-24 relative overflow-hidden">
+                {/* Background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-[#0a0808] to-[#050505]" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-500/5 rounded-full blur-[150px]" />
+
+                <div className="max-w-5xl mx-auto px-6 relative z-10">
+                    {/* Opening Copy - Pain Point */}
+                    <div className="text-center mb-16 space-y-6 max-w-3xl mx-auto">
+                        <p className="text-red-400/80 text-sm font-medium italic">
+                            "Você sabe que sua foto de perfil tá fraca. Aquela selfie no LinkedIn tá afastando oportunidades. Mas agendar um fotógrafo custa caro, exige tempo e você ainda precisa aparecer no estúdio..."
+                        </p>
+                        <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
+                            Chega de <span className="text-red-400 line-through decoration-red-500/50">fotos amadoras</span> que sabotam
+                            <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">sua imagem profissional</span>
+                        </h2>
+                    </div>
+
+                    {/* 2-Column: Problem vs Solution */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+                        {/* PROBLEM */}
+                        <div className="bg-red-500/5 border border-red-500/10 rounded-3xl p-8 space-y-5">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                                    <span className="text-lg">😩</span>
+                                </div>
+                                <h3 className="text-red-400 font-black uppercase tracking-wider text-sm">O Problema</h3>
+                            </div>
+                            <ul className="space-y-4">
+                                <li className="flex items-start gap-3">
+                                    <span className="text-red-400/50 mt-0.5">✕</span>
+                                    <p className="text-white/50 text-sm">Fotógrafo profissional custa <span className="text-red-400 font-bold">R$ 500 a R$ 2.000</span> por sessão</p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="text-red-400/50 mt-0.5">✕</span>
+                                    <p className="text-white/50 text-sm">Agendar, se deslocar e esperar dias pelas fotos editadas</p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="text-red-400/50 mt-0.5">✕</span>
+                                    <p className="text-white/50 text-sm">Selfie no celular = imagem amadora que não transmite autoridade</p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="text-red-400/50 mt-0.5">✕</span>
+                                    <p className="text-white/50 text-sm">Perde clientes, oportunidades e credibilidade por causa de uma foto ruim</p>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* SOLUTION */}
+                        <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-3xl p-8 space-y-5 relative">
+                            <div className="absolute -top-3 right-6 px-4 py-1 bg-amber-500 rounded-full text-[10px] font-black uppercase text-black tracking-wider">
+                                A Solução
+                            </div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                    <span className="text-lg">⚡</span>
+                                </div>
+                                <h3 className="text-emerald-400 font-black uppercase tracking-wider text-sm">LumiphotoIA</h3>
+                            </div>
+                            <ul className="space-y-4">
+                                <li className="flex items-start gap-3">
+                                    <Check size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                                    <p className="text-white/70 text-sm">Fotos com qualidade de estúdio por <span className="text-emerald-400 font-bold">a partir de R$ 3,70 cada</span></p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <Check size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                                    <p className="text-white/70 text-sm"><span className="text-amber-400 font-bold">Pronto em segundos</span> — sem agendar, sem sair de casa</p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <Check size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                                    <p className="text-white/70 text-sm">+50 estilos profissionais: executivo, fitness, aniversário, moda e mais</p>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <Check size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                                    <p className="text-white/70 text-sm">Seu rosto, sua identidade — a IA preserva <span className="text-amber-400 font-bold">100% das suas feições</span></p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Target Audience */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 md:p-10">
+                        <p className="text-center text-white/30 text-[10px] font-black uppercase tracking-[0.3em] mb-8">Feito para quem precisa de resultado</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+                            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-4 py-3 border border-white/5">
+                                <Briefcase size={18} className="text-amber-400 shrink-0" />
+                                <p className="text-white/60 text-xs">Profissionais liberais que querem atualizar o LinkedIn</p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-4 py-3 border border-white/5">
+                                <TrendingUp size={18} className="text-amber-400 shrink-0" />
+                                <p className="text-white/60 text-xs">Empreendedores e coaches que precisam de fotos para tráfego pago</p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-4 py-3 border border-white/5">
+                                <Instagram size={18} className="text-amber-400 shrink-0" />
+                                <p className="text-white/60 text-xs">Quem quer renovar o feed do Instagram com conteúdo profissional</p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-4 py-3 border border-white/5">
+                                <Zap size={18} className="text-amber-400 shrink-0" />
+                                <p className="text-white/60 text-xs">Quem não tem tempo ou dinheiro para contratar um fotógrafo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="text-center mt-12">
+                        <button onClick={onGetStarted} className="px-10 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-black uppercase tracking-[0.2em] text-sm rounded-xl hover:shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 transition-all">
+                            Quero Minhas Fotos Profissionais →
+                        </button>
+                        <p className="text-white/20 text-xs mt-4">3 poucos cliques. Resultado em segundos. Sem compromisso.</p>
+                    </div>
+                </div>
+            </section>
+
             {/* TRANSFORMATION SHOWCASE */}
             <section className="py-24 bg-gradient-to-b from-[#050505] via-[#080808] to-[#050505] border-t border-white/5 relative overflow-hidden">
                 {/* Background effects */}
