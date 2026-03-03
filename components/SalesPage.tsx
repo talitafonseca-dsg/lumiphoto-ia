@@ -537,7 +537,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                             <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-center gap-3 mb-3">
                                     <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-black font-black text-lg shrink-0">3</div>
-                                    <h3 className="text-base md:text-lg font-black uppercase">Receba em Minutos</h3>
+                                    <h3 className="text-base md:text-lg font-black uppercase">Receba em Segundos</h3>
                                 </div>
                                 <p className="text-white/40 text-sm leading-relaxed">Em alguns segundos, sua galeria em alta definição.</p>
                             </div>
