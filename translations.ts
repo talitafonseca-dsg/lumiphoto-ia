@@ -164,7 +164,7 @@ export const translations = {
             upload_style_ref: 'Ref. Estilo',
             create_avatar: 'Criar Avatar IA',
             photo_format: 'Formato da Foto',
-            image_quantity: 'Quantidade de Imagens',
+            image_quantity: 'Quantidade de Imagens (1 crédito cada)',
             buy_credits_msg: 'Compre seus créditos para iniciar a produção das suas fotos',
             buy_credits_btn: 'Comprar Créditos Agora',
             creative_mode_active: 'MODO CRIATIVO ATIVO',

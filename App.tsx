@@ -82,7 +82,7 @@ const App: React.FC = () => {
     style: VisualStyle.MODERN,
     studioStyle: StudioStyle.EXECUTIVO_PRO,
     mascotStyle: MascotStyle.PIXAR_3D,
-    aspectRatio: AspectRatio.SQUARE,
+    aspectRatio: AspectRatio.PORTRAIT_4_5,
     productDescription: '',
     copyText: '',
     ctaText: '',
@@ -373,6 +373,36 @@ const App: React.FC = () => {
       }));
 
       setResults(resultsWithMeta);
+
+      // === DEDUCT CREDITS ===
+      if (user) {
+        const imagesGenerated = resultsWithMeta.length;
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({ count: imagesGenerated }),
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setCredits(data.newCredits);
+            console.log(`💰 Credits: ${data.previousCredits} → ${data.newCredits} (-${data.deducted})`);
+            // Refresh session to sync user_metadata
+            await supabase.auth.refreshSession();
+          } else {
+            console.error('Failed to deduct credits:', await res.text());
+          }
+        } catch (creditErr) {
+          console.error('Error deducting credits:', creditErr);
+        }
+      }
     } catch (err: any) {
       console.error("Critical Generation Error:", err);
       if (err.message?.includes("Requested entity was not found") || err.message?.includes("API key not valid")) {
@@ -383,7 +413,7 @@ const App: React.FC = () => {
       const isQuota = err.message?.includes('429') || err.message?.includes('quota');
       setIsQuotaError(isQuota);
       setError(isQuota
-        ? "Limite de Uso Atingido. A conta compartilhada atingiu o limite. Conecte sua prÃ³pria chave API para continuar."
+        ? "Limite de Uso Atingido. A conta compartilhada atingiu o limite. Conecte sua própria chave API para continuar."
         : (err.message || "Erro desconhecido na engine neural. Tente novamente.")
       );
     } finally {
@@ -672,8 +702,9 @@ const App: React.FC = () => {
       case AspectRatio.SQUARE: return 'aspect-square';
       case AspectRatio.STORY_9_16: return 'aspect-[9/16]';
       case AspectRatio.PORTRAIT_3_4: return 'aspect-[3/4]';
+      case AspectRatio.PORTRAIT_4_5: return 'aspect-[4/5]';
       case AspectRatio.CLASSIC_4_3: return 'aspect-[4/3]';
-      default: return 'aspect-square';
+      default: return 'aspect-[4/5]';
     }
   };
 
@@ -1614,6 +1645,16 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* DOWNLOAD WARNING BANNER */}
+                <div className="flex items-center gap-3 px-5 py-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                  <span className="text-2xl">⚠️</span>
+                  <div>
+                    <p className="text-amber-400 font-bold text-sm">Faça o download das suas fotos!</p>
+                    <p className="text-white/40 text-xs">Não temos galeria de imagens. Clique na foto e baixe antes de sair desta página.</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
                   {results.map((variation) => (
                     <div key={variation.id} className="space-y-6">

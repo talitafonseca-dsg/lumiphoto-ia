@@ -166,11 +166,12 @@ CREATE A NEW IMAGE where the PERSON (Image 1) is PHYSICALLY HOLDING the PRODUCT 
         parts.push({
           text: `[IMAGE 1 - THE PERSON TO TRANSFORM]
 This person will appear in the final image.
->>> PRESERVE 100%: Face, facial features, skin tone, hair, identity
+>>> PRESERVE 100%: Face, facial features, skin tone, hair, identity, FACIAL EXPRESSION (do NOT change the expression — if the person is not smiling, do NOT add a smile)
 >>> REGENERATE: Clothing, Arms, hands, body pose.
 >>> CRITICAL INSTRUCTION: ADAPT THE CLOTHING to match the COLOR PALETTE and STYLE of Image 3 (Reference). Do not keep the original clothing if it clashes.
+>>> EXPRESSION RULE: Keep the EXACT same facial expression as the input photo. Do NOT force a smile, grin, or any expression that is not present in the original image.
 >>> POSE: Arms extended forward, hands gripping the product.
->>> NEGATIVE PROMPT: Original clothing, clashing colors, extra arms, mutated hands.`
+>>> NEGATIVE PROMPT: Original clothing, clashing colors, extra arms, mutated hands, changed expression, forced smile.`
         });
         parts.push({ inlineData: model });
 
@@ -262,7 +263,7 @@ CRITICAL RULES:
             parts.push({
               text: `[IMAGE 1 - PRIMARY SUBJECT IDENTITY]
 >>> THIS IS THE MAIN FACE/IDENTITY TO USE <<<
-Preserve: face, skin tone, hair, facial features, age, ethnicity.` });
+Preserve: face, skin tone, hair, facial features, age, ethnicity, EXACT facial expression (do NOT change expression or force a smile).` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
@@ -277,7 +278,7 @@ Preserve: face, skin tone, hair, facial features, age, ethnicity.` });
 >>> Use this additional angle/photo to better understand the facial features of the person in Image 1.`
               : `[IMAGE 1 - THE PERSON TO APPEAR IN OUTPUT]
 >>> THIS IS THE FACE/IDENTITY TO USE <<<
-Preserve: face, skin tone, hair, facial features, age, ethnicity`;
+Preserve: face, skin tone, hair, facial features, age, ethnicity, EXACT facial expression (do NOT change expression or force a smile)`;
 
             parts.push({ text: label });
             parts.push({ inlineData: asset });
