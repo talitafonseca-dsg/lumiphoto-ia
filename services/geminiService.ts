@@ -1152,6 +1152,15 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - HALLUCINATION CHECK: Do not generate fake husbands, wives, or children.
   - EXCEPTION: Only add people if the User Custom Instructions EXPLICITLY ask for "Add a family", "Add a husband", etc.
   ` : ''}
+  ${(studioStyle && (studioStyle as string).includes('Aniver') && config.birthdayAge) ? `
+  === BIRTHDAY AGE CONTEXT (CRITICAL) ===
+  THE PERSON IS CELEBRATING THEIR ${config.birthdayAge}th BIRTHDAY.
+  - If number balloons are part of the style, display the NUMBER "${config.birthdayAge}" prominently using METALLIC FOIL NUMBER BALLOONS.
+  - Incorporate age-appropriate decorations and energy level.
+  - The birthday person should look happy, celebrated, and be the center of attention.
+  - If a cake is present, it should have "${config.birthdayAge}" or appropriate candles.
+  === END AGE CONTEXT ===
+  ` : ''}
   ` : '')}
   
   HUMAN ELEMENT RULES:
@@ -2378,6 +2387,16 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.NEON_PORTRAIT: return "STYLE: Ultraviolet / Blacklight. LAYOUT: Glowing paint. BACKGROUND: Pitch black with UV body paint glowing patterns. LIGHTING: Blacklight only.";
     case StudioStyle.ENGENHEIRO: return "STYLE: Civil Engineer / Architect on Site. LAYOUT: Industrial professional look. BACKGROUND: Active construction site (blurred) or office with rolled blueprints and hard hat visible. Props: White hard hat, safety vest, blueprints. LIGHTING: Daylight or high-vis industrial.";
     case StudioStyle.PSICOLOGO: return "STYLE: Psychologist / Therapist. LAYOUT: Empathetic & Welcoming. BACKGROUND: Cozy therapy office, comfortable armchair, bookshelf, plants, warm decor. Props: Notebook, glasses, tissue box. LIGHTING: Warm, soothing, soft ambient light.";
+
+    // ANIVERSÁRIO STYLES
+    case StudioStyle.BDAY_BALOES_ROSE: return "STYLE: Birthday Photoshoot - Rose Gold Balloons. LAYOUT: Person surrounded by luxurious rose gold, pink, and white balloons of different sizes. BACKGROUND: White or soft pink studio backdrop filled with metallic rose gold balloons, some floating, some on the ground. Confetti scattered on floor. LIGHTING: Soft glamorous lighting with warm tones. POSE: Celebratory, holding balloons, laughing, or posing elegantly. VIBE: Chic, feminine, Instagram-worthy birthday celebration.";
+    case StudioStyle.BDAY_CONFETTI: return "STYLE: Birthday Photoshoot - Confetti Shower. LAYOUT: Dynamic action shot with golden confetti falling everywhere around the person. BACKGROUND: Clean black or dark studio with thousands of metallic gold confetti pieces caught mid-air. LIGHTING: Multi-flash to freeze confetti motion, dramatic rim lighting. POSE: Arms up celebrating, spinning, dancing in confetti rain, pure joy expression. VIBE: Explosive celebration, party energy, editorial magazine style.";
+    case StudioStyle.BDAY_BALOES_NUMERO: return "STYLE: Birthday Photoshoot - Number Balloons. LAYOUT: Person posing next to GIANT metallic foil number balloons showing their age. BACKGROUND: Decorated wall with balloon arch or garland behind. Colors: mix of metallics (gold, silver, rose gold) with matte colors. LIGHTING: Bright and cheerful studio lighting. POSE: Proud, fun, pointing at numbers, hugging the balloons. PROPS: CRITICAL - Include large metallic number balloons matching the age if specified. VIBE: Classic birthday photoshoot, fun milestone celebration.";
+    case StudioStyle.BDAY_LUXO_DOURADO: return "STYLE: Birthday Photoshoot - Black & Gold Luxury. LAYOUT: Glamorous high-end birthday portrait. BACKGROUND: Dramatic black backdrop with golden decorations: gold balloon arch, gold tinsel curtains, black and gold themed decor. LIGHTING: Warm spotlight with golden hue, rim light separating from dark background. POSE: Elegant, sophisticated, like a VIP celebration. OUTFIT: Suggest black or gold evening wear. VIBE: Luxury party, VIP birthday celebration, high-end event photography.";
+    case StudioStyle.BDAY_ESTUDIO_CLEAN: return "STYLE: Birthday Photoshoot - Clean Studio. LAYOUT: Simple and elegant studio portrait with minimal birthday elements. BACKGROUND: Pure white or soft grey seamless backdrop. Minimal props: a simple cake, a single balloon bunch, party hat (optional). LIGHTING: High-key professional photography lighting, soft and even. POSE: Natural and relaxed, sitting on stool or standing, gentle smile. VIBE: Timeless, clean, professional birthday portrait that focuses on the person.";
+    case StudioStyle.BDAY_JARDIM: return "STYLE: Birthday Photoshoot - Enchanted Garden. LAYOUT: Person in an enchanted garden setting with flowers and soft decorations. BACKGROUND: Lush green garden with flower arches, hanging florals, fairy lights intertwined with greenery, rustic wooden elements. LIGHTING: Soft golden hour sunlight filtering through leaves, magical and dreamy. POSE: Sitting among flowers, walking through garden arch, smelling flowers. VIBE: Romantic, whimsical, fairytale birthday magic, boho chic.";
+    case StudioStyle.BDAY_POOL_PARTY: return "STYLE: Birthday Photoshoot - Pool Party Summer. LAYOUT: Vibrant summer pool celebration. BACKGROUND: Crystal clear pool water, tropical plants, inflatable pool toys (flamingos, donuts), colorful towels. LIGHTING: Bright daylight, sun reflections on water, summer warmth. POSE: Sitting by pool edge, splashing, sunbathing, tropical cocktail in hand. PROPS: Pool floats, tropical flowers, fruit drinks, sunglasses. VIBE: Summer vibes, tropical birthday, fun and fresh.";
+    case StudioStyle.BDAY_NEON_GLOW: return "STYLE: Birthday Photoshoot - Neon Glow Party. LAYOUT: Person in a neon-lit party environment. BACKGROUND: Dark room with neon lights (pink, blue, purple), LED strips, luminous birthday decorations, glow sticks, UV reactive elements. LIGHTING: Blacklight/UV mixed with colored neon LED strips, dramatic and moody. POSE: Dancing, partying, DJ vibe, holding glow sticks. VIBE: Night club birthday, rave aesthetic, Gen-Z party vibes, electric and energetic.";
 
     // FAMILY STYLES - STRICT IDENTITY & COUNT RULES
     // FAMILY STYLES - STRICT IDENTITY & COUNT RULES

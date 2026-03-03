@@ -133,7 +133,7 @@ const App: React.FC = () => {
   const categories = React.useMemo(() => {
     const cats = new Set(Object.values(StudioStyleMeta).map(m => m.category));
     const catArray = Array.from(cats);
-    const order = ['Profissional', 'Moda & Beleza', 'Casual', 'Família', 'Comercial', 'Criativo'];
+    const order = ['Profissional', 'Moda & Beleza', 'Casual', 'Família', 'Aniversário', 'Comercial', 'Criativo'];
     return catArray.sort((a, b) => {
       const indexA = order.indexOf(a);
       const indexB = order.indexOf(b);
@@ -1046,6 +1046,25 @@ const App: React.FC = () => {
                         );
                       })}
                   </div>
+
+                  {/* BIRTHDAY AGE FIELD - Only when birthday style selected */}
+                  {config.studioStyle && (config.studioStyle as string).includes('Aniver') && (
+                    <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-amber-500/10 border border-pink-500/20 space-y-2">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-pink-400/80 flex items-center gap-1.5">
+                        🎂 Idade do Aniversariante
+                      </p>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={config.birthdayAge || ''}
+                        onChange={(e) => setConfig(prev => ({ ...prev, birthdayAge: e.target.value }))}
+                        placeholder="Ex: 25, 30, 50..."
+                        className="w-full p-3 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-white/20 focus:border-pink-500 focus:bg-black/60 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <p className="text-[8px] text-white/30">A idade aparecerá nos balões numéricos e decorações</p>
+                    </div>
+                  )}
 
                   {/* CUSTOM INSTRUCTIONS BOX */}
                   <div className="p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2">

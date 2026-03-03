@@ -87,6 +87,16 @@ export enum StudioStyle {
   FAMILY_KITCHEN = 'Cozinhando Juntos', // NOVO
   PET_FRIENDLY_FAMILY = 'Família com Pets', // NOVO
 
+  // ANIVERSÁRIO
+  BDAY_BALOES_ROSE = 'Aniver: Balões Rose Gold',
+  BDAY_CONFETTI = 'Aniver: Chuva de Confetti',
+  BDAY_BALOES_NUMERO = 'Aniver: Balões com Número',
+  BDAY_LUXO_DOURADO = 'Aniver: Luxo Dourado',
+  BDAY_ESTUDIO_CLEAN = 'Aniver: Estúdio Clean',
+  BDAY_JARDIM = 'Aniver: Jardim Encantado',
+  BDAY_POOL_PARTY = 'Aniver: Pool Party',
+  BDAY_NEON_GLOW = 'Aniver: Neon Glow',
+
   // COMERCIAL & PRODUTO (NOVO)
   ECOMMERCE_CLEAN = 'E-commerce Clean',
   TECH_STARTUP = 'Tech Startup',
@@ -526,6 +536,56 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     imageUrl: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80'
   },
 
+  // ANIVERSÁRIO
+  [StudioStyle.BDAY_BALOES_ROSE]: {
+    description: 'Balões Rose Gold & Elegância',
+    color: 'from-rose-400/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_CONFETTI]: {
+    description: 'Chuva de Confetti Dourado',
+    color: 'from-yellow-500/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_BALOES_NUMERO]: {
+    description: 'Balões Numéricos Metálicos',
+    color: 'from-amber-400/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_LUXO_DOURADO]: {
+    description: 'Festa Luxo Preto & Dourado',
+    color: 'from-amber-600/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_ESTUDIO_CLEAN]: {
+    description: 'Estúdio Simples & Chique',
+    color: 'from-gray-300/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_JARDIM]: {
+    description: 'Jardim Encantado & Flores',
+    color: 'from-pink-300/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_POOL_PARTY]: {
+    description: 'Pool Party & Verão',
+    color: 'from-cyan-400/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&w=600&q=80'
+  },
+  [StudioStyle.BDAY_NEON_GLOW]: {
+    description: 'Festa Neon & Brilho UV',
+    color: 'from-fuchsia-500/20',
+    category: 'Aniversário',
+    imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
+  },
+
   // COMERCIAL & PRODUTO
   [StudioStyle.ECOMMERCE_CLEAN]: {
     description: 'Fundo Branco & Foco',
@@ -738,6 +798,7 @@ export interface GenerationConfig {
   useBoxLayout?: boolean;
   brandColors?: string[]; // New: Store hex codes for strict branding
   customInstructions?: string; // New: User custom prompt instructions
+  birthdayAge?: string; // Age for birthday photoshoot presets
 }
 
 export interface GeneratedImage {
