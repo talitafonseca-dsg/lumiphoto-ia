@@ -355,13 +355,13 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Joias & Requinte',
     color: 'from-yellow-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1573408301185-a140d60523d7?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.SKINCARE_ORGANIC]: {
     description: 'Natural & Puro',
     color: 'from-green-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1556228578-8d2a741c9b20?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.STREET_FASHION]: {
     description: 'Urbano & Trendy',
@@ -385,7 +385,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Fragrância & Aura',
     color: 'from-amber-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1594035910387-fea4779426e9?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=600&q=80'
   },
 
   // LIFESTYLE
@@ -429,7 +429,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Zen & Equilíbrio',
     color: 'from-teal-300/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1588286882045-8002d9197c31?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.TRAVEL_BLOGGER]: {
     description: 'Aventura & Mundo',
@@ -473,7 +473,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Espontâneo em Casa',
     color: 'from-amber-100/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1542038784456-1ea8c935837a?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.FAMILY_GOLDEN_HOUR]: {
     description: 'Luz Dourada Externa',
@@ -491,13 +491,13 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Natal Mágico',
     color: 'from-red-600/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1512389142660-9c87db543544?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.FAMILY_PICNIC]: {
     description: 'Piquenique & Alegria',
     color: 'from-lime-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1533222535027-fea652012543?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.MATERNITY_SOFT]: {
     description: 'Gestante & Amor',
@@ -521,13 +521,13 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Avós & Netos',
     color: 'from-warm-gray-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1525492416187-d4f1076f8231?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.FAMILY_KITCHEN]: {
     description: 'Cozinhando Juntos',
     color: 'from-orange-200/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745a30bf?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.PET_FRIENDLY_FAMILY]: {
     description: 'Família com Pets',
@@ -621,7 +621,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Flores & Cores',
     color: 'from-pink-400/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1563245372-f217271dc16c?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.BAKERY_ARTISAN]: {
     description: 'Padaria Artesanal',
@@ -651,7 +651,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Barbearia Clássica',
     color: 'from-stone-900/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1512690459411-b9245aed6191?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80'
   },
 
   // CRIATIVO
@@ -695,7 +695,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Onírico & Mágico',
     color: 'from-violet-500/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1518640027989-d30d357e6ae9?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.GLITCH_ART]: {
     description: 'Erro Digital',
@@ -707,7 +707,7 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Colagem 3D',
     color: 'from-yellow-400/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1525715843408-5b6ec445005f?auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80'
   },
   [StudioStyle.DOUBLE_EXPOSURE]: {
     description: 'Fusão de Imagens',
