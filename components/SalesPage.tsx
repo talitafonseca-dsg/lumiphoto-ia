@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Camera, Check, Star, Zap, Image as ImageIcon, Briefcase, Heart, Instagram, Sparkles, Layout, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Camera, Check, Star, Zap, Image as ImageIcon, Briefcase, Heart, Instagram, Sparkles, Layout, ShoppingBag, TrendingUp, Gift, Copy, Link2, Loader2 } from 'lucide-react';
 
 interface SalesPageProps {
     onGetStarted: () => void;
@@ -8,6 +8,46 @@ interface SalesPageProps {
 }
 
 export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) => {
+    const [refEmail, setRefEmail] = useState('');
+    const [refLink, setRefLink] = useState('');
+    const [refLoading, setRefLoading] = useState(false);
+    const [refCopied, setRefCopied] = useState(false);
+    const [refError, setRefError] = useState<string | null>(null);
+
+    const handleGenerateReferral = async () => {
+        if (!refEmail || !refEmail.includes('@')) {
+            setRefError('Por favor, insira um email válido');
+            return;
+        }
+        setRefLoading(true);
+        setRefError(null);
+        try {
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-referral`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: refEmail.toLowerCase().trim() }),
+                }
+            );
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Erro ao gerar link');
+            }
+            const data = await res.json();
+            setRefLink(data.link);
+        } catch (err: any) {
+            setRefError(err.message || 'Erro ao gerar. Tente novamente.');
+        } finally {
+            setRefLoading(false);
+        }
+    };
+
+    const handleCopyRef = () => {
+        navigator.clipboard.writeText(refLink);
+        setRefCopied(true);
+        setTimeout(() => setRefCopied(false), 2000);
+    };
     return (
         <div className="h-screen w-full bg-[#050505] text-white selection:bg-amber-500/30 overflow-y-auto overflow-x-hidden">
             {/* HEADER */}
@@ -469,9 +509,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                                 <span className="text-xl">🚀</span>
                                 <h3 className="text-lg font-bold text-white">Starter</h3>
                             </div>
-                            <p className="text-4xl font-black text-white mb-1">R$ 27<span className="text-lg font-normal text-white/40">,00</span></p>
+                            <p className="text-4xl font-black text-white mb-1">R$ 37<span className="text-lg font-normal text-white/40">,00</span></p>
                             <p className="text-sm text-amber-400 font-bold mb-4">10 Fotos</p>
-                            <p className="text-xs text-white/30 mb-6">R$ 2,70 por foto</p>
+                            <p className="text-xs text-white/30 mb-6">R$ 3,70 por foto</p>
                             <button onClick={onGetStarted} className="mt-auto w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors">
                                 Comprar
                             </button>
@@ -483,9 +523,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                                 <span className="text-xl">✨</span>
                                 <h3 className="text-lg font-bold text-white">Essencial</h3>
                             </div>
-                            <p className="text-4xl font-black text-white mb-1">R$ 47<span className="text-lg font-normal text-white/40">,00</span></p>
+                            <p className="text-4xl font-black text-white mb-1">R$ 57<span className="text-lg font-normal text-white/40">,00</span></p>
                             <p className="text-sm text-amber-400 font-bold mb-4">30 Fotos</p>
-                            <p className="text-xs text-white/30 mb-6">R$ 1,56 por foto</p>
+                            <p className="text-xs text-white/30 mb-6">R$ 1,90 por foto</p>
                             <button onClick={onGetStarted} className="mt-auto w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors">
                                 Comprar
                             </button>
@@ -520,6 +560,138 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                             <button onClick={onGetStarted} className="mt-auto w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition-colors">
                                 Comprar
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* REFERRAL PROGRAM SECTION */}
+            <section className="py-24 relative overflow-hidden">
+                {/* Animated background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-emerald-950/20 to-[#0a0a0a]" />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+
+                {/* Glowing orbs */}
+                <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse" />
+                <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-amber-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s' }} />
+
+                <div className="max-w-4xl mx-auto px-6 relative z-10">
+                    {/* Badge */}
+                    <div className="text-center mb-12">
+                        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                            <Gift size={12} />
+                            Programa de Indicação
+                        </div>
+                        <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tight mb-4">
+                            Indique e <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-300">Ganhe</span>
+                        </h2>
+                        <p className="text-white/40 max-w-lg mx-auto text-lg">
+                            Compartilhe seu link exclusivo e ganhe <span className="text-emerald-400 font-bold">3 fotos grátis</span> quando alguém comprar pelo seu link!
+                        </p>
+                    </div>
+
+                    {/* Main Card */}
+                    <div className="relative">
+                        {/* Glow border */}
+                        <div className="absolute -inset-[1px] bg-gradient-to-r from-emerald-500/50 via-green-400/30 to-emerald-500/50 rounded-3xl blur-sm" />
+
+                        <div className="relative bg-zinc-900/90 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-emerald-500/20">
+                            {/* Steps */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                                <div className="text-center">
+                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                                        <Link2 size={24} className="text-emerald-400" />
+                                    </div>
+                                    <p className="text-white font-bold text-sm mb-1">1. Gere seu link</p>
+                                    <p className="text-white/30 text-xs">Insira seu email e receba um link exclusivo</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center mb-4">
+                                        <ShoppingBag size={24} className="text-amber-400" />
+                                    </div>
+                                    <p className="text-white font-bold text-sm mb-1">2. Compartilhe</p>
+                                    <p className="text-white/30 text-xs">Envie para amigos que precisam de fotos</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20 flex items-center justify-center mb-4">
+                                        <Sparkles size={24} className="text-green-400" />
+                                    </div>
+                                    <p className="text-white font-bold text-sm mb-1">3. Ganhe fotos</p>
+                                    <p className="text-white/30 text-xs">Receba 3 fotos grátis por cada compra</p>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent mb-10" />
+
+                            {/* Form */}
+                            {!refLink ? (
+                                <div className="max-w-xl mx-auto space-y-4">
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <input
+                                            type="email"
+                                            value={refEmail}
+                                            onChange={(e) => setRefEmail(e.target.value)}
+                                            placeholder="Seu melhor email"
+                                            className="flex-1 px-5 py-4 bg-white/5 rounded-xl border border-white/10 focus:border-emerald-500/50 focus:outline-none text-white placeholder:text-white/30 text-base"
+                                            onKeyDown={(e) => e.key === 'Enter' && handleGenerateReferral()}
+                                        />
+                                        <button
+                                            onClick={handleGenerateReferral}
+                                            disabled={refLoading}
+                                            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-500 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] transition-all disabled:opacity-50 whitespace-nowrap"
+                                        >
+                                            {refLoading ? (
+                                                <Loader2 size={20} className="animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Gift size={18} />
+                                                    Gerar Meu Link
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                    {refError && (
+                                        <p className="text-red-400 text-sm text-center">{refError}</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="max-w-xl mx-auto space-y-4">
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles size={14} className="text-emerald-400" />
+                                            <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                                                Seu link está pronto!
+                                            </span>
+                                        </div>
+                                        <div className="bg-black/40 rounded-lg p-4 flex items-center gap-3">
+                                            <code className="text-white/80 text-sm flex-1 break-all">{refLink}</code>
+                                            <button
+                                                onClick={handleCopyRef}
+                                                className="shrink-0 p-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors"
+                                            >
+                                                {refCopied ? (
+                                                    <Check size={18} className="text-emerald-400" />
+                                                ) : (
+                                                    <Copy size={18} className="text-emerald-400" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleCopyRef}
+                                        className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-500 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] transition-all text-lg"
+                                    >
+                                        <Copy size={20} />
+                                        {refCopied ? 'Link Copiado! ✓' : 'Copiar Link'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Info badge */}
+                            <p className="text-center text-white/20 text-xs mt-6">
+                                🔒 Link único por email • Recompensa automática • Notificação por email
+                            </p>
                         </div>
                     </div>
                 </div>
