@@ -1228,7 +1228,7 @@ const App: React.FC = () => {
       </aside >
 
       {/* MAIN VIEWPORT */}
-      < main className="flex-1 relative flex flex-col bg-transparent overflow-hidden" >
+      < main className="flex-1 min-h-0 relative flex flex-col bg-transparent overflow-hidden" >
         <div className="hidden md:flex w-full flex-shrink-0 border-b border-white/10 bg-gradient-to-r from-amber-950/40 via-[#0a0a0f]/95 to-black/90 backdrop-blur-3xl z-30 p-4 justify-between items-center">
 
           {/* USER INFO HEADER */}
@@ -1274,7 +1274,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-12 scrollbar-hide bg-[#050505]/20 relative">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-12 scrollbar-hide bg-[#050505]/20 relative">
           {error && (
             <div className="mb-12 p-8 glass-panel border-red-500/20 rounded-[2.5rem] flex items-start gap-5 text-red-400 max-w-2xl mx-auto animate-in slide-in-from-top-4 duration-500">
               <div className="p-3 bg-red-500/10 rounded-2xl"><AlertCircle size={28} /></div>
