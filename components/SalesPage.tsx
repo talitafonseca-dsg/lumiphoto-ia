@@ -22,9 +22,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="text-xs font-bold uppercase tracking-wider text-white/70 hover:text-white transition-colors"
+                            className="text-xs font-bold uppercase tracking-wider text-white/70 hover:text-white transition-colors hidden md:block"
                         >
                             Escolha o seu pacote
+                        </button>
+                        <button onClick={onLogin} className="px-5 py-2.5 rounded-full border border-white/20 text-white text-xs font-bold uppercase tracking-wider hover:bg-white/10 transition-all">
+                            Entrar
                         </button>
                         <button onClick={onGetStarted} className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-black uppercase tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-105 active:scale-95">
                             Ver Studio
