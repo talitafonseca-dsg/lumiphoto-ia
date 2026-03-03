@@ -87,12 +87,15 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                     </div>
 
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 max-w-5xl mx-auto">
-                        SUA IMAGEM PROFISSIONAL, <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-600">REINVENTADA PELA IA.</span>
+                        PARE DE USAR FOTOS AMADORAS. <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-600">TENHA RETRATOS PROFISSIONAIS COM IA EM MINUTOS.</span>
                     </h1>
 
                     <p className="text-lg md:text-xl text-white/40 max-w-2xl mx-auto leading-relaxed">
-                        Sem fotógrafo. Sem estúdio. Sem agendamento. Transforme suas selfies simples em retratos de estúdio de alta qualidade em segundos.
+                        Transforme selfies comuns em fotos de estúdio ultra-realistas, prontas para LinkedIn, currículo, redes sociais, aniversário ou perfil profissional.
+                    </p>
+                    <p className="text-sm font-bold text-white/60 uppercase tracking-widest">
+                        Sem estúdio. Sem complicação. Só resultado.
                     </p>
 
                     <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-4">
