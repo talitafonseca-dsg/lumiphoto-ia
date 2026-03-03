@@ -4,10 +4,11 @@ import { Camera, Check, Star, Zap, Image as ImageIcon, Briefcase, Heart, Instagr
 
 interface SalesPageProps {
     onGetStarted: () => void;
+    onViewStudio: () => void;
     onLogin: () => void;
 }
 
-export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) => {
+export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
     const [refEmail, setRefEmail] = useState('');
     const [refLink, setRefLink] = useState('');
     const [refLoading, setRefLoading] = useState(false);
@@ -69,7 +70,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                         <button onClick={onLogin} className="px-5 py-2.5 rounded-full border border-white/20 text-white text-xs font-bold uppercase tracking-wider hover:bg-white/10 transition-all">
                             Entrar
                         </button>
-                        <button onClick={onGetStarted} className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-black uppercase tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-105 active:scale-95">
+                        <button onClick={onViewStudio} className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-black uppercase tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all transform hover:scale-105 active:scale-95">
                             Ver Studio
                         </button>
                     </div>
