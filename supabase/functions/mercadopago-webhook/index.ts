@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const DEFAULT_PASSWORD = "lumi123456";
-const SITE_URL = "https://lumiphotoia.vercel.app";
+const SITE_URL = "https://www.lumiphotoia.online";
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {

@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
 
         const selectedPlan = PLANS[plan];
 
-        const SITE_URL = "https://lumiphotoia.vercel.app";
+        const SITE_URL = "https://www.lumiphotoia.online";
 
         const preferenceData = {
             items: [
