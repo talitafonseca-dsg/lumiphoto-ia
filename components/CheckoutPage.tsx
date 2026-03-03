@@ -19,17 +19,17 @@ const PLANS: Record<string, PlanType> = {
     starter: {
         id: 'starter',
         name: 'Starter',
-        price: 27,
+        price: 37,
         credits: 10,
-        pricePerPhoto: 2.70,
+        pricePerPhoto: 3.70,
         popular: false,
     },
     essencial: {
         id: 'essencial',
         name: 'Essencial',
-        price: 47,
+        price: 57,
         credits: 30,
-        pricePerPhoto: 1.56,
+        pricePerPhoto: 1.90,
         popular: false,
     },
     pro: {

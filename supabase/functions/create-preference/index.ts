@@ -21,13 +21,13 @@ const PLANS: Record<string, PlanInfo> = {
     starter: {
         id: "starter",
         title: "Pacote Starter - 10 Fotos",
-        price: 27,
+        price: 37,
         duration: "Pacote de 10 Fotos",
     },
     essencial: {
         id: "essencial",
         title: "Pacote Essencial - 30 Fotos",
-        price: 47,
+        price: 57,
         duration: "Pacote de 30 Fotos",
     },
     pro: {
