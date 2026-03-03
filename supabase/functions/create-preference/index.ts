@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const { plan, payer_email } = await req.json();
+        const { plan, payer_email, referral_code } = await req.json();
 
         if (!plan || !PLANS[plan]) {
             return new Response(
@@ -86,6 +86,12 @@ Deno.serve(async (req: Request) => {
 
         const SITE_URL = "https://www.lumiphotoia.online";
 
+        // Build external_reference with optional referral_code
+        const externalRef: Record<string, string> = { plan: plan, email: payer_email };
+        if (referral_code) {
+            externalRef.referral_code = referral_code;
+        }
+
         const preferenceData = {
             items: [
                 {
@@ -107,7 +113,7 @@ Deno.serve(async (req: Request) => {
             },
             auto_return: "approved",
             notification_url: `${SUPABASE_URL}/functions/v1/mercadopago-webhook`,
-            external_reference: JSON.stringify({ plan: plan, email: payer_email }),
+            external_reference: JSON.stringify(externalRef),
             statement_descriptor: "LUMIPHOTO IA",
         };
 

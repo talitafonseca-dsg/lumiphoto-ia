@@ -89,13 +89,15 @@ Deno.serve(async (req: Request) => {
         const payment = await paymentResponse.json();
         console.log("Payment details:", JSON.stringify(payment));
 
-        // Extract plan and email from external_reference first
+        // Extract plan, email and referral_code from external_reference
         let planType = "starter";
         let refEmail = "";
+        let referralCode = "";
         try {
             const refData = JSON.parse(payment.external_reference);
             planType = refData.plan || "starter";
             refEmail = refData.email || "";
+            referralCode = refData.referral_code || "";
         } catch {
             console.log("Could not parse external_reference");
         }
@@ -206,6 +208,11 @@ Deno.serve(async (req: Request) => {
 
         console.log(`✅ User ${isNewUser ? 'created' : 'updated'} successfully: ${payerEmail}`);
         console.log(`📋 Plan: ${planType} | Credits: ${creditsToAdd}`);
+
+        // ========== REFERRAL REWARD ==========
+        if (referralCode) {
+            await processReferralReward(referralCode, payerEmail);
+        }
 
         return new Response("OK", { status: 200 });
     } catch (error) {
@@ -330,6 +337,151 @@ async function sendWelcomeEmail(email: string, plan: string, credits: number, is
         }
     } catch (error) {
         console.error('Failed to send welcome email:', error);
+    }
+}
+
+const REFERRAL_REWARD_CREDITS = 3;
+
+async function processReferralReward(referralCode: string, buyerEmail: string) {
+    try {
+        console.log(`🔗 Processing referral code: ${referralCode}`);
+
+        // Find the referral
+        const { data: referral, error: findError } = await supabaseAdmin
+            .from("referrals")
+            .select("*")
+            .eq("referral_code", referralCode)
+            .eq("is_used", false)
+            .single();
+
+        if (findError || !referral) {
+            console.log("Referral not found or already used:", referralCode);
+            return;
+        }
+
+        // Anti-fraud: block self-referral
+        if (referral.referrer_email.toLowerCase() === buyerEmail.toLowerCase()) {
+            console.warn("⚠️ Self-referral blocked:", buyerEmail);
+            return;
+        }
+
+        // Find the referrer user in Supabase Auth
+        const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers();
+        const referrerUser = allUsers?.users?.find(
+            (u) => u.email?.toLowerCase() === referral.referrer_email.toLowerCase()
+        );
+
+        if (referrerUser) {
+            // Add 3 credits to referrer
+            const currentCredits = (referrerUser.user_metadata?.credits as number) || 0;
+            const newTotal = currentCredits + REFERRAL_REWARD_CREDITS;
+
+            await supabaseAdmin.auth.admin.updateUserById(referrerUser.id, {
+                user_metadata: {
+                    ...referrerUser.user_metadata,
+                    credits: newTotal,
+                },
+            });
+
+            console.log(`🎁 Added ${REFERRAL_REWARD_CREDITS} credits to ${referral.referrer_email} (${currentCredits} → ${newTotal})`);
+        } else {
+            console.log(`Referrer ${referral.referrer_email} not found in auth, skipping credit reward`);
+        }
+
+        // Mark referral as used
+        await supabaseAdmin
+            .from("referrals")
+            .update({
+                is_used: true,
+                used_by_email: buyerEmail,
+                credits_rewarded: !!referrerUser,
+                used_at: new Date().toISOString(),
+            })
+            .eq("id", referral.id);
+
+        // Send reward email
+        if (referrerUser) {
+            await sendReferralRewardEmail(referral.referrer_email, buyerEmail);
+        }
+
+        console.log(`✅ Referral ${referralCode} processed successfully`);
+    } catch (error) {
+        console.error("Error processing referral:", error);
+    }
+}
+
+async function sendReferralRewardEmail(referrerEmail: string, buyerEmail: string) {
+    if (!RESEND_API_KEY) {
+        console.warn("RESEND_API_KEY not configured, skipping referral email");
+        return;
+    }
+
+    const maskedBuyer = buyerEmail.replace(/(.{2})(.*)(@.*)/, "$1***$3");
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+        <div style="text-align:center;margin-bottom:32px;">
+            <h1 style="color:#f59e0b;font-size:28px;margin:0;letter-spacing:1px;">LUMIPHOTO<span style="color:#ffffff;">IA</span></h1>
+            <p style="color:#666;font-size:14px;margin-top:8px;">Programa de Indicação</p>
+        </div>
+
+        <div style="background:linear-gradient(145deg,#1a2e1a,#162116);border-radius:16px;padding:32px;border:1px solid rgba(34,197,94,0.3);">
+            <h2 style="color:#ffffff;font-size:22px;margin:0 0 8px 0;">🎉 Você ganhou 3 fotos grátis!</h2>
+            <p style="color:#a0a0a0;font-size:15px;margin:0 0 24px 0;">
+                Alguém comprou pelo seu link de indicação e você foi recompensado!
+            </p>
+
+            <div style="background:rgba(34,197,94,0.1);border-radius:12px;padding:16px;margin-bottom:24px;border:1px solid rgba(34,197,94,0.2);">
+                <p style="color:#22c55e;font-size:13px;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:1px;">Sua Recompensa</p>
+                <p style="color:#ffffff;font-size:24px;font-weight:bold;margin:0;">+3 Fotos Profissionais</p>
+                <p style="color:#a0a0a0;font-size:13px;margin:4px 0 0 0;">Comprador: ${maskedBuyer}</p>
+            </div>
+
+            <p style="color:#a0a0a0;font-size:13px;margin:0 0 24px 0;">
+                Os créditos já foram adicionados à sua conta. Acesse o estúdio e crie suas fotos!
+            </p>
+
+            <div style="text-align:center;">
+                <a href="${SITE_URL}" style="display:inline-block;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:bold;font-size:16px;padding:14px 40px;border-radius:12px;text-decoration:none;">Usar meus créditos →</a>
+            </div>
+        </div>
+
+        <div style="text-align:center;margin-top:32px;">
+            <p style="color:#555;font-size:12px;">© ${new Date().getFullYear()} LumiphotoIA. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    try {
+        const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+                from: 'LumiphotoIA <team@lumiphotoia.online>',
+                to: [referrerEmail],
+                subject: '🎉 Você ganhou 3 fotos grátis no LumiphotoIA!',
+                html: html,
+            }),
+        });
+
+        if (!res.ok) {
+            console.error('Resend referral email error:', await res.text());
+        } else {
+            console.log(`📧 Referral reward email sent to ${referrerEmail}`);
+        }
+    } catch (error) {
+        console.error('Failed to send referral email:', error);
     }
 }
 

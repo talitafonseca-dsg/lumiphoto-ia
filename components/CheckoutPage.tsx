@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, Check, Sparkles, Shield, Clock, Zap, ArrowRight, CreditCard } from 'lucide-react';
 
 interface CheckoutPageProps {
@@ -64,6 +64,15 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Capture referral code from URL or localStorage
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const refCode = params.get('ref');
+        if (refCode) {
+            localStorage.setItem('referral_code', refCode);
+        }
+    }, []);
+
     const handleCheckout = async () => {
         if (!email) {
             setError('Por favor, insira seu email');
@@ -90,6 +99,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
                     body: JSON.stringify({
                         plan: selectedPlan,
                         payer_email: email,
+                        referral_code: localStorage.getItem('referral_code') || undefined,
                     }),
                 }
             );

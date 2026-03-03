@@ -56,7 +56,8 @@ import {
   RectangleHorizontal,
   RectangleVertical,
   Smartphone,
-  Home
+  Home,
+  Gift
 } from 'lucide-react';
 import { CreationType, VisualStyle, StudioStyle, StudioStyleMeta, MascotStyle, MascotStyleMeta, MockupStyle, MockupStyleMeta, AspectRatio, SocialClass, GenerationConfig, GeneratedImage, ColorPalette, UGCEnvironment, UGCModel } from './types';
 import { generateStudioCreative, editGeneratedImage, animateGeneratedImage } from './services/geminiService';
@@ -68,6 +69,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { CheckoutPage } from './components/CheckoutPage';
 import { CheckoutSuccess } from './components/CheckoutSuccess';
 import { SalesPage } from './components/SalesPage';
+import { ReferralModal } from './components/ReferralModal';
 import { jsPDF } from 'jspdf';
 import { saveProject, canCreateProject, getRemainingSlots, getLastPurchaseDate, Project } from './services/projectService';
 import { supabase } from './services/supabaseClient';
@@ -157,6 +159,7 @@ const App: React.FC = () => {
   };
 
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
 
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
@@ -195,6 +198,13 @@ const App: React.FC = () => {
       setAuthLoading(false);
     };
     checkAuth();
+
+    // Capture referral code from URL
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      localStorage.setItem('referral_code', refCode);
+    }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -329,8 +339,14 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!apiKey && credits <= 0) {
-      // If no API key AND no credits, show paywall
+    if (user && credits <= 0) {
+      // Logged-in user without credits: show paywall
+      setShowPaywall(true);
+      return;
+    }
+
+    if (!user && !apiKey) {
+      // Not logged in and no API key: show paywall
       setShowPaywall(true);
       return;
     }
@@ -760,6 +776,14 @@ const App: React.FC = () => {
                 className="p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-all"
               >
                 <Home size={18} />
+              </button>
+
+              <button
+                onClick={() => setShowReferral(true)}
+                title="Indique e Ganhe"
+                className="p-2 hover:bg-emerald-500/10 rounded-lg text-white/20 hover:text-emerald-400 transition-all"
+              >
+                <Gift size={18} />
               </button>
 
               <button
@@ -1742,6 +1766,12 @@ const App: React.FC = () => {
           </div>
         )
       }
+
+      <ReferralModal
+        isOpen={showReferral}
+        onClose={() => setShowReferral(false)}
+        userEmail={user?.email}
+      />
 
     </div >
   );
