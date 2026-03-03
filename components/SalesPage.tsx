@@ -132,6 +132,139 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onLogin }) =
                 </div>
             </header>
 
+            {/* SOCIAL PROOF - TESTIMONIALS */}
+            <section className="py-20 bg-[#050505] border-t border-white/5 relative overflow-hidden">
+                {/* Subtle background */}
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10" />
+
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                    {/* Header */}
+                    <div className="text-center mb-14 space-y-4">
+                        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                            <Star size={12} />
+                            Depoimentos Reais
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight">
+                            Quem usou, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">Aprovou</span>
+                        </h2>
+                        <p className="text-white/30 max-w-md mx-auto text-sm">
+                            Veja o que nossos clientes estão dizendo sobre suas fotos profissionais com IA
+                        </p>
+                    </div>
+
+                    {/* Testimonials Grid */}
+                    <div className="flex gap-5 overflow-x-auto pb-4 md:pb-0 md:grid md:grid-cols-5 md:overflow-visible scrollbar-hide snap-x snap-mandatory">
+                        {/* Testimonial 1 */}
+                        <div className="min-w-[280px] md:min-w-0 snap-center flex flex-col bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 transition-all duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src="/testimonials/dep-1.png" alt="Camila" className="w-12 h-12 rounded-full object-cover border-2 border-amber-500/30" />
+                                <div>
+                                    <p className="text-white font-bold text-sm">Camila Souza</p>
+                                    <p className="text-white/30 text-[10px] uppercase tracking-wider">Maquiadora Profissional</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-0.5 mb-3">
+                                {[...Array(5)].map((_, i) => <Star key={i} size={12} className="text-amber-400 fill-amber-400" />)}
+                            </div>
+                            <p className="text-white/60 text-xs leading-relaxed flex-1">
+                                "Fiz um ensaio profissional que custaria <span className="text-amber-400 font-bold">R$ 800+</span> por menos de R$ 40. As fotos ficaram tão reais que meus clientes perguntaram qual fotógrafo eu contratei!"
+                            </p>
+                            <p className="text-amber-500/50 text-[10px] mt-4 font-bold uppercase tracking-wider">Ensaio Executivo</p>
+                        </div>
+
+                        {/* Testimonial 2 */}
+                        <div className="min-w-[280px] md:min-w-0 snap-center flex flex-col bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 transition-all duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src="/testimonials/dep-2.png" alt="Rafael" className="w-12 h-12 rounded-full object-cover border-2 border-amber-500/30" />
+                                <div>
+                                    <p className="text-white font-bold text-sm">Rafael Mendes</p>
+                                    <p className="text-white/30 text-[10px] uppercase tracking-wider">Personal Trainer</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-0.5 mb-3">
+                                {[...Array(5)].map((_, i) => <Star key={i} size={12} className="text-amber-400 fill-amber-400" />)}
+                            </div>
+                            <p className="text-white/60 text-xs leading-relaxed flex-1">
+                                "Usei para criar fotos pro meu Instagram de personal. Consegui <span className="text-amber-400 font-bold">47 novos seguidores</span> na primeira semana só com as fotos do studio. Qualidade absurda."
+                            </p>
+                            <p className="text-amber-500/50 text-[10px] mt-4 font-bold uppercase tracking-wider">Ensaio Fitness</p>
+                        </div>
+
+                        {/* Testimonial 3 */}
+                        <div className="min-w-[280px] md:min-w-0 snap-center flex flex-col bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 transition-all duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src="/testimonials/dep-3.png" alt="Juliana" className="w-12 h-12 rounded-full object-cover border-2 border-amber-500/30" />
+                                <div>
+                                    <p className="text-white font-bold text-sm">Juliana Costa</p>
+                                    <p className="text-white/30 text-[10px] uppercase tracking-wider">Advogada</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-0.5 mb-3">
+                                {[...Array(5)].map((_, i) => <Star key={i} size={12} className="text-amber-400 fill-amber-400" />)}
+                            </div>
+                            <p className="text-white/60 text-xs leading-relaxed flex-1">
+                                "Precisava de fotos profissionais pro meu LinkedIn urgente. Em <span className="text-amber-400 font-bold">menos de 5 minutos</span> eu tinha 10 opções incríveis. Meu perfil nunca ficou tão profissional!"
+                            </p>
+                            <p className="text-amber-500/50 text-[10px] mt-4 font-bold uppercase tracking-wider">Foto Corporativa</p>
+                        </div>
+
+                        {/* Testimonial 4 */}
+                        <div className="min-w-[280px] md:min-w-0 snap-center flex flex-col bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 transition-all duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src="/testimonials/dep-4.png" alt="Lucas" className="w-12 h-12 rounded-full object-cover border-2 border-amber-500/30" />
+                                <div>
+                                    <p className="text-white font-bold text-sm">Lucas Oliveira</p>
+                                    <p className="text-white/30 text-[10px] uppercase tracking-wider">Designer Gráfico</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-0.5 mb-3">
+                                {[...Array(5)].map((_, i) => <Star key={i} size={12} className="text-amber-400 fill-amber-400" />)}
+                            </div>
+                            <p className="text-white/60 text-xs leading-relaxed flex-1">
+                                "Eu trabalho com design e sei o valor de uma boa foto. A Lumiphoto me impressionou — <span className="text-amber-400 font-bold">qualidade de estúdio real</span>. Já indiquei pra 5 clientes meus."
+                            </p>
+                            <p className="text-amber-500/50 text-[10px] mt-4 font-bold uppercase tracking-wider">Ensaio Criativo</p>
+                        </div>
+
+                        {/* Testimonial 5 */}
+                        <div className="min-w-[280px] md:min-w-0 snap-center flex flex-col bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 transition-all duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src="/testimonials/dep-5.png" alt="Fernanda" className="w-12 h-12 rounded-full object-cover border-2 border-amber-500/30" />
+                                <div>
+                                    <p className="text-white font-bold text-sm">Fernanda Lima</p>
+                                    <p className="text-white/30 text-[10px] uppercase tracking-wider">Empresária</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-0.5 mb-3">
+                                {[...Array(5)].map((_, i) => <Star key={i} size={12} className="text-amber-400 fill-amber-400" />)}
+                            </div>
+                            <p className="text-white/60 text-xs leading-relaxed flex-1">
+                                "Fiz fotos de aniversário que pareciam de estúdio profissional. Minha família inteira ficou chocada. Já fiz <span className="text-amber-400 font-bold">3 sessões diferentes</span> e todas ficaram perfeitas!"
+                            </p>
+                            <p className="text-amber-500/50 text-[10px] mt-4 font-bold uppercase tracking-wider">Ensaio Aniversário</p>
+                        </div>
+                    </div>
+
+                    {/* Social proof counter */}
+                    <div className="flex items-center justify-center gap-8 mt-12 pt-8 border-t border-white/5">
+                        <div className="text-center">
+                            <p className="text-2xl font-black text-amber-400">10.000+</p>
+                            <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Fotos Geradas</p>
+                        </div>
+                        <div className="w-px h-10 bg-white/10" />
+                        <div className="text-center">
+                            <p className="text-2xl font-black text-amber-400">4.9</p>
+                            <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Avaliação Média</p>
+                        </div>
+                        <div className="w-px h-10 bg-white/10" />
+                        <div className="text-center">
+                            <p className="text-2xl font-black text-amber-400">98%</p>
+                            <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Satisfação</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* TRANSFORMATION SHOWCASE */}
             <section className="py-24 bg-gradient-to-b from-[#050505] via-[#080808] to-[#050505] border-t border-white/5 relative overflow-hidden">
                 {/* Background effects */}
