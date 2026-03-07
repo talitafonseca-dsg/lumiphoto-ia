@@ -1281,7 +1281,7 @@ const App: React.FC = () => {
             {(studioRefImage && !isCreativeBackground) && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 text-center">
-                  âš¡ Imagem de referÃªncia ativa - presets desativados
+                  ⚡ Imagem de referência ativa - presets desativados
                 </p>
               </div>
             )}
@@ -1295,7 +1295,7 @@ const App: React.FC = () => {
                   <div className="p-1.5 bg-amber-500/20 rounded-lg text-amber-400"><AlertCircle size={14} /></div>
                   <p className="text-[10px] text-amber-200/80 font-medium leading-tight">
                     <span className="font-bold text-amber-400 block mb-0.5">Estilo Personalizado Ativo</span>
-                    Os presets abaixo foram desativados para usar sua referÃªncia visual.
+                    Os presets abaixo foram desativados para usar sua referência visual.
                   </p>
                 </div>
               )}
