@@ -299,37 +299,42 @@ NEGATIVE PROMPT FOR PRODUCT: Credit card machine, payment terminal, calculator, 
         if (referenceDescription) {
           // SUCCESS: We have a text description — use it instead of pixels
 
-          // Check if there's also a product image
+          // Check if there's also a product image — analyze it as text too
+          // (product image may contain a person modeling the clothing = identity confusion)
           const hasProduct = !!productImage;
-          const productAsset = hasProduct ? extractBase64(productImage!) : null;
+          let productDescription = '';
+          if (hasProduct) {
+            console.log('🔍 Phase 1b: Analyzing product image...');
+            productDescription = await analyzeReferenceImage(productImage!, authToken);
+            console.log('📝 Product description:', productDescription ? productDescription.substring(0, 200) + '...' : 'FAILED');
+          }
 
           parts.push({
             text: `=== TASK: STYLE-TRANSFER PHOTOGRAPHY ===
-${hasProduct ? `You will receive TWO images: a PRODUCT image (clothing/item) and a SUBJECT image (the person).` : `You will receive ONE image of a person (THE SUBJECT).`}
-Below is a DETAILED TEXT DESCRIPTION of a style reference for the environment, lighting, and pose.
+You will receive ONE image of a person (THE SUBJECT).
+Below are TEXT DESCRIPTIONS that define what the output photo should look like.
 
-YOUR JOB: Create a NEW professional photo of THE SUBJECT ${hasProduct ? 'WEARING THE PRODUCT (clothing from the product image)' : 'wearing the described outfit'}, 
-in the described lighting/environment, with a similar pose.
+YOUR JOB: Create a NEW professional photo of THE SUBJECT (the person from the image below).
 
-=== STYLE REFERENCE DESCRIPTION (use for ENVIRONMENT, LIGHTING, and POSE) ===
+${hasProduct && productDescription ? `=== PRODUCT/CLOTHING DESCRIPTION (THE SUBJECT MUST WEAR THIS) ===
+${productDescription}
+=== END PRODUCT DESCRIPTION ===
+
+=== STYLE REFERENCE DESCRIPTION (use for ENVIRONMENT, LIGHTING, and POSE only) ===
 ${referenceDescription}
 === END STYLE REFERENCE ===
 
-${hasProduct ? `IMPORTANT: The CLOTHING in the output must come from the PRODUCT IMAGE provided below — NOT from the style reference description.
-The style reference above is ONLY for the environment, lighting, pose, and mood.` : ''}
-IMPORTANT: The person in the output MUST be the person from the ${hasProduct ? 'SUBJECT' : ''} image provided below.
-Use their exact face, hair, skin tone, body type, and age.`
-          });
+CLOTHING PRIORITY: Dress the subject in the outfit described in the PRODUCT section above.
+ENVIRONMENT: Use the environment, lighting, pose, and mood from the STYLE REFERENCE section above.`
+                : `=== STYLE REFERENCE DESCRIPTION (apply this to the subject) ===
+${referenceDescription}
+=== END STYLE REFERENCE ===
 
-          // If product exists, send it as an image (it's clothing, not a person — safe)
-          if (productAsset) {
-            parts.push({
-              text: `[THE PRODUCT — This is the clothing/item the subject must WEAR in the output]
-Analyze this garment: type, color, fabric, pattern, cut, style details.
-The subject must be wearing THIS EXACT item in the final photo.`
-            });
-            parts.push({ inlineData: productAsset });
-          }
+Apply the CLOTHING, LIGHTING, POSE, and BACKGROUND from the style description above.`}
+
+CRITICAL: The person in the output MUST be the person from the image provided below.
+Use their exact face, hair, skin tone, body type, and age. No other person's face is allowed.`
+          });
         } else {
           // FALLBACK: Analysis failed — send reference with minimal instructions
           const ref = extractBase64(referenceImage);
@@ -349,11 +354,9 @@ Apply those style elements to the person in the next image.]`
           const asset = extractBase64(customModelImage);
           if (asset) {
             parts.push({
-              text: `[THE SUBJECT — Create the output photo of THIS person]
-This is the REAL PERSON for the final photo.
-Preserve: exact face, skin tone, hair style/color, expression, body type, age.
-${productImage ? 'Dress this person in THE PRODUCT shown in the product image above.' : 'Dress this person in the outfit described in the STYLE REFERENCE above.'}
-Place them in the lighting and environment from the style reference.` });
+              text: `[THE SUBJECT — THIS is the person for the output photo]
+This is the ONLY person allowed in the output. Use their exact face, hair, skin tone, body type, age.
+Dress them in the outfit described above and place in the environment described above.` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
@@ -364,10 +367,9 @@ Place them in the lighting and environment from the style reference.` });
           if (asset) {
             const label = hasSubject
               ? `[Additional angle of THE SUBJECT — use to better understand their facial features.]`
-              : `[THE SUBJECT — Create the output photo of THIS person]
-This is the REAL PERSON for the final photo.
-Preserve: exact face, skin tone, hair style/color, expression, body type, age.
-${productImage ? 'Dress this person in THE PRODUCT shown in the product image above.' : 'Dress this person in the outfit from the STYLE REFERENCE description above.'}`;
+              : `[THE SUBJECT — THIS is the person for the output photo]
+This is the ONLY person allowed in the output. Use their exact face, hair, skin tone, body type, age.
+Dress them in the outfit described above and place in the environment described above.`;
 
             parts.push({ text: label });
             parts.push({ inlineData: asset });
