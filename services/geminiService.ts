@@ -63,6 +63,42 @@ export const animateGeneratedImage = async (imageUrl: string): Promise<string> =
 };
 
 
+// Analyze a reference image using Gemini text model to get a text description
+// This avoids sending reference pixels to the image generator which causes identity confusion
+const analyzeReferenceImage = async (referenceDataUrl: string, authToken?: string): Promise<string> => {
+  try {
+    const parts = referenceDataUrl.split(',');
+    if (parts.length < 2) return '';
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const base64Data = parts[1];
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/analyze-reference`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ imageData: base64Data, mimeType: mime }),
+    });
+
+    if (!response.ok) {
+      console.warn('Reference analysis failed, falling back to image mode');
+      return '';
+    }
+
+    const data = await response.json();
+    return data.description || '';
+  } catch (error) {
+    console.warn('Reference analysis error, falling back:', error);
+    return '';
+  }
+};
+
 
 const callImageApi = async (
   prompt: string,
@@ -245,83 +281,77 @@ NEGATIVE PROMPT FOR PRODUCT: Credit card machine, payment terminal, calculator, 
 
       if (referenceImage) {
         // ============================================
-        // REFERENCE MODE: SUBJECT-LAST PARADIGM
+        // REFERENCE MODE: TEXT-DESCRIPTION APPROACH
         // ============================================
-        // KEY INSIGHT: Send the REFERENCE image FIRST and the SUBJECT image LAST.
-        // AI models give more weight to the LAST image in context (recency bias).
-        // This ensures the subject's face is the dominant identity in the output.
+        // ARCHITECTURE: Instead of sending the reference image pixels to the generator
+        // (which causes the AI to reproduce the reference person's face/body),
+        // we FIRST analyze the reference with Gemini text model to get a description,
+        // then send ONLY the subject's photo + text description to the generator.
+        // This way the generator only sees ONE face = the subject. No identity confusion.
 
-        const ref = extractBase64(referenceImage);
         const isCreativeBg = type === CreationType.CREATIVE_BACKGROUND;
 
-        // STEP 1: MASTER TASK (short, positive framing — tell AI what TO DO, not what NOT to do)
-        parts.push({
-          text: `=== TASK: STYLE-TRANSFER PHOTOGRAPHY ===
-You will receive TWO images in order:
-  FIRST IMAGE = "STYLE SOURCE" (for clothing, lighting, pose, and mood inspiration)
-  LAST IMAGE = "THE SUBJECT" (the person whose face and identity MUST appear in the final output)
+        // PHASE 1: Analyze the reference image to get a text description
+        console.log('🔍 Phase 1: Analyzing reference image...');
+        const referenceDescription = await analyzeReferenceImage(referenceImage, authToken);
+        console.log('📝 Reference description:', referenceDescription ? referenceDescription.substring(0, 200) + '...' : 'FAILED');
 
-YOUR JOB: Create a NEW professional photo of THE SUBJECT (last image) styled with the look from the STYLE SOURCE (first image).
+        if (referenceDescription) {
+          // SUCCESS: We have a text description — use it instead of pixels
+          parts.push({
+            text: `=== TASK: STYLE-TRANSFER PHOTOGRAPHY ===
+You will receive ONE image of a person (THE SUBJECT).
+Below is a DETAILED TEXT DESCRIPTION of a style reference that you must apply to this person.
 
-Think of it as: "A photographer saw the style source and recreated that same look with a different person (the subject)."
-=== END TASK ===`
-        });
+YOUR JOB: Create a NEW professional photo of THE SUBJECT wearing the described outfit, 
+in the described lighting/environment, with a similar pose.
 
-        // STEP 2: Send REFERENCE IMAGE FIRST (style source — AI will process this first)
-        if (ref) {
-          if (isCreativeBg) {
+=== STYLE REFERENCE DESCRIPTION (apply this to the subject) ===
+${referenceDescription}
+=== END STYLE REFERENCE ===
+
+IMPORTANT: The person in the output MUST be the person from the image provided below.
+Use their exact face, hair, skin tone, body type, and age.
+Only apply the CLOTHING, LIGHTING, POSE, and BACKGROUND from the style description above.`
+          });
+        } else {
+          // FALLBACK: Analysis failed — send reference with minimal instructions
+          const ref = extractBase64(referenceImage);
+          if (ref) {
             parts.push({
-              text: `[STYLE SOURCE — Visual Identity Reference]
-Extract the brand colors, shapes, patterns, and "vibe" from this image.
-Create a NEW professional background inspired by these visual assets.
-DO NOT copy. RE-CREATE the style.`
+              text: `[STYLE REFERENCE — Extract clothing, lighting, and pose from this image. 
+Apply those style elements to the person in the next image.]`
             });
-          } else {
-            parts.push({
-              text: `[STYLE SOURCE — Use for Inspiration ONLY]
-Look at this image and extract:
-- CLOTHING: What type of outfit is shown? What color, fabric, pattern, and style?
-- LIGHTING: What is the lighting setup? (warm/cool, direction, intensity)
-- POSE: What kind of pose or body language is shown?
-- BACKGROUND: What environment or backdrop is used?
-- MOOD: What is the overall aesthetic feeling?
-
-You will use these style elements to dress and photograph THE SUBJECT (coming next).
-Any person shown here is just modeling the outfit — they are NOT the subject.`
-            });
+            parts.push({ inlineData: ref });
           }
-          parts.push({ inlineData: ref });
         }
 
-        // STEP 3: Send SUBJECT IMAGE LAST (recency bias — this is who must appear)
+        // PHASE 2: Send ONLY the subject's image (no competing faces)
         let hasSubject = false;
 
-        // 3a. Custom Model (Priority)
         if (customModelImage) {
           const asset = extractBase64(customModelImage);
           if (asset) {
             parts.push({
-              text: `[THE SUBJECT — This Person MUST Appear in the Output]
+              text: `[THE SUBJECT — Create the output photo of THIS person]
 This is the REAL PERSON for the final photo.
-Study this face: face shape, nose, eyes, skin tone, hair style/color, expression.
-The output image must show THIS EXACT PERSON wearing the outfit and in the style from the STYLE SOURCE above.
-Preserve: face, identity, skin tone, hair, expression, body type, age.` });
+Preserve: exact face, skin tone, hair style/color, expression, body type, age.
+Dress this person in the outfit described in the STYLE REFERENCE above.
+Place them in the lighting and environment described above.` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
         }
 
-        // 3b. Primary Image (Secondary or Fallback)
         if (primaryImage && primaryImage !== customModelImage) {
           const asset = extractBase64(primaryImage);
           if (asset) {
             const label = hasSubject
               ? `[Additional angle of THE SUBJECT — use to better understand their facial features.]`
-              : `[THE SUBJECT — This Person MUST Appear in the Output]
+              : `[THE SUBJECT — Create the output photo of THIS person]
 This is the REAL PERSON for the final photo.
-Study this face: face shape, nose, eyes, skin tone, hair style/color, expression.
-The output must show THIS EXACT PERSON styled with the look from the STYLE SOURCE.
-Preserve: face, identity, skin tone, hair, expression, body type, age.`;
+Preserve: exact face, skin tone, hair style/color, expression, body type, age.
+Dress this person in the outfit from the STYLE REFERENCE description above.`;
 
             parts.push({ text: label });
             parts.push({ inlineData: asset });
@@ -335,7 +365,7 @@ Preserve: face, identity, skin tone, hair, expression, body type, age.`;
           if (isPPTMode) {
             parts.push({
               text: `[NO SUBJECT PROVIDED - CLEAN BACKGROUND MODE]
-DO NOT include any person. Create only the background/design using the style source above.`
+DO NOT include any person. Create only the background/design using the style description above.`
             });
           } else {
             const avatarPrompts = [
@@ -347,20 +377,10 @@ DO NOT include any person. Create only the background/design using the style sou
 
             parts.push({
               text: `[NO SUBJECT PROVIDED — Generate this person: ${specificAvatar}]
-Style them using the look from the STYLE SOURCE above.`
+Style them using the STYLE REFERENCE description above.`
             });
           }
         }
-
-        // STEP 4: Final instruction to reinforce the subject
-        parts.push({
-          text: `=== FINAL INSTRUCTION ===
-Generate a NEW professional photo where:
-- The PERSON is from the LAST image above (the subject). Use their exact face, hair, and body.
-- The STYLE (outfit, lighting, pose, mood) is inspired by the FIRST image above (the style source).
-- This is a brand new photo — not a copy of either input image.
-- Output must be clean: no watermarks, no unwanted text.`
-        });
       } else if (customModelImage) {
         const asset = extractBase64(customModelImage);
         if (asset) {
