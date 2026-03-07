@@ -250,21 +250,27 @@ NEGATIVE PROMPT FOR PRODUCT: Credit card machine, payment terminal, calculator, 
 ROLE: You are an expert Digital Compositor and Art Director.
 
 INPUTS:
-- IMAGE 1: The "HERO TALENT" (The person who MUST appear)
-- IMAGE 2: The "STYLE REFERENCE" (Could be: clothing, background, styled photo, or product)
+- IMAGE 1: The "HERO TALENT" — This is the REAL PERSON whose face and identity MUST appear in the output.
+- IMAGE 2: The "STYLE REFERENCE" — This is ONLY for visual inspiration (clothing, background, lighting, pose). NEVER use the person/face from Image 2.
 
-GOAL:
-Analyze IMAGE 2 to determine what it contains, then create a professional photo
-of the HERO TALENT (Image 1) incorporating the reference appropriately.
+=== IDENTITY HIERARCHY (ABSOLUTE TOP PRIORITY) ===
+PRIORITY #1 (NON-NEGOTIABLE): The FACE in the output MUST be the face from IMAGE 1.
+PRIORITY #2: The STYLE (clothing, lighting, pose, mood) should be inspired by IMAGE 2.
+PRIORITY #3: The output must be a NEW professional photo, not a copy of either image.
+
+IF IMAGE 2 CONTAINS A PERSON:
+- That person is a MANNEQUIN/STYLE DUMMY. They exist ONLY to show the clothing/style.
+- DELETE that person's face, body shape, hair, and identity from your output.
+- REPLACE them entirely with the person from Image 1.
+- If the output face resembles Image 2's person in ANY way → THE GENERATION IS FAILED.
 
 EXECUTION STEPS:
-1. CLASSIFY Image 2: Is it clothing/outfit? A background? A styled photo? A product?
-2. APPLY the reference: If clothing → dress the person. If background → place them there. If styled photo → copy the style.
-3. POST-PRODUCTION: Add the text overlay specified in the prompt.
+1. MEMORIZE the face from Image 1 (face shape, nose, eyes, skin tone, hair, expression).
+2. CLASSIFY Image 2: Is it clothing/outfit? A background? A styled photo? A product?
+3. APPLY the reference style to Image 1's person. NEVER swap the identity.
+4. VERIFY: Does the output face match Image 1? If not → REGENERATE.
 
-CRITICAL RULES:
-- IDENTITY: Must equal Image 1. DO NOT use the face from Image 2.
-- TEXT: IGNORE text in Image 2. Use ONLY text from the prompt.
+CRITICAL: TEXT in Image 2 must be IGNORED. Use ONLY text from the prompt.
 === END MASTER TASK ===`
         });
 
@@ -276,9 +282,26 @@ CRITICAL RULES:
           const asset = extractBase64(customModelImage);
           if (asset) {
             parts.push({
-              text: `[IMAGE 1 - PRIMARY SUBJECT IDENTITY]
->>> THIS IS THE MAIN FACE/IDENTITY TO USE <<<
-Preserve: face, skin tone, hair, facial features, age, ethnicity, EXACT facial expression (do NOT change expression or force a smile).` });
+              text: `[IMAGE 1 - ⚠️ PRIMARY SUBJECT — THE ONLY FACE ALLOWED IN OUTPUT ⚠️]
+>>> THIS IS THE REAL PERSON. MEMORIZE THIS FACE. <<<
+
+=== FACE DNA CARD (ANALYZE AND LOCK BEFORE GENERATING) ===
+STEP 1: Study this face carefully. Identify what makes this person UNIQUE:
+- FACE SHAPE: jawline, chin, forehead (round? angular? V-shaped?)
+- NOSE: bridge width, tip shape, nostril size
+- EYES: shape, spacing, color, lid crease
+- SKIN TONE: exact shade — NEVER lighten, darken, or change undertone
+- HAIR: style, color, texture, length, parting
+- EXPRESSION: keep IDENTICAL — do NOT change mouth state or add/remove smile
+- DISTINGUISHING MARKS: moles, freckles, scars, glasses
+
+STEP 2: LOCK these features. They are NON-NEGOTIABLE in the output.
+STEP 3: When generating, CHECK that the output face matches these locked features.
+
+ABSOLUTE RULE: If you see a DIFFERENT person in Image 2, that person is a STYLE MODEL ONLY.
+You must NEVER use Image 2's face. The output face MUST match THIS image (Image 1).
+
+RECOGNITION TEST: The real person must look at the output and say "That's me!"` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
@@ -386,13 +409,19 @@ If Image 2 shows a location, studio setup, nature scene, office, or background e
 - The person in Image 2 (if any) is a STYLE MODEL only. DO NOT DRAW THEM.
 - REPLACE any person in Image 2 with the person from Image 1.
 
-CATEGORY C — STYLED PHOTO WITH A PERSON:
-If Image 2 shows a person in a specific professional photo style (headshot, editorial, corporate, etc.):
-- ACTION: Re-create the SAME photo style using the person from Image 1.
-- EXTRACT: Lighting setup, camera angle, pose type, color grading, clothing style, and overall aesthetic.
-- DRESS: The person from Image 1 in a SIMILAR outfit (same type/style, adapted to their body).
-- DO NOT use the face from Image 2. Use ONLY the face from Image 1.
-- GOAL: "Same photographer, same studio, different person."
+CATEGORY C — STYLED PHOTO WITH A PERSON (MOST COMMON CASE):
+If Image 2 shows a person in a specific professional photo style (headshot, editorial, corporate, fashion, etc.):
+- ⚠️ WARNING: Image 2 contains a person but that person is NOT the subject. They are a STYLE DUMMY.
+- ACTION: COMPLETELY DISCARD the person from Image 2 (their face, body, hair, identity — ALL OF IT).
+- ACTION: Re-create the SAME photo style (lighting, camera angle, pose type, color grading, clothing style) but with the PERSON FROM IMAGE 1.
+- DRESS: The person from Image 1 in the SAME TYPE of outfit shown in Image 2 (same color, style, cut).
+- POSE: Mimic a SIMILAR pose from Image 2 but adapted naturally to Image 1's person.
+- LIGHTING: Copy the exact lighting setup from Image 2.
+- FACE: Must be 100% from Image 1. ZERO features from Image 2's person.
+- HAIR: Must match Image 1's hair. Do NOT use Image 2's hairstyle.
+- BODY TYPE: Must match Image 1's body type. Do NOT use Image 2's body.
+- GOAL: Imagine the same photographer took Image 1's person to the same studio and dressed them similarly.
+- FAILURE TEST: If the output person looks like Image 2's person → IMMEDIATELY REGENERATE.
 
 CATEGORY D — PRODUCT/OBJECT/LOGO:
 If Image 2 shows a product, logo, brand element, or physical object:
@@ -420,10 +449,12 @@ MANDATORY: The output MUST be completely CLEAN and PRISTINE.
 NO watermarks, NO unwanted text, NO "Designi", NO diagonal patterns.
 Quality: Professional photography or Adobe Illustrator vector art quality.${showReferencePixels ? `
 
-[IMAGE 2 - REFERENCE INPUT]
+[IMAGE 2 - REFERENCE INPUT — ⚠️ STYLE ONLY, NOT IDENTITY ⚠️]
 >>> ANALYZE this image using the categories above (A/B/C/D).
 >>> APPLY the corresponding action to create the output.
->>> SOLE SUBJECT: The person from Image 1.
+>>> IF THIS IMAGE CONTAINS A PERSON: That person is a MANNEQUIN. DELETE their face and identity. Use ONLY Image 1's face.
+>>> EXTRACT ONLY: clothing style, lighting, pose concept, color palette, background mood.
+>>> SOLE SUBJECT IN OUTPUT: The person from Image 1. NO EXCEPTIONS.
 >>> IGNORE any text or watermarks in this image.` : ''}`
           });
 
