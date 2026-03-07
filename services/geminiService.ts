@@ -244,79 +244,84 @@ NEGATIVE PROMPT FOR PRODUCT: Credit card machine, payment terminal, calculator, 
       // AI should CREATE A NEW IMAGE with user's identity in reference's style
 
       if (referenceImage) {
-        // MASTER TASK - Provide context BEFORE images (same pattern as Product-First mode)
+        // ============================================
+        // REFERENCE MODE: SUBJECT-LAST PARADIGM
+        // ============================================
+        // KEY INSIGHT: Send the REFERENCE image FIRST and the SUBJECT image LAST.
+        // AI models give more weight to the LAST image in context (recency bias).
+        // This ensures the subject's face is the dominant identity in the output.
+
+        const ref = extractBase64(referenceImage);
+        const isCreativeBg = type === CreationType.CREATIVE_BACKGROUND;
+
+        // STEP 1: MASTER TASK (short, positive framing — tell AI what TO DO, not what NOT to do)
         parts.push({
-          text: `=== MASTER TASK: COMPOSITE PHOTOGRAPHY & DESIGN ===
-ROLE: You are an expert Digital Compositor and Art Director.
+          text: `=== TASK: STYLE-TRANSFER PHOTOGRAPHY ===
+You will receive TWO images in order:
+  FIRST IMAGE = "STYLE SOURCE" (for clothing, lighting, pose, and mood inspiration)
+  LAST IMAGE = "THE SUBJECT" (the person whose face and identity MUST appear in the final output)
 
-INPUTS:
-- IMAGE 1: The "HERO TALENT" — This is the REAL PERSON whose face and identity MUST appear in the output.
-- IMAGE 2: The "STYLE REFERENCE" — This is ONLY for visual inspiration (clothing, background, lighting, pose). NEVER use the person/face from Image 2.
+YOUR JOB: Create a NEW professional photo of THE SUBJECT (last image) styled with the look from the STYLE SOURCE (first image).
 
-=== IDENTITY HIERARCHY (ABSOLUTE TOP PRIORITY) ===
-PRIORITY #1 (NON-NEGOTIABLE): The FACE in the output MUST be the face from IMAGE 1.
-PRIORITY #2: The STYLE (clothing, lighting, pose, mood) should be inspired by IMAGE 2.
-PRIORITY #3: The output must be a NEW professional photo, not a copy of either image.
-
-IF IMAGE 2 CONTAINS A PERSON:
-- That person is a MANNEQUIN/STYLE DUMMY. They exist ONLY to show the clothing/style.
-- DELETE that person's face, body shape, hair, and identity from your output.
-- REPLACE them entirely with the person from Image 1.
-- If the output face resembles Image 2's person in ANY way → THE GENERATION IS FAILED.
-
-EXECUTION STEPS:
-1. MEMORIZE the face from Image 1 (face shape, nose, eyes, skin tone, hair, expression).
-2. CLASSIFY Image 2: Is it clothing/outfit? A background? A styled photo? A product?
-3. APPLY the reference style to Image 1's person. NEVER swap the identity.
-4. VERIFY: Does the output face match Image 1? If not → REGENERATE.
-
-CRITICAL: TEXT in Image 2 must be IGNORED. Use ONLY text from the prompt.
-=== END MASTER TASK ===`
+Think of it as: "A photographer saw the style source and recreated that same look with a different person (the subject)."
+=== END TASK ===`
         });
 
-        // Send User Images (Primary Subject)
+        // STEP 2: Send REFERENCE IMAGE FIRST (style source — AI will process this first)
+        if (ref) {
+          if (isCreativeBg) {
+            parts.push({
+              text: `[STYLE SOURCE — Visual Identity Reference]
+Extract the brand colors, shapes, patterns, and "vibe" from this image.
+Create a NEW professional background inspired by these visual assets.
+DO NOT copy. RE-CREATE the style.`
+            });
+          } else {
+            parts.push({
+              text: `[STYLE SOURCE — Use for Inspiration ONLY]
+Look at this image and extract:
+- CLOTHING: What type of outfit is shown? What color, fabric, pattern, and style?
+- LIGHTING: What is the lighting setup? (warm/cool, direction, intensity)
+- POSE: What kind of pose or body language is shown?
+- BACKGROUND: What environment or backdrop is used?
+- MOOD: What is the overall aesthetic feeling?
+
+You will use these style elements to dress and photograph THE SUBJECT (coming next).
+Any person shown here is just modeling the outfit — they are NOT the subject.`
+            });
+          }
+          parts.push({ inlineData: ref });
+        }
+
+        // STEP 3: Send SUBJECT IMAGE LAST (recency bias — this is who must appear)
         let hasSubject = false;
 
-        // 1. Custom Model (Priority)
+        // 3a. Custom Model (Priority)
         if (customModelImage) {
           const asset = extractBase64(customModelImage);
           if (asset) {
             parts.push({
-              text: `[IMAGE 1 - ⚠️ PRIMARY SUBJECT — THE ONLY FACE ALLOWED IN OUTPUT ⚠️]
->>> THIS IS THE REAL PERSON. MEMORIZE THIS FACE. <<<
-
-=== FACE DNA CARD (ANALYZE AND LOCK BEFORE GENERATING) ===
-STEP 1: Study this face carefully. Identify what makes this person UNIQUE:
-- FACE SHAPE: jawline, chin, forehead (round? angular? V-shaped?)
-- NOSE: bridge width, tip shape, nostril size
-- EYES: shape, spacing, color, lid crease
-- SKIN TONE: exact shade — NEVER lighten, darken, or change undertone
-- HAIR: style, color, texture, length, parting
-- EXPRESSION: keep IDENTICAL — do NOT change mouth state or add/remove smile
-- DISTINGUISHING MARKS: moles, freckles, scars, glasses
-
-STEP 2: LOCK these features. They are NON-NEGOTIABLE in the output.
-STEP 3: When generating, CHECK that the output face matches these locked features.
-
-ABSOLUTE RULE: If you see a DIFFERENT person in Image 2, that person is a STYLE MODEL ONLY.
-You must NEVER use Image 2's face. The output face MUST match THIS image (Image 1).
-
-RECOGNITION TEST: The real person must look at the output and say "That's me!"` });
+              text: `[THE SUBJECT — This Person MUST Appear in the Output]
+This is the REAL PERSON for the final photo.
+Study this face: face shape, nose, eyes, skin tone, hair style/color, expression.
+The output image must show THIS EXACT PERSON wearing the outfit and in the style from the STYLE SOURCE above.
+Preserve: face, identity, skin tone, hair, expression, body type, age.` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
         }
 
-        // 2. Primary Image (Secondary or Fallback)
+        // 3b. Primary Image (Secondary or Fallback)
         if (primaryImage && primaryImage !== customModelImage) {
           const asset = extractBase64(primaryImage);
           if (asset) {
             const label = hasSubject
-              ? `[IMAGE 1B - SECONDARY REFERENCE FOR SUBJECT]
->>> Use this additional angle/photo to better understand the facial features of the person in Image 1.`
-              : `[IMAGE 1 - THE PERSON TO APPEAR IN OUTPUT]
->>> THIS IS THE FACE/IDENTITY TO USE <<<
-Preserve: face, skin tone, hair, facial features, age, ethnicity, EXACT facial expression (do NOT change expression or force a smile)`;
+              ? `[Additional angle of THE SUBJECT — use to better understand their facial features.]`
+              : `[THE SUBJECT — This Person MUST Appear in the Output]
+This is the REAL PERSON for the final photo.
+Study this face: face shape, nose, eyes, skin tone, hair style/color, expression.
+The output must show THIS EXACT PERSON styled with the look from the STYLE SOURCE.
+Preserve: face, identity, skin tone, hair, expression, body type, age.`;
 
             parts.push({ text: label });
             parts.push({ inlineData: asset });
@@ -325,144 +330,37 @@ Preserve: face, skin tone, hair, facial features, age, ethnicity, EXACT facial e
         }
 
         if (!hasSubject) {
-          // PPT MODE SPECIAL HANDLING:
-          // If we are in CREATIVE_BACKGROUND mode and no subject is provided (Clean Slides),
-          // we MUST NOT generate a random person.
           const isPPTMode = type === CreationType.CREATIVE_BACKGROUND;
 
           if (isPPTMode) {
             parts.push({
-              text: `[NO MODEL PROVIDED - CLEAN SLIDE MODE]
-              >>> CRITICAL: DO NOT INCLUDE ANY PERSON, FACE, OR HUMAN FIGURE.
-              >>> DESIGN ONLY: Use abstract shapes, geometric elements, and 3D icons.
-              >>> PLACEHOLDER REQUIREMENT: You MUST include a GRAY RECTANGLE FRAME (Placeholder) where the user can insert a photo later.
-              >>> NEGATIVE PROMPT: Humans, people, face, woman, man, girl, boy, skin, eyes, hands, body.`
+              text: `[NO SUBJECT PROVIDED - CLEAN BACKGROUND MODE]
+DO NOT include any person. Create only the background/design using the style source above.`
             });
           } else {
-            // LEGACY FALLBACK FOR SOCIAL POSTS (Generate Avatar if missing)
-            // DYNAMIC AVATAR GENERATOR (Per Variation) to force divergence
             const avatarPrompts = [
-              "A BLACK BRAZILIAN GIRL, curly afro hair, wearing an ORANGE dress. Joyful smile. Holding school supplies.",
+              "A BLACK BRAZILIAN GIRL, curly afro hair, wearing an ORANGE dress. Joyful smile.",
               "A ASIAN BRAZILIAN GIRL, straight black hair with bangs, wearing a PINK sweater. Friendly expression.",
               "A BRAZILIAN TEENAGER GIRL (14-16 years old), long straight brown hair, wearing a PURPLE backpack and WHITE blouse. Confident smile."
             ];
             const specificAvatar = avatarPrompts[variationIndex - 1] || avatarPrompts[0];
 
             parts.push({
-              text: `[NO MODEL PROVIDED - GENERATE UNIQUE AVATAR]
-               >>> CRITICAL: DO NOT USE THE PERSON FROM IMAGE 2.
-               >>> TARGET AVATAR: ${specificAvatar}
-               >>> INSTRUCTION: The output person MUST MATCH the 'TARGET AVATAR' description above.
-               >>> DIVERGENCE CHECK: If the output looks like the person in Image 2, the task is FAILED.`
+              text: `[NO SUBJECT PROVIDED — Generate this person: ${specificAvatar}]
+Style them using the look from the STYLE SOURCE above.`
             });
           }
         }
 
-        // Send Reference Image as IMAGE 2 (Style Reference)
-        // ONLY send actual pixels for V3 which was clean. V1/V2 get text-only description
-        const ref = extractBase64(referenceImage);
-        if (ref) {
-          // V1 and V2 worked clean without pixels, V3 had watermarks with pixels
-          // Solution: NO variation receives the contaminated pixels
-          // Optimization: Always send reference pixels if user provided them
-          const showReferencePixels = true;
-
-          // DYNAMIC PROMPT FOR REFERENCE IMAGE
-          const isCreativeBg = type === CreationType.CREATIVE_BACKGROUND;
-
-          let stylePrompt = "";
-          if (isCreativeBg) {
-            stylePrompt = `[VISUAL IDENTITY SOURCE]
-BACKGROUND SOURCE: IMAGE 2 (Reference/Logo).
-INSTRUCTION: You must act as a Brand Designer. Analyze Image 2 to extract the EXACT Brand Assets.
-1. COLORS: Extract the dominant brand colors from Image 2.
-2. SHAPES: Apply the geometric shapes, lines, or patterns found in Image 2.
-3. STYLE: Match the "vibe" (e.g., Tech, Organic, Minimalist, Luxury) of Image 2.
-
-EXECUTION: Create a new professional presentation background using these extracted assets.
-DO NOT simply crop the image. RE-CREATE the style in a high-resolution 3D or Vector render.
-MANDATORY: Leave negative space for text (PowerPoint style).`;
-          } else {
-            // INTELLIGENT REFERENCE ANALYSIS - AI determines what the reference contains
-            stylePrompt = `[IMAGE 2 - INTELLIGENT STYLE REFERENCE]
->>> STEP 1: ANALYZE IMAGE 2 AND CLASSIFY IT <<<
-
-Before generating, you MUST determine what Image 2 contains:
-
-CATEGORY A — CLOTHING/OUTFIT/FASHION ITEM:
-If Image 2 shows clothing (dress, suit, shirt, pants, uniform, costume, outfit on a mannequin, flat-lay clothing, jumpsuit, accessories, shoes, etc.):
-- ACTION: ANALYZE the garment — identify the type, color, fabric, pattern, cut, and style details.
-- ACTION: Then CREATE A BRAND NEW PROFESSIONAL PHOTO of the person from Image 1 WEARING this exact type of outfit.
-- The person from Image 1 must be the SOLE SUBJECT of the output image.
-- PRESERVE: The clothing's exact color, pattern, fabric texture, style, and design details on the person's body.
-- GENERATE: A completely NEW body pose with natural arms and hands. The person must look like they are WEARING the clothes, not posing next to them.
-- BACKGROUND: Generate a NEW professional studio or lifestyle background that complements the outfit. Do NOT copy the background from Image 2.
-- ABSOLUTELY FORBIDDEN: Do NOT simply reproduce, crop, or return Image 2 as the output. The output must be a NEW photo of the person from Image 1.
-- ABSOLUTELY FORBIDDEN: Do NOT show the clothing item separately — it must be ON the person's body.
-- TEST: If the output looks like Image 2 with minor edits → FAILED. The output must clearly show the PERSON from Image 1 wearing the garment.
-
-CATEGORY B — BACKGROUND/ENVIRONMENT/SCENE:
-If Image 2 shows a location, studio setup, nature scene, office, or background environment:
-- ACTION: Place the person from Image 1 INTO this type of environment.
-- EXTRACT: The lighting style, color palette, atmosphere, and spatial composition from Image 2.
-- GENERATE: A NEW background INSPIRED by Image 2 — do NOT pixel-copy the background.
-- The person in Image 2 (if any) is a STYLE MODEL only. DO NOT DRAW THEM.
-- REPLACE any person in Image 2 with the person from Image 1.
-
-CATEGORY C — STYLED PHOTO WITH A PERSON (MOST COMMON CASE):
-If Image 2 shows a person in a specific professional photo style (headshot, editorial, corporate, fashion, etc.):
-- ⚠️ WARNING: Image 2 contains a person but that person is NOT the subject. They are a STYLE DUMMY.
-- ACTION: COMPLETELY DISCARD the person from Image 2 (their face, body, hair, identity — ALL OF IT).
-- ACTION: Re-create the SAME photo style (lighting, camera angle, pose type, color grading, clothing style) but with the PERSON FROM IMAGE 1.
-- DRESS: The person from Image 1 in the SAME TYPE of outfit shown in Image 2 (same color, style, cut).
-- POSE: Mimic a SIMILAR pose from Image 2 but adapted naturally to Image 1's person.
-- LIGHTING: Copy the exact lighting setup from Image 2.
-- FACE: Must be 100% from Image 1. ZERO features from Image 2's person.
-- HAIR: Must match Image 1's hair. Do NOT use Image 2's hairstyle.
-- BODY TYPE: Must match Image 1's body type. Do NOT use Image 2's body.
-- GOAL: Imagine the same photographer took Image 1's person to the same studio and dressed them similarly.
-- FAILURE TEST: If the output person looks like Image 2's person → IMMEDIATELY REGENERATE.
-
-CATEGORY D — PRODUCT/OBJECT/LOGO:
-If Image 2 shows a product, logo, brand element, or physical object:
-- ACTION: Integrate this element into the composition with the person from Image 1.
-- The person should be presenting, holding, or interacting with the element.
-
->>> ABSOLUTE ANTI-REPRODUCTION RULE <<<
-The output image must ALWAYS be a NEW CREATION featuring the person from Image 1.
-NEVER return Image 2 as-is or with minor modifications.
-NEVER produce an output where Image 1's person is absent.
-The FACE and IDENTITY in the output MUST come from Image 1.
-The STYLE INSPIRATION (lighting, clothing, pose, mood) comes from Image 2.
-If Image 2 contains text or watermarks, IGNORE them completely.
-
->>> SELF-CHECK BEFORE FINALIZING <<<
-1. Is the person from Image 1 clearly visible and recognizable? If NO → REGENERATE.
-2. Does the output look like a copy of Image 2? If YES → REGENERATE.
-3. Has the style/clothing/mood from Image 2 been applied? If NO → REGENERATE.`;
-          }
-
-          parts.push({
-            text: `${stylePrompt}
-
-MANDATORY: The output MUST be completely CLEAN and PRISTINE.
-NO watermarks, NO unwanted text, NO "Designi", NO diagonal patterns.
-Quality: Professional photography or Adobe Illustrator vector art quality.${showReferencePixels ? `
-
-[IMAGE 2 - REFERENCE INPUT — ⚠️ STYLE ONLY, NOT IDENTITY ⚠️]
->>> ANALYZE this image using the categories above (A/B/C/D).
->>> APPLY the corresponding action to create the output.
->>> IF THIS IMAGE CONTAINS A PERSON: That person is a MANNEQUIN. DELETE their face and identity. Use ONLY Image 1's face.
->>> EXTRACT ONLY: clothing style, lighting, pose concept, color palette, background mood.
->>> SOLE SUBJECT IN OUTPUT: The person from Image 1. NO EXCEPTIONS.
->>> IGNORE any text or watermarks in this image.` : ''}`
-          });
-
-          // Only send the actual image for V3
-          if (showReferencePixels) {
-            parts.push({ inlineData: ref });
-          }
-        }
+        // STEP 4: Final instruction to reinforce the subject
+        parts.push({
+          text: `=== FINAL INSTRUCTION ===
+Generate a NEW professional photo where:
+- The PERSON is from the LAST image above (the subject). Use their exact face, hair, and body.
+- The STYLE (outfit, lighting, pose, mood) is inspired by the FIRST image above (the style source).
+- This is a brand new photo — not a copy of either input image.
+- Output must be clean: no watermarks, no unwanted text.`
+        });
       } else if (customModelImage) {
         const asset = extractBase64(customModelImage);
         if (asset) {
