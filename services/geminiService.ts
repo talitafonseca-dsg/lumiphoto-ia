@@ -298,22 +298,38 @@ NEGATIVE PROMPT FOR PRODUCT: Credit card machine, payment terminal, calculator, 
 
         if (referenceDescription) {
           // SUCCESS: We have a text description — use it instead of pixels
+
+          // Check if there's also a product image
+          const hasProduct = !!productImage;
+          const productAsset = hasProduct ? extractBase64(productImage!) : null;
+
           parts.push({
             text: `=== TASK: STYLE-TRANSFER PHOTOGRAPHY ===
-You will receive ONE image of a person (THE SUBJECT).
-Below is a DETAILED TEXT DESCRIPTION of a style reference that you must apply to this person.
+${hasProduct ? `You will receive TWO images: a PRODUCT image (clothing/item) and a SUBJECT image (the person).` : `You will receive ONE image of a person (THE SUBJECT).`}
+Below is a DETAILED TEXT DESCRIPTION of a style reference for the environment, lighting, and pose.
 
-YOUR JOB: Create a NEW professional photo of THE SUBJECT wearing the described outfit, 
+YOUR JOB: Create a NEW professional photo of THE SUBJECT ${hasProduct ? 'WEARING THE PRODUCT (clothing from the product image)' : 'wearing the described outfit'}, 
 in the described lighting/environment, with a similar pose.
 
-=== STYLE REFERENCE DESCRIPTION (apply this to the subject) ===
+=== STYLE REFERENCE DESCRIPTION (use for ENVIRONMENT, LIGHTING, and POSE) ===
 ${referenceDescription}
 === END STYLE REFERENCE ===
 
-IMPORTANT: The person in the output MUST be the person from the image provided below.
-Use their exact face, hair, skin tone, body type, and age.
-Only apply the CLOTHING, LIGHTING, POSE, and BACKGROUND from the style description above.`
+${hasProduct ? `IMPORTANT: The CLOTHING in the output must come from the PRODUCT IMAGE provided below — NOT from the style reference description.
+The style reference above is ONLY for the environment, lighting, pose, and mood.` : ''}
+IMPORTANT: The person in the output MUST be the person from the ${hasProduct ? 'SUBJECT' : ''} image provided below.
+Use their exact face, hair, skin tone, body type, and age.`
           });
+
+          // If product exists, send it as an image (it's clothing, not a person — safe)
+          if (productAsset) {
+            parts.push({
+              text: `[THE PRODUCT — This is the clothing/item the subject must WEAR in the output]
+Analyze this garment: type, color, fabric, pattern, cut, style details.
+The subject must be wearing THIS EXACT item in the final photo.`
+            });
+            parts.push({ inlineData: productAsset });
+          }
         } else {
           // FALLBACK: Analysis failed — send reference with minimal instructions
           const ref = extractBase64(referenceImage);
@@ -336,8 +352,8 @@ Apply those style elements to the person in the next image.]`
               text: `[THE SUBJECT — Create the output photo of THIS person]
 This is the REAL PERSON for the final photo.
 Preserve: exact face, skin tone, hair style/color, expression, body type, age.
-Dress this person in the outfit described in the STYLE REFERENCE above.
-Place them in the lighting and environment described above.` });
+${productImage ? 'Dress this person in THE PRODUCT shown in the product image above.' : 'Dress this person in the outfit described in the STYLE REFERENCE above.'}
+Place them in the lighting and environment from the style reference.` });
             parts.push({ inlineData: asset });
             hasSubject = true;
           }
@@ -351,7 +367,7 @@ Place them in the lighting and environment described above.` });
               : `[THE SUBJECT — Create the output photo of THIS person]
 This is the REAL PERSON for the final photo.
 Preserve: exact face, skin tone, hair style/color, expression, body type, age.
-Dress this person in the outfit from the STYLE REFERENCE description above.`;
+${productImage ? 'Dress this person in THE PRODUCT shown in the product image above.' : 'Dress this person in the outfit from the STYLE REFERENCE description above.'}`;
 
             parts.push({ text: label });
             parts.push({ inlineData: asset });
