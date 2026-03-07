@@ -21,10 +21,10 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
     };
 
     const segments = [
-        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Close-ups gourmet com fumaça que dão água na boca.', image: '/delivery/hero-burger.png', hot: true },
-        { icon: '🍕', title: 'Pizza & Massas', desc: 'Queijo derretendo do forno. O cliente pede na hora.', image: '/delivery/pizza.png', hot: true },
+        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Close-ups gourmet com fumaça que dão água na boca.', image: '/delivery/after-burger.png', hot: true },
+        { icon: '🍕', title: 'Pizza & Massas', desc: 'Queijo derretendo do forno. O cliente pede na hora.', image: '/delivery/after-pizza.png', hot: true },
         { icon: '🍣', title: 'Sushi & Japonês', desc: 'Composição elegante que valoriza cada peça.', image: '/delivery/hero-sushi.png', hot: false },
-        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/pro-doces.png', hot: true },
+        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/after-cake.png', hot: true },
         { icon: '🥗', title: 'Saudável & Bowls', desc: 'Cores vibrantes que atraem o público fitness.', image: '/delivery/pro-bowl.png', hot: false },
         { icon: '🥩', title: 'Churrasco & Grill', desc: 'Carnes na brasa com textura e suculência.', image: '/delivery/pro-prato.png', hot: false },
     ];
@@ -45,6 +45,12 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
         { icon: <Shield size={24} />, title: 'Multi-plataforma', desc: 'iFood, Rappi, Uber Eats, Instagram — tudo.', gradient: 'from-blue-500/20' },
     ];
 
+    const beforeAfterPairs = [
+        { before: '/delivery/before-burger.png', after: '/delivery/after-burger.png', label: 'Hambúrguer' },
+        { before: '/delivery/before-pizza.png', after: '/delivery/after-pizza.png', label: 'Pizza' },
+        { before: '/delivery/before-cake.png', after: '/delivery/after-cake.png', label: 'Bolo' },
+    ];
+
     return (
         <div className="min-h-screen h-screen overflow-y-auto bg-[#0a0a0a] text-white overflow-x-hidden">
 
@@ -63,7 +69,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                 </div>
             </nav>
 
-            {/* ===== HERO ===== */}
+            {/* ===== HERO COM ANTES/DEPOIS ===== */}
             <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0">
                     <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-orange-500/10 blur-[200px] rounded-full" />
@@ -114,48 +120,91 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             <p className="text-white/20 text-xs mt-4">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
                         </div>
 
-                        {/* Right: Food Showcase — Desktop */}
+                        {/* Right: Before/After Showcase — Desktop */}
                         <div className="hidden lg:block relative">
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-                                    <img src="/delivery/hero-burger.png" alt="Burger Gourmet" className="w-full h-64 object-cover" />
+                                {/* Before */}
+                                <div className="relative rounded-2xl overflow-hidden border border-red-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+                                    <img src="/delivery/before-burger.png" alt="Antes - foto caseira" className="w-full h-64 object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                    <span className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500/90 text-[10px] font-black text-black uppercase tracking-wider rounded-lg">🍔 Burger</span>
+                                    <span className="absolute bottom-3 left-3 px-3 py-1 bg-red-500/80 text-[10px] font-black text-white uppercase tracking-wider rounded-lg">📱 Foto do celular</span>
                                 </div>
-                                <div className="relative rounded-2xl overflow-hidden border-2 border-red-500/40 shadow-[0_8px_30px_rgba(239,68,68,0.2)] mt-8">
-                                    <img src="/delivery/pro-doces.png" alt="Doces Artesanais" className="w-full h-64 object-cover" />
+                                {/* After */}
+                                <div className="relative rounded-2xl overflow-hidden border-2 border-orange-500/40 shadow-[0_8px_30px_rgba(245,158,11,0.2)] mt-8">
+                                    <img src="/delivery/after-burger.png" alt="Depois - IA profissional" className="w-full h-64 object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                    <span className="absolute bottom-3 right-3 px-3 py-1 bg-pink-500/90 text-[10px] font-black text-white uppercase tracking-wider rounded-lg">🍰 Doces</span>
+                                    <span className="absolute bottom-3 right-3 px-3 py-1 bg-orange-500/90 text-[10px] font-black text-black uppercase tracking-wider rounded-lg">✨ Resultado IA</span>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-2 mt-4">
-                                {[
-                                    { img: '/delivery/pizza.png', label: 'Pizza' },
-                                    { img: '/delivery/pro-prato.png', label: 'Churrasco' },
-                                    { img: '/delivery/pro-bowl.png', label: 'Saudável' },
-                                ].map((s, i) => (
-                                    <div key={i} className="relative rounded-xl overflow-hidden aspect-square border border-white/10">
-                                        <img src={s.img} alt={s.label} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                        <p className="absolute bottom-1 left-1 text-[8px] font-black text-white/80 uppercase">{s.label}</p>
+                            {/* More before/after pairs */}
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                                <div className="relative rounded-xl overflow-hidden border border-red-500/20">
+                                    <div className="flex relative">
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/before-pizza.png" alt="Antes pizza" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-red-500/70 text-[7px] font-black text-white uppercase rounded">antes</span>
+                                        </div>
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/after-pizza.png" alt="Depois pizza" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-orange-500/90 text-[7px] font-black text-black uppercase rounded">depois</span>
+                                        </div>
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                                            <ArrowRight size={8} className="text-black" />
+                                        </div>
                                     </div>
-                                ))}
+                                    <p className="text-center text-[8px] font-black text-white/50 py-1 bg-black/40">🍕 Pizza</p>
+                                </div>
+                                <div className="relative rounded-xl overflow-hidden border border-red-500/20">
+                                    <div className="flex relative">
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/before-cake.png" alt="Antes bolo" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-red-500/70 text-[7px] font-black text-white uppercase rounded">antes</span>
+                                        </div>
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/after-cake.png" alt="Depois bolo" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-orange-500/90 text-[7px] font-black text-black uppercase rounded">depois</span>
+                                        </div>
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                                            <ArrowRight size={8} className="text-black" />
+                                        </div>
+                                    </div>
+                                    <p className="text-center text-[8px] font-black text-white/50 py-1 bg-black/40">🍰 Bolo</p>
+                                </div>
                             </div>
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/80 backdrop-blur-xl border border-orange-500/30 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-                                <p className="text-orange-400 text-xs font-black text-center">🍕 Fotos que dão água na boca</p>
+                                <p className="text-orange-400 text-xs font-black text-center">📱 → ✨ De caseira a profissional em 30s</p>
                             </div>
                         </div>
 
-                        {/* Mobile Carousel */}
+                        {/* Mobile Carousel — Before/After */}
                         <div className="lg:hidden -mx-6 px-6">
                             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                {beforeAfterPairs.map((pair, i) => (
+                                    <div key={i} className="flex-shrink-0 w-64 rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-white/[0.02]">
+                                        <div className="flex relative">
+                                            <div className="w-1/2 relative">
+                                                <img src={pair.before} alt={`Antes ${pair.label}`} className="w-full h-36 object-cover" />
+                                                <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-red-500/70 text-[8px] font-black text-white uppercase rounded">📱 Antes</span>
+                                            </div>
+                                            <div className="w-1/2 relative">
+                                                <img src={pair.after} alt={`Depois ${pair.label}`} className="w-full h-36 object-cover" />
+                                                <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-orange-500/90 text-[8px] font-black text-black uppercase rounded">✨ IA</span>
+                                            </div>
+                                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                                                <ArrowRight size={10} className="text-black" />
+                                            </div>
+                                        </div>
+                                        <div className="p-2 text-center">
+                                            <p className="text-white/50 text-[10px] font-bold">{pair.label} — Antes & Depois</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {/* Extra individual result cards */}
                                 {[
-                                    { img: '/delivery/hero-burger.png', label: 'Burger Gourmet' },
                                     { img: '/delivery/pro-doces.png', label: 'Doces Artesanais' },
-                                    { img: '/delivery/pizza.png', label: 'Pizza do Forno' },
                                     { img: '/delivery/pro-prato.png', label: 'Churrasco Premium' },
                                 ].map((s, i) => (
-                                    <div key={i} className="flex-shrink-0 w-44 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
+                                    <div key={`extra-${i}`} className="flex-shrink-0 w-36 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
                                         <div className="relative aspect-[3/4]">
                                             <img src={s.img} alt={s.label} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -201,6 +250,51 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                 </div>
             </section>
 
+            {/* ===== ANTES/DEPOIS COMPLETO ===== */}
+            <section className="py-24 px-6 border-t border-white/5">
+                <div className="max-w-5xl mx-auto">
+                    <div className="text-center mb-16">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                            <ImageIcon size={12} />
+                            Antes & Depois
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
+                            Veja a <span className="text-orange-400">transformação</span>
+                        </h2>
+                        <p className="text-white/40 text-sm max-w-lg mx-auto">
+                            Foto de celular → food photography de restaurante premiado. Em 30 segundos.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {beforeAfterPairs.map((pair, i) => (
+                            <div key={i} className="rounded-2xl overflow-hidden border border-white/10 bg-white/[0.02] shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
+                                <div className="relative">
+                                    <div className="grid grid-cols-2">
+                                        <div className="relative">
+                                            <img src={pair.before} alt={`Antes ${pair.label}`} className="w-full h-48 object-cover" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-red-500/80 text-[9px] font-black text-white uppercase rounded-full">📱 Antes</span>
+                                        </div>
+                                        <div className="relative">
+                                            <img src={pair.after} alt={`Depois ${pair.label}`} className="w-full h-48 object-cover" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                            <span className="absolute top-2 right-2 px-2 py-0.5 bg-orange-500/90 text-[9px] font-black text-black uppercase rounded-full">✨ Depois</span>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-xl z-10 border-2 border-white/20">
+                                        <ArrowRight size={14} className="text-black" />
+                                    </div>
+                                </div>
+                                <div className="p-4 text-center border-t border-white/5">
+                                    <p className="text-white font-bold text-sm">{pair.label}</p>
+                                    <p className="text-orange-400/60 text-[10px] font-black uppercase tracking-wider mt-0.5">30 segundos com IA</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* ===== SEGMENTOS COM IMAGENS ===== */}
             <section className="py-24 px-6">
                 <div className="max-w-5xl mx-auto">
@@ -212,9 +306,6 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
                             Fotos que fazem o cliente <span className="text-orange-400">pedir agora</span>
                         </h2>
-                        <p className="text-white/40 text-sm max-w-lg mx-auto">
-                            Cada tipo de comida tem um preset especializado.
-                        </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {segments.map((seg, i) => (
@@ -269,38 +360,6 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                         <ArrowRight size={20} />
                                     </div>
                                 )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== GALERIA — IMAGENS ÚNICAS ===== */}
-            <section className="py-24 px-6 border-t border-white/5">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-                            <ImageIcon size={12} />
-                            Resultados Reais
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            O cliente vê e <span className="text-orange-400">pede na hora</span>
-                        </h2>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[
-                            { img: '/delivery/hero-sushi.png', label: 'Sushi Premium' },
-                            { img: '/delivery/acai.png', label: 'Açaí & Bowls' },
-                            { img: '/studio-styles/gastronomia.png', label: 'Confeitaria' },
-                            { img: '/studio-styles/coffee_shop.png', label: 'Café & Brunch' },
-                        ].map((item, i) => (
-                            <div key={i} className="relative rounded-2xl overflow-hidden border border-white/10 group aspect-square">
-                                <img src={item.img} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                                <div className="absolute bottom-3 left-3 right-3">
-                                    <p className="text-white text-xs font-bold">{item.label}</p>
-                                    <p className="text-orange-400 text-[9px] font-black uppercase tracking-wider">Gerado com IA ✨</p>
-                                </div>
                             </div>
                         ))}
                     </div>
