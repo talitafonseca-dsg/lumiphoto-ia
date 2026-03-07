@@ -6,47 +6,19 @@ export interface FAQItem {
     a: string;
 }
 
-// ========== BASE FAQS — perguntas universais para TODAS as páginas ==========
+// ========== BASE FAQS — 3 perguntas essenciais para TODAS as páginas ==========
 export const baseFaqs: FAQItem[] = [
     {
-        q: 'Preciso saber usar IA ou escrever prompts?',
-        a: 'Não! A plataforma faz tudo automaticamente. Você só faz upload da foto e escolhe o estilo. Zero conhecimento técnico necessário.',
+        q: 'Preciso saber usar IA ou ter experiência?',
+        a: 'Não! Você só faz upload da foto e escolhe o estilo. A plataforma faz tudo automaticamente — funciona 100% no navegador, sem instalar nada.',
     },
     {
-        q: 'É mensalidade? Vai cobrar todo mês?',
-        a: 'Não. É pagamento único. Você compra um pacote de créditos e usa quando quiser. Sem assinatura, sem renovação automática.',
+        q: 'É mensalidade? Como funciona o pagamento?',
+        a: 'Não! É pagamento único. Você compra créditos e usa quando quiser — sem assinatura, sem renovação automática, e os créditos nunca expiram.',
     },
     {
-        q: 'Os créditos expiram?',
-        a: 'Não! Seus créditos nunca expiram. Você pode usar hoje, amanhã, ou daqui a meses — eles ficam disponíveis na sua conta até você usar todos.',
-    },
-    {
-        q: 'Posso comprar um plano agora e outro diferente depois?',
-        a: 'Sim! Você pode comprar qualquer pacote de créditos a qualquer momento. Não fica preso a um plano específico. Os créditos de compras diferentes se acumulam automaticamente na sua conta.',
-    },
-    {
-        q: 'O valor é por selfie enviada ou por foto gerada?',
-        a: 'O custo é por foto gerada. Você pode enviar quantas selfies quiser sem gastar créditos. Cada crédito = 1 foto profissional gerada pela IA.',
-    },
-    {
-        q: 'Quanto custa um ensaio de 3 fotos?',
-        a: 'Depende do pacote escolhido. No plano Pro (80 fotos), cada foto sai por R$ 1,21 — então um ensaio de 3 fotos custa apenas R$ 3,63. No plano Premium (100 fotos), sai ainda mais barato: R$ 3,51 por ensaio.',
-    },
-    {
-        q: 'Qual a qualidade das fotos?',
-        a: 'Qualidade de estúdio profissional em alta resolução. A IA gera fotos com iluminação, pose e cenário profissional — seus clientes não vão perceber que foram geradas por IA.',
-    },
-    {
-        q: 'Posso revender as fotos?',
-        a: 'Sim! Uso comercial totalmente liberado em todos os planos. Você pode cobrar quanto quiser dos seus clientes.',
-    },
-    {
-        q: 'Como faço o download das fotos?',
-        a: 'Após gerar suas fotos, basta clicar no botão de download. As fotos são salvas em alta resolução diretamente no seu dispositivo — funciona em celular e computador.',
-    },
-    {
-        q: 'Preciso instalar algum aplicativo?',
-        a: 'Não. A LumiphotoIA funciona 100% no navegador. Basta acessar pelo celular ou computador, sem baixar nada.',
+        q: 'Qual a qualidade? Posso usar comercialmente?',
+        a: 'Qualidade de estúdio profissional em alta resolução. Uso comercial 100% liberado em todos os planos — catálogos, anúncios, redes sociais, revenda.',
     },
 ];
 
