@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-    Camera, Check, Star, Zap, ArrowRight, Shield, Sparkles,
-    Users, DollarSign, Clock, Download, Eye, MessageCircle,
-    ChevronDown, TrendingUp, Image as ImageIcon,
-    Target, Heart, Award, Flame
+    Camera, ArrowRight, Shield, Sparkles,
+    DollarSign, Clock, Download, Eye,
+    TrendingUp, Image as ImageIcon,
+    Target, Award, Flame, Zap, Star
 } from 'lucide-react';
 import FAQSection, { deliveryFaqs } from './FAQSection';
 
@@ -21,27 +21,27 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
     };
 
     const segments = [
-        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Burgers gourmet com fumaça e close-ups irresistíveis.', image: '/delivery/hero-burger.png', hot: true },
-        { icon: '🍕', title: 'Pizza & Massas', desc: 'Pizza artesanal com queijo derretendo do forno.', image: '/delivery/pizza.png', hot: true },
-        { icon: '🍣', title: 'Sushi & Japonês', desc: 'Composição profissional elegante e colorida.', image: '/delivery/hero-sushi.png', hot: false },
-        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Bolos, brigadeiros, trufas e sobremesas artesanais.', image: '/studio-styles/gastronomia.png', hot: true },
-        { icon: '🫐', title: 'Açaí & Bowls', desc: 'Bowls vibrantes e coloridos para redes sociais.', image: '/delivery/acai.png', hot: false },
-        { icon: '☕', title: 'Café & Padaria', desc: 'Café artesanal, pães, croissants e brunchs.', image: '/studio-styles/coffee_shop.png', hot: false },
+        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Close-ups gourmet com fumaça que dão água na boca.', image: '/delivery/hero-burger.png', hot: true },
+        { icon: '🍕', title: 'Pizza & Massas', desc: 'Queijo derretendo do forno. O cliente pede na hora.', image: '/delivery/pizza.png', hot: true },
+        { icon: '🍣', title: 'Sushi & Japonês', desc: 'Composição elegante que valoriza cada peça.', image: '/delivery/hero-sushi.png', hot: false },
+        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/pro-doces.png', hot: true },
+        { icon: '🥗', title: 'Saudável & Bowls', desc: 'Cores vibrantes que atraem o público fitness.', image: '/delivery/pro-bowl.png', hot: false },
+        { icon: '🥩', title: 'Churrasco & Grill', desc: 'Carnes na brasa com textura e suculência.', image: '/delivery/pro-prato.png', hot: false },
     ];
 
     const steps = [
-        { num: '01', title: 'Fotografe o Prato', desc: 'Tire uma foto do prato com o celular. Não precisa ser perfeita.', icon: <Camera size={28} />, color: 'from-orange-500 to-amber-400' },
+        { num: '01', title: 'Fotografe o Prato', desc: 'Tire uma foto com o celular. Simples assim.', icon: <Camera size={28} />, color: 'from-orange-500 to-amber-400' },
         { num: '02', title: 'Escolha o Estilo', desc: 'Burger, pizza, sushi, doces — cada tipo tem um preset.', icon: <Sparkles size={28} />, color: 'from-red-500 to-orange-400' },
         { num: '03', title: 'IA Transforma', desc: 'Food photography profissional em 30 segundos.', icon: <Zap size={28} />, color: 'from-amber-500 to-yellow-400' },
         { num: '04', title: 'Use & Venda', desc: 'Cardápio, iFood, Instagram e delivery próprio.', icon: <Download size={28} />, color: 'from-green-500 to-emerald-400' },
     ];
 
     const benefits = [
-        { icon: <DollarSign size={24} />, title: 'R$ 1,17 por Foto', desc: 'Fotógrafo de comida cobra R$ 200+ por prato. Com a Lumi, menos de R$ 2.', gradient: 'from-orange-500/20' },
-        { icon: <Clock size={24} />, title: '30 Segundos', desc: 'Pare de esperar dias. Fotos prontas na hora.', gradient: 'from-amber-500/20' },
+        { icon: <DollarSign size={24} />, title: 'R$ 1,17 por Foto', desc: 'Fotógrafo de comida cobra R$ 200+ por prato. Com a Lumi, R$ 1,17.', gradient: 'from-orange-500/20' },
+        { icon: <Clock size={24} />, title: '30 Segundos', desc: 'Pare de esperar. Fotos prontas na hora pra subir.', gradient: 'from-amber-500/20' },
         { icon: <Eye size={24} />, title: 'Dá Água na Boca', desc: 'Iluminação e cores que fazem o cliente pedir.', gradient: 'from-red-500/20' },
-        { icon: <TrendingUp size={24} />, title: '+400% Pedidos', desc: 'Restaurantes com fotos profissionais vendem até 4x mais.', gradient: 'from-green-500/20' },
-        { icon: <Star size={24} />, title: 'Cardápio Completo', desc: 'Fotografe 50 pratos em uma tarde.', gradient: 'from-purple-500/20' },
+        { icon: <TrendingUp size={24} />, title: '+400% Pedidos', desc: 'Restaurantes com boas fotos vendem até 4x mais.', gradient: 'from-green-500/20' },
+        { icon: <Star size={24} />, title: 'Cardápio Inteiro', desc: 'Fotografe 50 pratos em uma tarde.', gradient: 'from-purple-500/20' },
         { icon: <Shield size={24} />, title: 'Multi-plataforma', desc: 'iFood, Rappi, Uber Eats, Instagram — tudo.', gradient: 'from-blue-500/20' },
     ];
 
@@ -79,23 +79,19 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             </div>
 
                             <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.95] tracking-tight mb-6">
-                                Fotos de{' '}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                                    Comida
+                                Seu prato é{' '}
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-300">
+                                    incrível
                                 </span>
-                                <br />que{' '}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                                    Vendem
-                                </span>
-                                <br />com{' '}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300">
-                                    IA
+                                <br />mas a foto{' '}
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">
+                                    não mostra
                                 </span>
                             </h1>
 
                             <p className="text-base md:text-lg text-white/50 max-w-xl mb-6 leading-relaxed">
-                                Transforme fotos de celular em <strong className="text-white/80">food photography profissional</strong> em 30 segundos.
-                                Hambúrguer, pizza, sushi, doces — qualquer prato.
+                                O cliente abre o iFood, vê uma foto <strong className="text-white/80">escura e sem graça</strong> e pede do concorrente.
+                                A IA transforma aquela foto de celular em <strong className="text-orange-400">food photography profissional</strong> em 30 segundos.
                             </p>
 
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8">
@@ -111,7 +107,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             </div>
 
                             <button onClick={scrollToPricing} className="px-10 py-5 bg-gradient-to-r from-orange-500 to-amber-400 rounded-2xl font-black text-lg text-black uppercase tracking-wider hover:shadow-[0_0_50px_rgba(245,158,11,0.4)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 inline-flex items-center gap-3">
-                                Começar Agora
+                                Quero Fotos que Dão Fome
                                 <ArrowRight size={22} />
                             </button>
 
@@ -127,16 +123,16 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                     <span className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500/90 text-[10px] font-black text-black uppercase tracking-wider rounded-lg">🍔 Burger</span>
                                 </div>
                                 <div className="relative rounded-2xl overflow-hidden border-2 border-red-500/40 shadow-[0_8px_30px_rgba(239,68,68,0.2)] mt-8">
-                                    <img src="/delivery/pizza.png" alt="Pizza Artesanal" className="w-full h-64 object-cover" />
+                                    <img src="/delivery/pro-doces.png" alt="Doces Artesanais" className="w-full h-64 object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                    <span className="absolute bottom-3 right-3 px-3 py-1 bg-red-500/90 text-[10px] font-black text-white uppercase tracking-wider rounded-lg">🍕 Pizza</span>
+                                    <span className="absolute bottom-3 right-3 px-3 py-1 bg-pink-500/90 text-[10px] font-black text-white uppercase tracking-wider rounded-lg">🍰 Doces</span>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-2 mt-4">
                                 {[
-                                    { img: '/delivery/hero-sushi.png', label: 'Sushi' },
-                                    { img: '/delivery/acai.png', label: 'Açaí' },
-                                    { img: '/studio-styles/coffee_shop.png', label: 'Café' },
+                                    { img: '/delivery/pizza.png', label: 'Pizza' },
+                                    { img: '/delivery/pro-prato.png', label: 'Churrasco' },
+                                    { img: '/delivery/pro-bowl.png', label: 'Saudável' },
                                 ].map((s, i) => (
                                     <div key={i} className="relative rounded-xl overflow-hidden aspect-square border border-white/10">
                                         <img src={s.img} alt={s.label} className="w-full h-full object-cover" />
@@ -146,7 +142,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 ))}
                             </div>
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/80 backdrop-blur-xl border border-orange-500/30 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-                                <p className="text-orange-400 text-xs font-black text-center">🍕 Fotos que dão fome</p>
+                                <p className="text-orange-400 text-xs font-black text-center">🍕 Fotos que dão água na boca</p>
                             </div>
                         </div>
 
@@ -155,9 +151,9 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                                 {[
                                     { img: '/delivery/hero-burger.png', label: 'Burger Gourmet' },
-                                    { img: '/delivery/pizza.png', label: 'Pizza Artesanal' },
-                                    { img: '/delivery/hero-sushi.png', label: 'Sushi Japonês' },
-                                    { img: '/delivery/acai.png', label: 'Açaí & Bowls' },
+                                    { img: '/delivery/pro-doces.png', label: 'Doces Artesanais' },
+                                    { img: '/delivery/pizza.png', label: 'Pizza do Forno' },
+                                    { img: '/delivery/pro-prato.png', label: 'Churrasco Premium' },
                                 ].map((s, i) => (
                                     <div key={i} className="flex-shrink-0 w-44 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
                                         <div className="relative aspect-[3/4]">
@@ -173,20 +169,35 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                 </div>
             </section>
 
-            {/* ===== PROVA SOCIAL ===== */}
-            <section className="py-8 border-y border-white/5 bg-white/[0.01]">
-                <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                    {[
-                        { metric: '5.000+', label: 'Fotos de pratos geradas' },
-                        { metric: '300+', label: 'Restaurantes ativos' },
-                        { metric: '4.9★', label: 'Avaliação média' },
-                        { metric: '30s', label: 'Tempo por foto' },
-                    ].map((item, i) => (
-                        <div key={i}>
-                            <div className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">{item.metric}</div>
-                            <div className="text-white/40 text-xs mt-1">{item.label}</div>
+            {/* ===== DOR: COMIDA BONITA, FOTO FEIA ===== */}
+            <section className="py-20 bg-[#050505] border-t border-white/5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600/5 via-transparent to-orange-600/5" />
+                <div className="max-w-5xl mx-auto px-6 relative z-10">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
+                            Comida bonita, foto <span className="text-red-400">feia</span> = <span className="text-red-400">pedido perdido</span>
+                        </h2>
+                        <p className="text-white/40 text-sm max-w-lg mx-auto">
+                            No iFood e no Instagram, a primeira coisa que o cliente vê é a foto. Se não dá fome, ele passa pro próximo.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="p-5 rounded-2xl border border-red-500/20 bg-red-500/5">
+                            <div className="text-red-400 text-2xl mb-3">📸</div>
+                            <h3 className="text-white font-bold text-sm mb-1">Foto de celular sem iluminação</h3>
+                            <p className="text-white/40 text-xs">Prato bonito parece comida requentada. Cliente não pede.</p>
                         </div>
-                    ))}
+                        <div className="p-5 rounded-2xl border border-red-500/20 bg-red-500/5">
+                            <div className="text-red-400 text-2xl mb-3">💸</div>
+                            <h3 className="text-white font-bold text-sm mb-1">Fotógrafo de comida: R$ 200+ por prato</h3>
+                            <p className="text-white/40 text-xs">E o cardápio muda todo mês. Insustentável.</p>
+                        </div>
+                        <div className="p-5 rounded-2xl border border-orange-500/20 bg-orange-500/5">
+                            <div className="text-orange-400 text-2xl mb-3">✨</div>
+                            <h3 className="text-white font-bold text-sm mb-1">Com a Lumi: R$ 1,17 e 30 segundos</h3>
+                            <p className="text-white/40 text-xs">Food photography profissional. Cardápio inteiro em uma tarde.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -199,10 +210,10 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             Tipos de Comida
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            Para Todo Tipo de <span className="text-orange-400">Culinária</span>
+                            Fotos que fazem o cliente <span className="text-orange-400">pedir agora</span>
                         </h2>
                         <p className="text-white/40 text-sm max-w-lg mx-auto">
-                            Presets especializados para cada tipo de comida. Fotos que dão fome.
+                            Cada tipo de comida tem um preset especializado.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -239,7 +250,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             Simples & Rápido
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            Como <span className="text-orange-400">Funciona</span>
+                            De foto do <span className="text-red-400">celular</span> a <span className="text-orange-400">cardápio premium</span>
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -264,7 +275,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                 </div>
             </section>
 
-            {/* ===== GALERIA DE RESULTADOS ===== */}
+            {/* ===== GALERIA — IMAGENS ÚNICAS ===== */}
             <section className="py-24 px-6 border-t border-white/5">
                 <div className="max-w-5xl mx-auto">
                     <div className="text-center mb-16">
@@ -273,15 +284,15 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             Resultados Reais
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            Food Photography <span className="text-orange-400">Profissional</span>
+                            O cliente vê e <span className="text-orange-400">pede na hora</span>
                         </h2>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[
-                            { img: '/delivery/hero-burger.png', label: 'Burger Gourmet' },
-                            { img: '/delivery/pizza.png', label: 'Pizza Artesanal' },
-                            { img: '/delivery/hero-sushi.png', label: 'Sushi Japonês' },
+                            { img: '/delivery/hero-sushi.png', label: 'Sushi Premium' },
                             { img: '/delivery/acai.png', label: 'Açaí & Bowls' },
+                            { img: '/studio-styles/gastronomia.png', label: 'Confeitaria' },
+                            { img: '/studio-styles/coffee_shop.png', label: 'Café & Brunch' },
                         ].map((item, i) => (
                             <div key={i} className="relative rounded-2xl overflow-hidden border border-white/10 group aspect-square">
                                 <img src={item.img} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -305,7 +316,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             Vantagens
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            Por que <span className="text-orange-400">Restaurantes</span> Escolhem a Lumi
+                            Chega de <span className="text-red-400">perder pedidos</span> por foto feia
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -329,13 +340,13 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                         Investimento
                     </div>
                     <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tight mb-4">
-                        Venda <span className="text-orange-400">Mais</span> com Fotos que Dão Fome
+                        Cada dia sem boas fotos é <span className="text-red-400">dinheiro perdido</span>
                     </h2>
                     <p className="text-white/40 text-sm max-w-lg mx-auto mb-10">
-                        Fotos profissionais de comida a partir de R$ 1,17 cada. Pagamento único, sem mensalidade.
+                        Enquanto você espera, o concorrente com fotos profissionais leva seus clientes. Resolva isso em 30 segundos.
                     </p>
                     <button onClick={onGetStarted} className="px-12 py-5 bg-gradient-to-r from-orange-500 to-amber-400 rounded-2xl font-black text-lg text-black uppercase tracking-wider hover:shadow-[0_0_50px_rgba(245,158,11,0.4)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 inline-flex items-center gap-3">
-                        Escolher Meu Pacote
+                        Quero Fotos que Vendem
                         <ArrowRight size={22} />
                     </button>
                     <p className="text-white/20 text-xs mt-4">Sem mensalidade • Uso comercial incluído • Suporte por WhatsApp</p>
