@@ -121,6 +121,28 @@ export enum StudioStyle {
   SPA_WELLNESS = 'Spa & Relax', // NOVO
   BARBER_SHOP_RETRO = 'Barbearia Retrô', // NOVO
 
+  // VAREJO 🛍️
+  VAREJO_MODA_LOOKBOOK = 'Moda: Lookbook',
+  VAREJO_MODA_FLATLAY = 'Moda: Flat Lay',
+  VAREJO_MODA_EDITORIAL = 'Moda: Editorial',
+  VAREJO_JOIAS_LUXURY = 'Joias: Luxury',
+  VAREJO_COSMETICOS = 'Cosméticos: Beauty',
+  VAREJO_ACESSORIOS = 'Acessórios: Lifestyle',
+  VAREJO_ELETRONICOS = 'Tech: Premium',
+  VAREJO_FUNDO_BRANCO = 'Fundo Branco: Marketplace',
+  VAREJO_LIFESTYLE = 'Lifestyle Shot',
+
+  // DELIVERY 🍕
+  DELIVERY_BURGER = 'Burger Gourmet',
+  DELIVERY_PIZZA = 'Pizza Artesanal',
+  DELIVERY_SUSHI = 'Sushi & Japonês',
+  DELIVERY_DOCES = 'Confeitaria & Doces',
+  DELIVERY_ACAI = 'Açaí & Bowls',
+  DELIVERY_CAFE = 'Café & Bebidas',
+  DELIVERY_CHURRASCO = 'Churrasco & Brasa',
+  DELIVERY_SAUDAVEL = 'Saudável & Fit',
+  DELIVERY_PADARIA = 'Padaria & Pães',
+
   // CRIATIVO & ARTÍSTICO
   CYBERPUNK_NEON = 'Cyberpunk Neon',
   FUTURISTA_LAB = 'Futurista Lab',
@@ -790,6 +812,118 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     color: 'from-stone-900/20',
     category: 'Comercial',
     imageUrl: '/studio-styles/barber_shop_retro.png'
+  },
+
+  // VAREJO 🛍️
+  [StudioStyle.VAREJO_MODA_LOOKBOOK]: {
+    description: 'Modelo vestindo a peça',
+    color: 'from-rose-500/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/ecommerce_clean.png'
+  },
+  [StudioStyle.VAREJO_MODA_FLATLAY]: {
+    description: 'Roupas dispostas artisticamente',
+    color: 'from-pink-300/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/ecommerce_clean.png'
+  },
+  [StudioStyle.VAREJO_MODA_EDITORIAL]: {
+    description: 'Editorial com cenário fashion',
+    color: 'from-purple-600/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/editorial_vogue.png'
+  },
+  [StudioStyle.VAREJO_JOIAS_LUXURY]: {
+    description: 'Joias em fundo escuro luxury',
+    color: 'from-yellow-300/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/jewelry_macro.png'
+  },
+  [StudioStyle.VAREJO_COSMETICOS]: {
+    description: 'Cosméticos premium com texturas',
+    color: 'from-fuchsia-400/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/skincare_organic.png'
+  },
+  [StudioStyle.VAREJO_ACESSORIOS]: {
+    description: 'Bolsas, óculos, sapatos lifestyle',
+    color: 'from-amber-500/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/luxury_gold.png'
+  },
+  [StudioStyle.VAREJO_ELETRONICOS]: {
+    description: 'Tech & gadgets em fundo dark',
+    color: 'from-slate-700/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/tech_startup.png'
+  },
+  [StudioStyle.VAREJO_FUNDO_BRANCO]: {
+    description: 'Fundo branco para marketplace',
+    color: 'from-gray-200/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/ecommerce_clean.png'
+  },
+  [StudioStyle.VAREJO_LIFESTYLE]: {
+    description: 'Produto em contexto real',
+    color: 'from-emerald-400/20',
+    category: 'Varejo 🛍️',
+    imageUrl: '/studio-styles/nature_fresh.png'
+  },
+
+  // DELIVERY 🍕
+  [StudioStyle.DELIVERY_BURGER]: {
+    description: 'Hambúrguer gourmet com fumaça',
+    color: 'from-orange-600/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_PIZZA]: {
+    description: 'Pizza artesanal com queijo',
+    color: 'from-red-500/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_SUSHI]: {
+    description: 'Sushi & comida japonesa',
+    color: 'from-slate-600/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_DOCES]: {
+    description: 'Bolos, doces & confeitaria',
+    color: 'from-pink-500/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_ACAI]: {
+    description: 'Açaí & bowls coloridos',
+    color: 'from-purple-500/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_CAFE]: {
+    description: 'Café artesanal & bebidas',
+    color: 'from-amber-900/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/coffee_shop.png'
+  },
+  [StudioStyle.DELIVERY_CHURRASCO]: {
+    description: 'Carne na brasa & churrasco',
+    color: 'from-red-800/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/gastronomia.png'
+  },
+  [StudioStyle.DELIVERY_SAUDAVEL]: {
+    description: 'Saladas & bowls saudáveis',
+    color: 'from-green-500/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/nutricionista.png'
+  },
+  [StudioStyle.DELIVERY_PADARIA]: {
+    description: 'Pães artesanais & massas',
+    color: 'from-amber-400/20',
+    category: 'Delivery 🍕',
+    imageUrl: '/studio-styles/bakery_artisan.png'
   },
 
   // CRIATIVO

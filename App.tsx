@@ -78,6 +78,8 @@ import { AniversarioLandingPage } from './components/AniversarioLandingPage';
 import { AdvogadasLandingPage } from './components/AdvogadasLandingPage';
 import { EsteticaLandingPage } from './components/EsteticaLandingPage';
 import { BeautyLandingPage } from './components/BeautyLandingPage';
+import { VarejoLandingPage } from './components/VarejoLandingPage';
+import { DeliveryLandingPage } from './components/DeliveryLandingPage';
 import { jsPDF } from 'jspdf';
 import { saveProject, canCreateProject, getRemainingSlots, getLastPurchaseDate, Project } from './services/projectService';
 import { supabase } from './services/supabaseClient';
@@ -1148,6 +1150,20 @@ const App: React.FC = () => {
     return <BeautyLandingPage onGetStarted={() => { referrerPath.current = '/ensaio-beleza'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaio-beleza'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
   }
 
+  if (currentPath === '/varejo') {
+    if (showAuth) {
+      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+    }
+    return <VarejoLandingPage onGetStarted={() => { referrerPath.current = '/varejo'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/varejo'; setSelectedCategory('Varejo 🛍️'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+  }
+
+  if (currentPath === '/delivery') {
+    if (showAuth) {
+      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+    }
+    return <DeliveryLandingPage onGetStarted={() => { referrerPath.current = '/delivery'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/delivery'; setSelectedCategory('Delivery 🍕'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+  }
+
   // ADMIN ROUTE
   if (currentPath === '/admin') {
     return <AdminDashboard />;
@@ -1475,7 +1491,7 @@ const App: React.FC = () => {
                       return cats;
                     })().map(cat => {
                       const isTikTok = cat.includes('TikTok');
-                      const isFeatured = (referrerPath.current === '/ensaio-aniversario' && cat === 'Aniversário') || (referrerPath.current === '/ensaios' && cat === 'Profissional') || (referrerPath.current === '/ensaio-advogadas' && cat === 'Advogado ⚖️') || (referrerPath.current === '/ensaio-estetica' && cat === 'Moda & Beleza') || (referrerPath.current === '/ensaio-beleza' && cat === 'Moda & Beleza');
+                      const isFeatured = (referrerPath.current === '/ensaio-aniversario' && cat === 'Aniversário') || (referrerPath.current === '/ensaios' && cat === 'Profissional') || (referrerPath.current === '/ensaio-advogadas' && cat === 'Advogado ⚖️') || (referrerPath.current === '/ensaio-estetica' && cat === 'Moda & Beleza') || (referrerPath.current === '/ensaio-beleza' && cat === 'Moda & Beleza') || (referrerPath.current === '/varejo' && cat === 'Varejo 🛍️') || (referrerPath.current === '/delivery' && cat === 'Delivery 🍕');
                       return (
                         <button
                           key={cat}

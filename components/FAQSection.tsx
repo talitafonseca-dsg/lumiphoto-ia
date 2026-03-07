@@ -107,6 +107,36 @@ export const esteticaFaqs: FAQItem[] = [
     },
 ];
 
+export const varejoFaqs: FAQItem[] = [
+    {
+        q: 'Posso usar para fotos de catálogo e loja virtual?',
+        a: 'Sim! Os presets de varejo são otimizados para e-commerce, marketplaces (Shopee, Mercado Livre) e catálogos online. Gere fotos com fundo branco ou lifestyle em segundos.',
+    },
+    {
+        q: 'Funciona para qualquer tipo de produto?',
+        a: 'Sim! Moda, joias, acessórios, cosméticos, eletrônicos e muito mais. Basta subir a foto do produto e a IA cria imagens profissionais no estilo que você escolher.',
+    },
+    {
+        q: 'Posso colocar o produto em uma modelo?',
+        a: 'Sim! Suba a foto do produto + uma selfie da modelo e a IA veste a modelo com o produto em um cenário profissional. Perfeito para lookbooks e catálogos de moda.',
+    },
+];
+
+export const deliveryFaqs: FAQItem[] = [
+    {
+        q: 'Funciona com fotos de celular?',
+        a: 'Sim! Suba a foto do prato tirada com o celular e a IA transforma em food photography profissional — com iluminação, composição e cores que dão água na boca.',
+    },
+    {
+        q: 'Posso usar para cardápio digital e iFood?',
+        a: 'Sim! As fotos são geradas em alta resolução, perfeitas para cardápios digitais, iFood, Rappi, delivery próprio e redes sociais do restaurante.',
+    },
+    {
+        q: 'Funciona para qualquer tipo de comida?',
+        a: 'Sim! Hambúrguer, pizza, sushi, doces, açaí, saladas, pães, café e muito mais. Temos presets específicos para cada tipo de culinária.',
+    },
+];
+
 // ========== COMPONENTE FAQ ==========
 
 interface FAQSectionProps {
