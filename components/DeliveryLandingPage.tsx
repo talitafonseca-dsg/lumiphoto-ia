@@ -21,10 +21,10 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
     };
 
     const segments = [
-        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Close-ups gourmet com fumaça que dão água na boca.', image: '/delivery/after-burger.png', hot: true },
-        { icon: '🍕', title: 'Pizza & Massas', desc: 'Queijo derretendo do forno. O cliente pede na hora.', image: '/delivery/after-pizza.png', hot: true },
+        { icon: '🍔', title: 'Hambúrguer & Fast Food', desc: 'Close-ups gourmet com fumaça que dão água na boca.', image: '/delivery/depois-burger.png', hot: true },
+        { icon: '🍕', title: 'Pizza & Massas', desc: 'Queijo derretendo do forno. O cliente pede na hora.', image: '/delivery/depois-pizza.png', hot: true },
         { icon: '🍣', title: 'Sushi & Japonês', desc: 'Composição elegante que valoriza cada peça.', image: '/delivery/hero-sushi.png', hot: false },
-        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/after-cake.png', hot: true },
+        { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/depois-bolo.png', hot: true },
         { icon: '🥗', title: 'Saudável & Bowls', desc: 'Cores vibrantes que atraem o público fitness.', image: '/delivery/pro-bowl.png', hot: false },
         { icon: '🥩', title: 'Churrasco & Grill', desc: 'Carnes na brasa com textura e suculência.', image: '/delivery/pro-prato.png', hot: false },
     ];
@@ -46,9 +46,9 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
     ];
 
     const beforeAfterPairs = [
-        { before: '/delivery/before-burger.png', after: '/delivery/after-burger.png', label: 'Hambúrguer' },
-        { before: '/delivery/before-pizza.png', after: '/delivery/after-pizza.png', label: 'Pizza' },
-        { before: '/delivery/before-cake.png', after: '/delivery/after-cake.png', label: 'Bolo' },
+        { before: '/delivery/antes-burger.png', after: '/delivery/depois-burger.png', label: 'Hambúrguer' },
+        { before: '/delivery/antes-pizza.png', after: '/delivery/depois-pizza.png', label: 'Pizza' },
+        { before: '/delivery/antes-bolo.png', after: '/delivery/depois-bolo.png', label: 'Bolo' },
     ];
 
     return (
@@ -125,13 +125,13 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                             <div className="grid grid-cols-2 gap-4">
                                 {/* Before */}
                                 <div className="relative rounded-2xl overflow-hidden border border-red-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-                                    <img src="/delivery/before-burger.png" alt="Antes - foto caseira" className="w-full h-64 object-cover" />
+                                    <img src="/delivery/antes-burger.png" alt="Antes - foto caseira" className="w-full h-64 object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                     <span className="absolute bottom-3 left-3 px-3 py-1 bg-red-500/80 text-[10px] font-black text-white uppercase tracking-wider rounded-lg">📱 Foto do celular</span>
                                 </div>
                                 {/* After */}
                                 <div className="relative rounded-2xl overflow-hidden border-2 border-orange-500/40 shadow-[0_8px_30px_rgba(245,158,11,0.2)] mt-8">
-                                    <img src="/delivery/after-burger.png" alt="Depois - IA profissional" className="w-full h-64 object-cover" />
+                                    <img src="/delivery/depois-burger.png" alt="Depois - IA profissional" className="w-full h-64 object-cover" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                     <span className="absolute bottom-3 right-3 px-3 py-1 bg-orange-500/90 text-[10px] font-black text-black uppercase tracking-wider rounded-lg">✨ Resultado IA</span>
                                 </div>
@@ -141,11 +141,11 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 <div className="relative rounded-xl overflow-hidden border border-red-500/20">
                                     <div className="flex relative">
                                         <div className="w-1/2 relative">
-                                            <img src="/delivery/before-pizza.png" alt="Antes pizza" className="w-full h-20 object-cover" />
+                                            <img src="/delivery/antes-pizza.png" alt="Antes pizza" className="w-full h-20 object-cover" />
                                             <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-red-500/70 text-[7px] font-black text-white uppercase rounded">antes</span>
                                         </div>
                                         <div className="w-1/2 relative">
-                                            <img src="/delivery/after-pizza.png" alt="Depois pizza" className="w-full h-20 object-cover" />
+                                            <img src="/delivery/depois-pizza.png" alt="Depois pizza" className="w-full h-20 object-cover" />
                                             <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-orange-500/90 text-[7px] font-black text-black uppercase rounded">depois</span>
                                         </div>
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
@@ -157,11 +157,11 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 <div className="relative rounded-xl overflow-hidden border border-red-500/20">
                                     <div className="flex relative">
                                         <div className="w-1/2 relative">
-                                            <img src="/delivery/before-cake.png" alt="Antes bolo" className="w-full h-20 object-cover" />
+                                            <img src="/delivery/antes-bolo.png" alt="Antes bolo" className="w-full h-20 object-cover" />
                                             <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-red-500/70 text-[7px] font-black text-white uppercase rounded">antes</span>
                                         </div>
                                         <div className="w-1/2 relative">
-                                            <img src="/delivery/after-cake.png" alt="Depois bolo" className="w-full h-20 object-cover" />
+                                            <img src="/delivery/depois-bolo.png" alt="Depois bolo" className="w-full h-20 object-cover" />
                                             <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-orange-500/90 text-[7px] font-black text-black uppercase rounded">depois</span>
                                         </div>
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
