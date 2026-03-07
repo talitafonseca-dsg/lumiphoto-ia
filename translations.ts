@@ -134,7 +134,7 @@ export const translations = {
             new_creation: 'NOVA CRIAÇÃO',
             download_hd: 'BAIXAR ALTA DEFINIÇÃO',
             download_preview: 'BAIXAR PRÉVIA (CLIENTE)',
-            preview_watermark: 'PRÉVIA - LUMIPHOTOIA',
+            preview_watermark: 'PRÉVIA',
             curation_title: 'CURADORIA DE ESTILOS',
             curation_subtitle: 'Presets neurais de alta performance',
             feature_categories: {
@@ -351,7 +351,7 @@ export const translations = {
             new_creation: 'NEW CREATION',
             download_hd: 'DOWNLOAD HIGH DEFINITION',
             download_preview: 'DOWNLOAD PREVIEW (CLIENT)',
-            preview_watermark: 'PREVIEW - LUMIPHOTOIA',
+            preview_watermark: 'PREVIEW',
             curation_title: 'STYLE CURATION',
             curation_subtitle: 'High performance neural presets',
             feature_categories: {

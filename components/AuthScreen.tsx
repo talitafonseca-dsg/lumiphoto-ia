@@ -1,18 +1,39 @@
-import React, { useState } from 'react';
-import { Loader2, Mail, Lock, LogIn, ArrowLeft, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Loader2, Mail, Lock, LogIn, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface AuthScreenProps {
     onLogin: () => void;
+    onBack?: () => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onBack }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [mode, setMode] = useState<'login' | 'forgot'>('login');
     const [resetSent, setResetSent] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [recentPurchase, setRecentPurchase] = useState<{ email: string; password: string } | null>(null);
+
+    // Check for recent purchase from CheckoutResult
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('lumiphoto_recent_purchase');
+            if (stored) {
+                const data = JSON.parse(stored);
+                // Only show if purchase was within the last 30 minutes
+                if (data.timestamp && Date.now() - data.timestamp < 30 * 60 * 1000) {
+                    setRecentPurchase({ email: data.email, password: data.password });
+                    if (data.email) setEmail(data.email);
+                    if (data.password) setPassword(data.password);
+                } else {
+                    localStorage.removeItem('lumiphoto_recent_purchase');
+                }
+            }
+        } catch { /* ignore */ }
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +56,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             }
 
             if (data.user) {
+                // Clear recent purchase data after successful login
+                localStorage.removeItem('lumiphoto_recent_purchase');
                 onLogin();
             }
         } catch (err: any) {
@@ -74,6 +97,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-amber-600/5 blur-[120px] rounded-full pointer-events-none"></div>
 
             <div className="w-full max-w-md relative z-10">
+                {/* Back Button */}
+                {onBack && (
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors mb-8"
+                    >
+                        <ArrowLeft size={18} />
+                        Voltar à página inicial
+                    </button>
+                )}
+
                 {/* Logo */}
                 <div className="text-center mb-10">
                     <div className="flex items-center justify-center gap-3 mb-4">
@@ -91,7 +125,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 {mode === 'login' ? (
                     /* Login Form */
                     <form onSubmit={handleLogin} className="bg-white/[0.03] backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-                        <h2 className="text-xl font-bold mb-6 text-center text-white">Entrar na Plataforma</h2>
+                        <h2 className="text-xl font-bold mb-4 text-center text-white">Entrar na Plataforma</h2>
+
+                        {/* Recent Purchase Welcome Banner */}
+                        {recentPurchase && (
+                            <div className="mb-6 p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/30 rounded-2xl space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle size={18} className="text-emerald-400 flex-shrink-0" />
+                                    <p className="text-emerald-400 font-bold text-sm">Compra aprovada! Faça login abaixo</p>
+                                </div>
+                                <div className="bg-black/20 rounded-xl p-3 space-y-1.5">
+                                    {recentPurchase.email && (
+                                        <p className="text-white/60 text-xs">
+                                            Email: <span className="text-white font-bold">{recentPurchase.email}</span>
+                                        </p>
+                                    )}
+                                    <p className="text-white/60 text-xs">
+                                        Senha: <span className="text-amber-400 font-mono font-bold">{recentPurchase.password}</span>
+                                    </p>
+                                </div>
+                                <p className="text-white/30 text-[10px] text-center">Os campos já foram preenchidos. Clique em "Entrar"</p>
+                            </div>
+                        )}
 
                         {error && (
                             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center">
@@ -122,13 +177,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 <div className="relative">
                                     <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                                     <input
-                                        type="password"
+                                        type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         required
-                                        className="w-full pl-12 pr-4 py-3.5 bg-white/5 rounded-xl border border-white/10 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/20 text-white placeholder:text-white/30 transition-colors"
+                                        className="w-full pl-12 pr-12 py-3.5 bg-white/5 rounded-xl border border-white/10 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/20 text-white placeholder:text-white/30 transition-colors"
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -58,6 +58,10 @@ export enum StudioStyle {
   BRIDAL_LUXURY = 'Noiva Luxo', // NOVO
   MEN_GROOMING = 'Barbearia & Estilo', // NOVO
   PERFUME_ELEGANCE = 'Perfumaria', // NOVO
+  MANICURE = 'Manicure & Nail Art', // NOVO
+  DESIGNER_SOBRANCELHA = 'Design de Sobrancelhas', // NOVO
+  DEPILADORA = 'Depiladora', // NOVO
+  PENTEADOS = 'Penteados & Updos', // NOVO
 
   // LIFESTYLE & SAÚDE
   FITNESS_PRO = 'Fitness Pro',
@@ -96,6 +100,13 @@ export enum StudioStyle {
   BDAY_JARDIM = 'Aniver: Jardim Encantado',
   BDAY_POOL_PARTY = 'Aniver: Pool Party',
   BDAY_NEON_GLOW = 'Aniver: Neon Glow',
+  // ANIVERSÁRIO MASCULINO
+  BDAY_CHURRASCO = 'Aniver: Churrasco & Cerveja',
+  BDAY_ESPORTE = 'Aniver: Esporte & Troféu',
+  BDAY_BOTECO = 'Aniver: Boteco Retrô',
+  BDAY_WHISKY_VIP = 'Aniver: Whisky VIP',
+  BDAY_AVENTURA = 'Aniver: Aventura Outdoor',
+  BDAY_GAMER = 'Aniver: Gamer Party',
 
   // COMERCIAL & PRODUTO (NOVO)
   ECOMMERCE_CLEAN = 'E-commerce Clean',
@@ -123,6 +134,72 @@ export enum StudioStyle {
   DOUBLE_EXPOSURE = 'Dupla Exposição', // NOVO
   WATERCOLOR_ART = 'Aquarela', // NOVO
   NEON_PORTRAIT = 'Retrato Neon', // NOVO
+
+  // POLÍTICO
+  POLITICO_BANDEIRA = 'Político: Bandeira',
+  POLITICO_COMICIO = 'Político: Comício',
+  POLITICO_GABINETE = 'Político: Gabinete',
+  POLITICO_CAMPANHA_RURAL = 'Político: Campanha Rural',
+
+  // RESTAURAÇÃO DE FOTOS
+  RESTAURACAO_RETRATO = 'Restauração: Retrato',
+  RESTAURACAO_FAMILIA = 'Restauração: Família',
+  RESTAURACAO_COLORIZAR = 'Restauração: Colorizar',
+
+  // PALCO & ORATÓRIA
+  PALESTRANTE_PALCO = 'Palestrante no Palco',
+  COACH_MENTOR = 'Coach & Mentor',
+  PASTOR_LIDER = 'Pastor / Líder Religioso',
+  TEDX_SPEAKER = 'TEDx Speaker',
+  COMUNICADOR_MC = 'Comunicador / MC',
+
+  // INSPIRACIONAL
+  INSP_FUNDO_BOLD_RED = 'Fundo Bold Vermelho',
+  INSP_FUNDO_BOLD_BLUE = 'Fundo Bold Azul',
+  INSP_IMPACTO_CINEMATIC = 'Impacto Cinematic',
+  INSP_NEON_BICOLOR = 'Neon Bicolor',
+  INSP_HOME_OFFICE = 'Home Office Creator',
+  INSP_EDITORIAL_ELEGANTE = 'Editorial Elegante',
+  INSP_GOLDEN_HOUR = 'Golden Hour Portrait',
+  INSP_PRETO_BRANCO = 'Preto & Branco',
+  INSP_STREET_URBAN = 'Street Urban',
+  INSP_SMOKE_MYSTERY = 'Smoke & Mystery',
+  INSP_LUZ_NATURAL = 'Luz Natural',
+  INSP_POWER_PORTRAIT = 'Power Portrait',
+
+  // OFÍCIOS & SERVIÇOS
+  DENTISTA = 'Dentista',
+  PEDREIRO = 'Pedreiro / Construção',
+  ELETRICISTA = 'Eletricista',
+  MECANICO = 'Mecânico Automotivo',
+  CHEF_COZINHEIRO = 'Chef / Cozinheiro',
+  PROFESSOR = 'Professor / Educador',
+  ENFERMEIRO = 'Enfermeiro(a)',
+  FARMACEUTICO = 'Farmacêutico',
+  BOMBEIRO = 'Bombeiro',
+  CONTADOR = 'Contador / Contabilidade',
+  CAMINHONEIRO = 'Caminhoneiro',
+  AGRICULTOR = 'Agricultor / Agro',
+
+  // TIKTOK VIRAL 🔥
+  TIKTOK_MIRROR = 'Selfie no Espelho',
+  TIKTOK_BEACH = 'Praia Golden Hour',
+  TIKTOK_PARTY = 'Festa & Drinks',
+  TIKTOK_CAR = 'No Carro',
+  TIKTOK_MORNING = 'That Girl Morning',
+  TIKTOK_GYM = 'Gym Selfie',
+  TIKTOK_OOTD = 'OOTD - Look do Dia',
+  TIKTOK_ROOFTOP = 'Rooftop Sunset',
+  TIKTOK_CAFE = 'Café Aesthetic',
+  TIKTOK_FESTIVAL = 'Festival & Show',
+
+  // ADVOGADOS ESPECIAL ⚖️
+  ADV_MINIMALISTA = 'Advogado Minimalista',
+  ADV_MODERNO = 'Advogado Moderno',
+  ADV_ESCRITORIO = 'Escritório Clean',
+  ADV_EXECUTIVO_DARK = 'Executivo Dark',
+  ADV_EDITORIAL = 'Advocacia Editorial',
+  ADV_CORPORATIVO = 'Corporativo Premium',
 }
 
 export enum MascotStyle {
@@ -239,79 +316,79 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Liderança & Autoridade',
     color: 'from-blue-600/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/executivo_pro.png'
   },
   [StudioStyle.ADVOGADO]: {
     description: 'Direito & Confiança',
     color: 'from-amber-800/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/advogado.png'
   },
   [StudioStyle.MEDICO_DENTISTA]: {
     description: 'Saúde & Credibilidade',
     color: 'from-teal-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/medico_dentista.png'
   },
   [StudioStyle.CORRETOR_IMOVEIS]: {
     description: 'Sucesso & Negócios',
     color: 'from-emerald-600/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/corretor_imoveis.png'
   },
   [StudioStyle.ENGENHEIRO]: {
     description: 'Obras & Solidez',
     color: 'from-orange-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/engenheiro.png'
   },
   [StudioStyle.ARQUITETO]: {
     description: 'Criatividade & Estrutura',
     color: 'from-slate-600/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/arquiteto.png'
   },
   [StudioStyle.PSICOLOGO]: {
     description: 'Empatia & Acolhimento',
     color: 'from-teal-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/psicologo.png'
   },
   [StudioStyle.DESIGNER_GRAFICO]: {
     description: 'Inovação Visual',
     color: 'from-purple-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/designer_grafico.png'
   },
   [StudioStyle.VENDEDOR_CARROS]: {
     description: 'Vendas & Dinamismo',
     color: 'from-red-600/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/vendedor_carros.png'
   },
   [StudioStyle.SOCIAL_MEDIA]: {
     description: 'Conectado & Criativo',
     color: 'from-pink-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/social_media.png'
   },
   [StudioStyle.PODCASTER]: {
     description: 'Voz & Influência',
     color: 'from-purple-500/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/podcaster.png'
   },
   [StudioStyle.PET_SHOP]: {
     description: 'Cuidado Animal',
     color: 'from-orange-500/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/pet_shop.png'
   },
   [StudioStyle.CONSULTOR_FINANCEIRO]: {
     description: 'Estratégia & Crescimento',
     color: 'from-slate-600/20',
     category: 'Profissional',
-    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/consultor_financeiro.png'
   },
 
   // MODA & BELEZA
@@ -319,73 +396,97 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Alta Moda & Contraste',
     color: 'from-purple-600/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/editorial_vogue.png'
   },
   [StudioStyle.LUXURY_GOLD]: {
     description: 'Elegância & Opulência',
     color: 'from-amber-600/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/luxury_gold.png'
   },
   [StudioStyle.GLOW_BEAUTY]: {
     description: 'Pele Perfeita & Fresh',
     color: 'from-pink-600/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/glow_beauty.png'
   },
   [StudioStyle.OLD_MONEY]: {
     description: 'Herança & Clássico',
     color: 'from-amber-800/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1543087903-1ac2ec7aa8c5?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/old_money.png'
   },
   [StudioStyle.MAQUIADORA]: {
     description: 'Arte & Detalhes',
     color: 'from-pink-500/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/maquiadora.png'
   },
   [StudioStyle.CABELEIREIRO]: {
     description: 'Hair Style Profissional',
     color: 'from-fuchsia-600/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/cabeleireiro.png'
   },
   [StudioStyle.JEWELRY_MACRO]: {
     description: 'Joias & Requinte',
     color: 'from-yellow-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/jewelry_macro.png'
   },
   [StudioStyle.SKINCARE_ORGANIC]: {
     description: 'Natural & Puro',
     color: 'from-green-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/skincare_organic.png'
   },
   [StudioStyle.STREET_FASHION]: {
     description: 'Urbano & Trendy',
     color: 'from-zinc-700/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/street_fashion.png'
   },
   [StudioStyle.BRIDAL_LUXURY]: {
     description: 'Noiva & Elegância',
     color: 'from-rose-100/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bridal_luxury.png'
   },
   [StudioStyle.MEN_GROOMING]: {
     description: 'Barbearia & Estilo',
     color: 'from-slate-800/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/men_grooming.png'
   },
   [StudioStyle.PERFUME_ELEGANCE]: {
     description: 'Fragrância & Aura',
     color: 'from-amber-200/20',
     category: 'Moda & Beleza',
-    imageUrl: 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/perfume_elegance.png'
+  },
+  [StudioStyle.MANICURE]: {
+    description: 'Unhas & Nail Art',
+    color: 'from-pink-400/20',
+    category: 'Moda & Beleza',
+    imageUrl: '/studio-styles/manicure.png'
+  },
+  [StudioStyle.DESIGNER_SOBRANCELHA]: {
+    description: 'Sobrancelhas Perfeitas',
+    color: 'from-rose-300/20',
+    category: 'Moda & Beleza',
+    imageUrl: '/studio-styles/designer_sobrancelha.png'
+  },
+  [StudioStyle.DEPILADORA]: {
+    description: 'Estética & Depilação',
+    color: 'from-sky-200/20',
+    category: 'Moda & Beleza',
+    imageUrl: '/studio-styles/depiladora.png'
+  },
+  [StudioStyle.PENTEADOS]: {
+    description: 'Penteados & Hair Art',
+    color: 'from-fuchsia-400/20',
+    category: 'Moda & Beleza',
+    imageUrl: '/studio-styles/penteados.png'
   },
 
   // LIFESTYLE
@@ -393,73 +494,73 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Performance & Suor',
     color: 'from-red-600/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/fitness_pro.png'
   },
   [StudioStyle.NATURE_FRESH]: {
     description: 'Orgânico & Ao Ar Livre',
     color: 'from-emerald-600/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/nature_fresh.png'
   },
   [StudioStyle.COASTAL_LUXE]: {
     description: 'Verão e Sofisticação',
     color: 'from-sky-500/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/coastal_luxe.png'
   },
   [StudioStyle.URBAN_STREET]: {
     description: 'Streetwear Moderno',
     color: 'from-zinc-600/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/urban_street.png'
   },
   [StudioStyle.PERSONAL_TRAINER]: {
     description: 'Coach & Motivação',
     color: 'from-lime-600/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/personal_trainer.png'
   },
   [StudioStyle.NUTRICIONISTA]: {
     description: 'Saudável & Colorido',
     color: 'from-green-500/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/nutricionista.png'
   },
   [StudioStyle.YOGA_WELLNESS]: {
     description: 'Zen & Equilíbrio',
     color: 'from-teal-300/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/yoga_wellness.png'
   },
   [StudioStyle.TRAVEL_BLOGGER]: {
     description: 'Aventura & Mundo',
     color: 'from-sky-400/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/travel_blogger.png'
   },
   [StudioStyle.COFFEE_LOVER]: {
     description: 'Café & Aconchego',
     color: 'from-amber-900/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/coffee_lover.png'
   },
   [StudioStyle.GAMER_STREAMER]: {
     description: 'Setup & Energia',
     color: 'from-purple-600/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/gamer_streamer.png'
   },
   [StudioStyle.MUSICIAN_VIBE]: {
     description: 'Música & Alma',
     color: 'from-indigo-700/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/musician_vibe.png'
   },
   [StudioStyle.DIY_CRAFTS]: {
     description: 'Artesanato & Mãos',
     color: 'from-orange-300/20',
     category: 'Casual',
-    imageUrl: 'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/diy_crafts.png'
   },
 
   // FAMILY
@@ -467,73 +568,73 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Retrato de Família',
     color: 'from-gray-300/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_studio_clean.png'
   },
   [StudioStyle.FAMILY_LIFESTYLE_HOME]: {
     description: 'Espontâneo em Casa',
     color: 'from-amber-100/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_lifestyle_home.png'
   },
   [StudioStyle.FAMILY_GOLDEN_HOUR]: {
     description: 'Luz Dourada Externa',
     color: 'from-orange-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_golden_hour.png'
   },
   [StudioStyle.FAMILY_BEACH]: {
     description: 'Família na Praia',
     color: 'from-cyan-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_beach.png'
   },
   [StudioStyle.FAMILY_CHRISTMAS]: {
     description: 'Natal Mágico',
     color: 'from-red-600/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_christmas.png'
   },
   [StudioStyle.FAMILY_PICNIC]: {
     description: 'Piquenique & Alegria',
     color: 'from-lime-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_picnic.png'
   },
   [StudioStyle.MATERNITY_SOFT]: {
     description: 'Gestante & Amor',
     color: 'from-pink-200/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/maternity_soft.png'
   },
   [StudioStyle.NEWBORN_ART]: {
     description: 'Recém-nascido',
     color: 'from-stone-200/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/newborn_art.png'
   },
   [StudioStyle.KIDS_PLAYGROUND]: {
     description: 'Diversão no Parque',
     color: 'from-yellow-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/kids_playground.png'
   },
   [StudioStyle.GENERATIONS_PORTRAIT]: {
     description: 'Avós & Netos',
     color: 'from-warm-gray-400/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/generations_portrait.png'
   },
   [StudioStyle.FAMILY_KITCHEN]: {
     description: 'Cozinhando Juntos',
     color: 'from-orange-200/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/family_kitchen.png'
   },
   [StudioStyle.PET_FRIENDLY_FAMILY]: {
     description: 'Família com Pets',
     color: 'from-amber-700/20',
     category: 'Família',
-    imageUrl: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/pet_friendly_family.png'
   },
 
   // ANIVERSÁRIO
@@ -541,49 +642,86 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Balões Rose Gold & Elegância',
     color: 'from-rose-400/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_baloes_rose.png'
   },
   [StudioStyle.BDAY_CONFETTI]: {
     description: 'Chuva de Confetti Dourado',
     color: 'from-yellow-500/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_confetti.png'
   },
   [StudioStyle.BDAY_BALOES_NUMERO]: {
     description: 'Balões Numéricos Metálicos',
     color: 'from-amber-400/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_baloes_numero.png'
   },
   [StudioStyle.BDAY_LUXO_DOURADO]: {
     description: 'Festa Luxo Preto & Dourado',
     color: 'from-amber-600/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_luxo_dourado.png'
   },
   [StudioStyle.BDAY_ESTUDIO_CLEAN]: {
     description: 'Estúdio Simples & Chique',
     color: 'from-gray-300/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_estudio_clean.png'
   },
   [StudioStyle.BDAY_JARDIM]: {
     description: 'Jardim Encantado & Flores',
     color: 'from-pink-300/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_jardim.png'
   },
   [StudioStyle.BDAY_POOL_PARTY]: {
     description: 'Pool Party & Verão',
     color: 'from-cyan-400/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_pool_party.png'
   },
   [StudioStyle.BDAY_NEON_GLOW]: {
     description: 'Festa Neon & Brilho UV',
     color: 'from-fuchsia-500/20',
     category: 'Aniversário',
-    imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bday_neon_glow.png'
+  },
+  // ANIVERSÁRIO MASCULINO
+  [StudioStyle.BDAY_CHURRASCO]: {
+    description: 'Churrasco & Cerveja Gelada',
+    color: 'from-orange-700/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_churrasco.png'
+  },
+  [StudioStyle.BDAY_ESPORTE]: {
+    description: 'Troféu & Vitória',
+    color: 'from-green-600/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_esporte.png'
+  },
+  [StudioStyle.BDAY_BOTECO]: {
+    description: 'Boteco & Nostalgia',
+    color: 'from-yellow-700/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_boteco.png'
+  },
+  [StudioStyle.BDAY_WHISKY_VIP]: {
+    description: 'Whisky & Charuto VIP',
+    color: 'from-amber-900/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_whisky_vip.png'
+  },
+  [StudioStyle.BDAY_AVENTURA]: {
+    description: 'Aventura & Natureza',
+    color: 'from-emerald-700/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_aventura.png'
+  },
+  [StudioStyle.BDAY_GAMER]: {
+    description: 'Setup Gamer & RGB',
+    color: 'from-purple-700/20',
+    category: 'Aniversário',
+    imageUrl: '/studio-styles/bday_gamer.png'
   },
 
   // COMERCIAL & PRODUTO
@@ -591,67 +729,67 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Fundo Branco & Foco',
     color: 'from-gray-100/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/ecommerce_clean.png'
   },
   [StudioStyle.TECH_STARTUP]: {
     description: 'Inovação & Escritório',
     color: 'from-indigo-500/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/tech_startup.png'
   },
   [StudioStyle.GASTRONOMIA]: {
     description: 'Food Porn & Sabor',
     color: 'from-orange-500/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/gastronomia.png'
   },
   [StudioStyle.REAL_ESTATE]: {
     description: 'Arquitetura & Decor',
     color: 'from-blue-200/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/real_estate.png'
   },
   [StudioStyle.COFFEE_SHOP]: {
     description: 'Cafeteria & Aroma',
     color: 'from-stone-700/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1507914372368-b2b085b925a1?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/coffee_shop.png'
   },
   [StudioStyle.FLORIST_BOUTIQUE]: {
     description: 'Flores & Cores',
     color: 'from-pink-400/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/florist_boutique.png'
   },
   [StudioStyle.BAKERY_ARTISAN]: {
     description: 'Padaria Artesanal',
     color: 'from-amber-300/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bakery_artisan.png'
   },
   [StudioStyle.BOOKSTORE_COZY]: {
     description: 'Livraria & Cultura',
     color: 'from-blue-900/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/bookstore_cozy.png'
   },
   [StudioStyle.GYM_CROSSFIT]: {
     description: 'Academia & Força',
     color: 'from-slate-800/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/personal_trainer.png'
   },
   [StudioStyle.SPA_WELLNESS]: {
     description: 'Spa & Relax',
     color: 'from-teal-100/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/spa_wellness.png'
   },
   [StudioStyle.BARBER_SHOP_RETRO]: {
     description: 'Barbearia Clássica',
     color: 'from-stone-900/20',
     category: 'Comercial',
-    imageUrl: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/barber_shop_retro.png'
   },
 
   // CRIATIVO
@@ -659,73 +797,398 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     description: 'Neon & Futurismo',
     color: 'from-cyan-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/cyberpunk_neon.png'
   },
   [StudioStyle.FUTURISTA_LAB]: {
     description: 'Alta Tecnologia',
     color: 'from-indigo-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/futurista_lab.png'
   },
   [StudioStyle.VINTAGE_FILM]: {
     description: 'Analógico & Retrô',
     color: 'from-orange-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/vintage_film.png'
   },
   [StudioStyle.POP_ART]: {
     description: 'Cores & Contraste',
     color: 'from-yellow-500/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/pop_art.png'
   },
   [StudioStyle.TATUADOR]: {
     description: 'Ink & Lifestyle',
     color: 'from-violet-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/tatuador.png'
   },
   [StudioStyle.FOTOGRAFO]: {
     description: 'Câmera & Arte',
     color: 'from-rose-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/fotografo.png'
   },
   [StudioStyle.SURREAL_DREAM]: {
     description: 'Onírico & Mágico',
     color: 'from-violet-500/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/surreal_dream.png'
   },
   [StudioStyle.GLITCH_ART]: {
     description: 'Erro Digital',
     color: 'from-fuchsia-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/glitch_art.png'
   },
   [StudioStyle.PAPER_CUTOUT]: {
     description: 'Colagem 3D',
     color: 'from-yellow-400/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/paper_cutout.png'
   },
   [StudioStyle.DOUBLE_EXPOSURE]: {
     description: 'Fusão de Imagens',
     color: 'from-cyan-500/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1554189097-ffe88e998a2b?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/double_exposure.png'
   },
   [StudioStyle.WATERCOLOR_ART]: {
     description: 'Pintura Suave',
     color: 'from-emerald-400/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/watercolor_art.png'
   },
   [StudioStyle.NEON_PORTRAIT]: {
     description: 'Luzes Fluorescentes',
     color: 'from-blue-600/20',
     category: 'Criativo',
-    imageUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80'
+    imageUrl: '/studio-styles/neon_portrait.png'
+  },
+
+  // POLÍTICO
+  [StudioStyle.POLITICO_BANDEIRA]: {
+    description: 'Bandeira & Patriotismo',
+    color: 'from-green-700/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_bandeira.png'
+  },
+  [StudioStyle.POLITICO_COMICIO]: {
+    description: 'Palanque & Multidão',
+    color: 'from-red-700/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_comicio.png'
+  },
+  [StudioStyle.POLITICO_GABINETE]: {
+    description: 'Gabinete & Autoridade',
+    color: 'from-slate-700/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_gabinete.png'
+  },
+  [StudioStyle.POLITICO_CAMPANHA_RURAL]: {
+    description: 'Campanha & Povo',
+    color: 'from-amber-700/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_campanha_rural.png'
+  },
+
+  // RESTAURAÇÃO DE FOTOS
+  [StudioStyle.RESTAURACAO_RETRATO]: {
+    description: 'Restaurar Retrato Antigo',
+    color: 'from-stone-500/20',
+    category: 'Restauração',
+    imageUrl: '/studio-styles/luxury_gold.png'
+  },
+  [StudioStyle.RESTAURACAO_FAMILIA]: {
+    description: 'Restaurar Foto de Família',
+    color: 'from-amber-500/20',
+    category: 'Restauração',
+    imageUrl: '/studio-styles/family_studio_clean.png'
+  },
+  [StudioStyle.RESTAURACAO_COLORIZAR]: {
+    description: 'Colorizar Foto P&B',
+    color: 'from-purple-500/20',
+    category: 'Restauração',
+    imageUrl: '/studio-styles/restauracao_colorizar.png'
+  },
+
+  // PALCO & ORATÓRIA
+  [StudioStyle.PALESTRANTE_PALCO]: {
+    description: 'Palco & Holofotes',
+    color: 'from-blue-500/20',
+    category: 'Palco & Oratória',
+    imageUrl: '/studio-styles/palestrante_palco.png'
+  },
+  [StudioStyle.COACH_MENTOR]: {
+    description: 'Coach & Motivação',
+    color: 'from-amber-500/20',
+    category: 'Palco & Oratória',
+    imageUrl: '/studio-styles/coach_mentor.png'
+  },
+  [StudioStyle.PASTOR_LIDER]: {
+    description: 'Púlpito & Ministério',
+    color: 'from-indigo-400/20',
+    category: 'Palco & Oratória',
+    imageUrl: '/studio-styles/pastor_lider.png'
+  },
+  [StudioStyle.TEDX_SPEAKER]: {
+    description: 'Palco TED & Impacto',
+    color: 'from-red-500/20',
+    category: 'Palco & Oratória',
+    imageUrl: '/studio-styles/tedx_speaker.png'
+  },
+  [StudioStyle.COMUNICADOR_MC]: {
+    description: 'Energia & Palco',
+    color: 'from-purple-500/20',
+    category: 'Palco & Oratória',
+    imageUrl: '/studio-styles/comunicador_mc.png'
+  },
+
+  // INSPIRACIONAL
+  [StudioStyle.INSP_FUNDO_BOLD_RED]: {
+    description: 'Fundo Vermelho Bold',
+    color: 'from-red-600/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_fundo_bold_red.png'
+  },
+  [StudioStyle.INSP_FUNDO_BOLD_BLUE]: {
+    description: 'Fundo Azul Bold',
+    color: 'from-blue-600/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_fundo_bold_blue.png'
+  },
+  [StudioStyle.INSP_IMPACTO_CINEMATIC]: {
+    description: 'Sombras & Impacto',
+    color: 'from-gray-800/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_impacto_cinematic.png'
+  },
+  [StudioStyle.INSP_NEON_BICOLOR]: {
+    description: 'Neon Vermelho & Azul',
+    color: 'from-fuchsia-500/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_neon_bicolor.png'
+  },
+  [StudioStyle.INSP_HOME_OFFICE]: {
+    description: 'Creator em Casa',
+    color: 'from-amber-500/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_home_office.png'
+  },
+  [StudioStyle.INSP_EDITORIAL_ELEGANTE]: {
+    description: 'Elegância & Sofisticação',
+    color: 'from-rose-400/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_editorial_elegante.png'
+  },
+  [StudioStyle.INSP_GOLDEN_HOUR]: {
+    description: 'Luz Dourada Natural',
+    color: 'from-yellow-500/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_golden_hour.png'
+  },
+  [StudioStyle.INSP_PRETO_BRANCO]: {
+    description: 'Clássico P&B',
+    color: 'from-neutral-500/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_preto_branco.png'
+  },
+  [StudioStyle.INSP_STREET_URBAN]: {
+    description: 'Urbano & Street',
+    color: 'from-stone-500/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_street_urban.png'
+  },
+  [StudioStyle.INSP_SMOKE_MYSTERY]: {
+    description: 'Fumaça & Mistério',
+    color: 'from-slate-600/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_smoke_mystery.png'
+  },
+  [StudioStyle.INSP_LUZ_NATURAL]: {
+    description: 'Luz de Janela',
+    color: 'from-orange-300/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_luz_natural.png'
+  },
+  [StudioStyle.INSP_POWER_PORTRAIT]: {
+    description: 'Poder & Autoridade',
+    color: 'from-zinc-700/20',
+    category: 'Inspiracional',
+    imageUrl: '/studio-styles/insp_power_portrait.png'
+  },
+
+  // OFÍCIOS & SERVIÇOS
+  [StudioStyle.DENTISTA]: {
+    description: 'Sorriso & Confiança',
+    color: 'from-cyan-400/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/dentista.png'
+  },
+  [StudioStyle.PEDREIRO]: {
+    description: 'Construção & Força',
+    color: 'from-orange-600/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/pedreiro.png'
+  },
+  [StudioStyle.ELETRICISTA]: {
+    description: 'Energia & Precisão',
+    color: 'from-yellow-500/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/eletricista.png'
+  },
+  [StudioStyle.MECANICO]: {
+    description: 'Motor & Habilidade',
+    color: 'from-slate-600/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/mecanico.png'
+  },
+  [StudioStyle.CHEF_COZINHEIRO]: {
+    description: 'Gastronomia & Arte',
+    color: 'from-red-500/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/chef.png'
+  },
+  [StudioStyle.PROFESSOR]: {
+    description: 'Educação & Inspiração',
+    color: 'from-blue-400/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/professor.png'
+  },
+  [StudioStyle.ENFERMEIRO]: {
+    description: 'Cuidado & Saúde',
+    color: 'from-teal-400/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/enfermeiro.png'
+  },
+  [StudioStyle.FARMACEUTICO]: {
+    description: 'Saúde & Conhecimento',
+    color: 'from-green-400/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/farmaceutico.png'
+  },
+  [StudioStyle.BOMBEIRO]: {
+    description: 'Coragem & Heroísmo',
+    color: 'from-red-600/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/bombeiro.png'
+  },
+  [StudioStyle.CONTADOR]: {
+    description: 'Números & Estratégia',
+    color: 'from-indigo-400/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/contador.png'
+  },
+  [StudioStyle.CAMINHONEIRO]: {
+    description: 'Estrada & Liberdade',
+    color: 'from-amber-600/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/caminhoneiro.png'
+  },
+  [StudioStyle.AGRICULTOR]: {
+    description: 'Campo & Dedicação',
+    color: 'from-emerald-600/20',
+    category: 'Ofícios & Serviços',
+    imageUrl: '/studio-styles/agricultor.png'
+  },
+
+  // TIKTOK VIRAL 🔥
+  [StudioStyle.TIKTOK_MIRROR]: {
+    description: 'Selfie Aesthetic',
+    color: 'from-pink-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_mirror.png'
+  },
+  [StudioStyle.TIKTOK_BEACH]: {
+    description: 'Beach Vibes',
+    color: 'from-amber-400/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_beach.png'
+  },
+  [StudioStyle.TIKTOK_PARTY]: {
+    description: 'Party Mode',
+    color: 'from-fuchsia-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_party.png'
+  },
+  [StudioStyle.TIKTOK_CAR]: {
+    description: 'Car Aesthetic',
+    color: 'from-slate-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_car.png'
+  },
+  [StudioStyle.TIKTOK_MORNING]: {
+    description: 'That Girl ✨',
+    color: 'from-lime-300/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_morning.png'
+  },
+  [StudioStyle.TIKTOK_GYM]: {
+    description: 'Gym Aesthetic',
+    color: 'from-red-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_gym.png'
+  },
+  [StudioStyle.TIKTOK_OOTD]: {
+    description: 'Look do Dia',
+    color: 'from-violet-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_ootd.png'
+  },
+  [StudioStyle.TIKTOK_ROOFTOP]: {
+    description: 'Sunset Vibes',
+    color: 'from-orange-500/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_rooftop.png'
+  },
+  [StudioStyle.TIKTOK_CAFE]: {
+    description: 'Coffee Vibes',
+    color: 'from-yellow-800/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_cafe.png'
+  },
+  [StudioStyle.TIKTOK_FESTIVAL]: {
+    description: 'Festival Energy',
+    color: 'from-purple-600/20',
+    category: 'TikTok Viral 🔥',
+    imageUrl: '/studio-styles/tiktok_festival.png'
+  },
+  // ADVOGADOS ESPECIAL ⚖️
+  [StudioStyle.ADV_MINIMALISTA]: {
+    description: 'Fundo branco clean, postura de autoridade',
+    color: 'from-gray-400/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_minimalista.png'
+  },
+  [StudioStyle.ADV_MODERNO]: {
+    description: 'Sem gravata, visual contemporâneo',
+    color: 'from-slate-500/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_moderno.png'
+  },
+  [StudioStyle.ADV_ESCRITORIO]: {
+    description: 'Mesa clean com livros jurídicos',
+    color: 'from-amber-500/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_escritorio.png'
+  },
+  [StudioStyle.ADV_EXECUTIVO_DARK]: {
+    description: 'Fundo escuro elegante, corporativo',
+    color: 'from-zinc-600/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_executivo_dark.png'
+  },
+  [StudioStyle.ADV_EDITORIAL]: {
+    description: 'Fashion-forward, editorial moderno',
+    color: 'from-stone-500/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_editorial.png'
+  },
+  [StudioStyle.ADV_CORPORATIVO]: {
+    description: 'Janela panorâmica, skyline corporativo',
+    color: 'from-sky-500/20',
+    category: 'Profissional',
+    imageUrl: '/studio-styles/adv_corporativo.png'
   }
 };
 

@@ -9,6 +9,15 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const DEFAULT_PASSWORD = "lumi123456";
 const SITE_URL = "https://www.lumiphotoia.online";
 
+// TrackPro/Meta CAPI - Server-Side Tracking
+const TRACKPRO_ENDPOINT = "https://obzvzudlfftyjwgemdhx.supabase.co/functions/v1/track-event";
+const TRACKPRO_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienZ6dWRsZmZ0eWp3Z2VtZGh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMzY0NjYsImV4cCI6MjA4NzgxMjQ2Nn0.iSgCV7hYpR4UKm0Twok4AmBFzhQqThpFSx6AQaNFKkI";
+const TRACKPRO_USER_ID = "844b2e8d-36b7-438b-93d4-2bc9cee6118d";
+
+const PLAN_PRICES: Record<string, number> = {
+    starter: 37, essencial: 57, pro: 80, premium: 117,
+};
+
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
         autoRefreshToken: false,
@@ -93,11 +102,23 @@ Deno.serve(async (req: Request) => {
         let planType = "starter";
         let refEmail = "";
         let referralCode = "";
+        let affiliateCode = "";
+        let whatsapp = "";
+        let sourcePage = "";
+        let utmSource = "";
+        let utmMedium = "";
+        let utmCampaign = "";
         try {
             const refData = JSON.parse(payment.external_reference);
             planType = refData.plan || "starter";
             refEmail = refData.email || "";
             referralCode = refData.referral_code || "";
+            affiliateCode = refData.affiliate_code || "";
+            whatsapp = refData.whatsapp || "";
+            sourcePage = refData.source_page || "";
+            utmSource = refData.utm_source || "";
+            utmMedium = refData.utm_medium || "";
+            utmCampaign = refData.utm_campaign || "";
         } catch {
             console.log("Could not parse external_reference");
         }
@@ -114,6 +135,10 @@ Deno.serve(async (req: Request) => {
                 amount: payment.transaction_amount,
                 status: payment.status,
                 metadata: payment,
+                ...(sourcePage ? { source_page: sourcePage } : {}),
+                ...(utmSource ? { utm_source: utmSource } : {}),
+                ...(utmMedium ? { utm_medium: utmMedium } : {}),
+                ...(utmCampaign ? { utm_campaign: utmCampaign } : {}),
             }, { onConflict: "mercadopago_payment_id" });
 
             return new Response("OK", { status: 200 });
@@ -154,7 +179,8 @@ Deno.serve(async (req: Request) => {
                 plan_type: planType,
                 payment_id: paymentId,
                 purchase_date: new Date().toISOString(),
-                credits: creditsToAdd
+                credits: creditsToAdd,
+                ...(whatsapp ? { whatsapp } : {}),
             },
         });
 
@@ -177,7 +203,8 @@ Deno.serve(async (req: Request) => {
                             plan_type: planType,
                             payment_id: paymentId,
                             last_payment_date: new Date().toISOString(),
-                            credits: newTotal
+                            credits: newTotal,
+                            ...(whatsapp ? { whatsapp } : {}),
                         },
                     });
                 }
@@ -200,6 +227,10 @@ Deno.serve(async (req: Request) => {
             user_id: userId,
             user_created: true,
             metadata: payment,
+            ...(sourcePage ? { source_page: sourcePage } : {}),
+            ...(utmSource ? { utm_source: utmSource } : {}),
+            ...(utmMedium ? { utm_medium: utmMedium } : {}),
+            ...(utmCampaign ? { utm_campaign: utmCampaign } : {}),
         }, { onConflict: "mercadopago_payment_id" });
 
         // Enviar email de boas-vindas
@@ -209,9 +240,17 @@ Deno.serve(async (req: Request) => {
         console.log(`✅ User ${isNewUser ? 'created' : 'updated'} successfully: ${payerEmail}`);
         console.log(`📋 Plan: ${planType} | Credits: ${creditsToAdd}`);
 
+        // ========== SERVER-SIDE PURCHASE TRACKING (Meta CAPI) ==========
+        await trackServerPurchase(payerEmail, planType, payment.transaction_amount, paymentId.toString());
+
         // ========== REFERRAL REWARD ==========
         if (referralCode) {
             await processReferralReward(referralCode, payerEmail);
+        }
+
+        // ========== AFFILIATE COMMISSION ==========
+        if (affiliateCode) {
+            await processAffiliateCommission(affiliateCode, payerEmail, planType, payment.transaction_amount, paymentId.toString());
         }
 
         return new Response("OK", { status: 200 });
@@ -223,11 +262,51 @@ Deno.serve(async (req: Request) => {
 });
 
 function getPlanFromReference(ref: string): string {
+    try { const data = JSON.parse(ref); return data.plan || "starter"; } catch { return "starter"; }
+}
+
+// Server-side Purchase event via TrackPro (Meta CAPI)
+async function trackServerPurchase(email: string, plan: string, amount: number, paymentId: string) {
     try {
-        const data = JSON.parse(ref);
-        return data.plan || "starter";
-    } catch {
-        return "starter";
+        const eventId = `purchase_${paymentId}`;
+        const purchaseValue = PLAN_PRICES[plan] || amount || 37;
+
+        const payload = {
+            event_name: "Purchase",
+            event_id: eventId,
+            event_time: Math.floor(Date.now() / 1000),
+            source_url: `${SITE_URL}/checkout/success`,
+            user_id: TRACKPRO_USER_ID,
+            user_data: {
+                email: email || null,
+                external_id: `server_${paymentId}`,
+            },
+            custom_data: {
+                value: purchaseValue,
+                currency: "BRL",
+                content_name: plan || "LumiPhoto Credits",
+                content_type: "product",
+                order_id: paymentId,
+            },
+        };
+
+        const res = await fetch(TRACKPRO_ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": TRACKPRO_ANON_KEY,
+                "Authorization": `Bearer ${TRACKPRO_ANON_KEY}`,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+            console.log(`📊 Server-side Purchase tracked via CAPI: ${email} | ${plan} | R$${purchaseValue} | eventId: ${eventId}`);
+        } else {
+            console.error("TrackPro CAPI error:", await res.text());
+        }
+    } catch (error) {
+        console.error("Failed to track server-side Purchase:", error);
     }
 }
 
@@ -485,3 +564,64 @@ async function sendReferralRewardEmail(referrerEmail: string, buyerEmail: string
     }
 }
 
+async function processAffiliateCommission(affiliateCode: string, buyerEmail: string, planType: string, saleAmount: number, paymentId: string) {
+    try {
+        console.log(`🤝 Processing affiliate commission for code: ${affiliateCode}`);
+
+        // Find the affiliate
+        const { data: affiliate, error: affError } = await supabaseAdmin
+            .from("affiliates")
+            .select("*")
+            .eq("affiliate_code", affiliateCode)
+            .eq("is_active", true)
+            .single();
+
+        if (affError || !affiliate) {
+            console.log("Affiliate not found or inactive:", affiliateCode);
+            return;
+        }
+
+        // Anti-fraud: block self-purchase
+        if (affiliate.email.toLowerCase() === buyerEmail.toLowerCase()) {
+            console.warn("⚠️ Self-affiliate purchase blocked:", buyerEmail);
+            return;
+        }
+
+        // Check for duplicate
+        const { data: existing } = await supabaseAdmin
+            .from("affiliate_sales")
+            .select("id")
+            .eq("payment_id", paymentId)
+            .single();
+
+        if (existing) {
+            console.log("Affiliate sale already recorded for payment:", paymentId);
+            return;
+        }
+
+        // Calculate commission
+        const commissionAmount = Number(saleAmount) * Number(affiliate.commission_percent) / 100;
+
+        // Insert affiliate sale
+        const { error: insertError } = await supabaseAdmin
+            .from("affiliate_sales")
+            .insert({
+                affiliate_id: affiliate.id,
+                payment_id: paymentId,
+                buyer_email: buyerEmail,
+                plan_type: planType,
+                sale_amount: saleAmount,
+                commission_amount: commissionAmount,
+                status: "pending",
+            });
+
+        if (insertError) {
+            console.error("Error recording affiliate sale:", insertError);
+            return;
+        }
+
+        console.log(`✅ Affiliate ${affiliate.name} earned ${commissionAmount.toFixed(2)} (${affiliate.commission_percent}% of ${saleAmount})`);
+    } catch (error) {
+        console.error("Error processing affiliate commission:", error);
+    }
+}

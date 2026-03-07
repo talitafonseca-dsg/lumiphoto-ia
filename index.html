@@ -16,9 +16,311 @@
     }(window, document, 'script',
       'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '4260013394267682');
-    fbq('track', 'PageView');
+    // NÃO coloque fbq('track', ...) aqui — o TrackPro cuida disso com deduplicação.
   </script>
   <!-- End Meta Pixel Code -->
+
+  <!-- TrackPro - Meta CAPI Advanced Tracking -->
+  <script>
+    (function () {
+      if (window.__trackProLoaded) return;
+      window.__trackProLoaded = true;
+      var ENDPOINT = "https://obzvzudlfftyjwgemdhx.supabase.co/functions/v1/track-event";
+      var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienZ6dWRsZmZ0eWp3Z2VtZGh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMzY0NjYsImV4cCI6MjA4NzgxMjQ2Nn0.iSgCV7hYpR4UKm0Twok4AmBFzhQqThpFSx6AQaNFKkI";
+      var USER_ID = "844b2e8d-36b7-438b-93d4-2bc9cee6118d";
+
+      function getCookie(name) {
+        var m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return m ? m[2] : null;
+      }
+
+      function setCookie(name, val, days) {
+        var d = '';
+        try {
+          d = ';domain=.' + window.location.hostname.split('.').slice(-2).join('.');
+        } catch (e) { }
+        document.cookie = name + '=' + val + ';path=/;max-age=' + (days * 86400) + ';SameSite=Lax' + d;
+      }
+
+      function getParam(name) {
+        var m = window.location.search.match(new RegExp('[?&]' + name + '=([^&]+)'));
+        if (m) return decodeURIComponent(m[1]);
+        var h = window.location.hash.match(new RegExp('[#&]' + name + '=([^&]+)'));
+        if (h) return decodeURIComponent(h[1]);
+        return null;
+      }
+
+      function extractFbclid(url) {
+        if (!url) return null;
+        try {
+          var u = new URL(url);
+          var p = u.searchParams.get('fbclid');
+          if (p) return p;
+          var hm = u.hash.match(/[#&]fbclid=([^&]+)/);
+          if (hm) return decodeURIComponent(hm[1]);
+        } catch (e) { }
+        return null;
+      }
+
+      function getFbp() {
+        var c = getCookie('_fbp');
+        if (c) return c;
+        var ts = Date.now();
+        var rand = Math.floor(Math.random() * 10000000000);
+        var domainParts = 1;
+        try { domainParts = window.location.hostname.split('.').length - 1; } catch (e) { }
+        var fbp = 'fb.' + domainParts + '.' + ts + '.' + rand;
+        setCookie('_fbp', fbp, 90);
+        return fbp;
+      }
+
+      function getFbc() {
+        var existingFbc = getCookie('_fbc');
+        var fbclid = null;
+        fbclid = getParam('fbclid');
+        if (!fbclid) {
+          try {
+            var entries = performance.getEntriesByType('navigation');
+            if (entries && entries[0] && entries[0].name) {
+              fbclid = extractFbclid(entries[0].name);
+            }
+          } catch (e) { }
+        }
+        if (!fbclid) fbclid = extractFbclid(document.referrer);
+        if (!fbclid) { try { fbclid = localStorage.getItem('_tp_fbclid'); } catch (e) { } }
+        if (!fbclid) { try { fbclid = sessionStorage.getItem('_tp_fbclid'); } catch (e) { } }
+        if (fbclid) {
+          var existingFbclid = null;
+          if (existingFbc) {
+            var parts = existingFbc.split('.');
+            if (parts.length >= 4) existingFbclid = parts.slice(3).join('.');
+          }
+          if (!existingFbc || existingFbclid !== fbclid) {
+            try { localStorage.setItem('_tp_fbclid', fbclid); } catch (e) { }
+            try { sessionStorage.setItem('_tp_fbclid', fbclid); } catch (e) { }
+            var domainParts = 1;
+            try { domainParts = window.location.hostname.split('.').length - 1; } catch (e) { }
+            var fbc = 'fb.' + domainParts + '.' + Date.now() + '.' + fbclid;
+            setCookie('_fbc', fbc, 90);
+            return fbc;
+          }
+        }
+        if (existingFbc) return existingFbc;
+        return null;
+      }
+
+      var _resolvedFbclid = getParam('fbclid');
+      if (!_resolvedFbclid) { try { _resolvedFbclid = localStorage.getItem('_tp_fbclid'); } catch (e) { } }
+
+      function tagLink(a) {
+        if (!a || !a.href || !_resolvedFbclid) return;
+        try {
+          var u = new URL(a.href);
+          if (u.hostname === window.location.hostname && !u.searchParams.has('fbclid')) {
+            u.searchParams.set('fbclid', _resolvedFbclid);
+            a.href = u.toString();
+          }
+        } catch (e) { }
+      }
+
+      if (_resolvedFbclid) {
+        document.addEventListener('click', function (e) {
+          tagLink(e.target.closest ? e.target.closest('a') : null);
+        }, true);
+        try {
+          new MutationObserver(function (muts) {
+            muts.forEach(function (m) {
+              m.addedNodes.forEach(function (n) {
+                if (n.tagName === 'A') tagLink(n);
+                if (n.querySelectorAll) n.querySelectorAll('a').forEach(tagLink);
+              });
+            });
+          }).observe(document.documentElement, { childList: true, subtree: true });
+        } catch (e) { }
+        ['pushState', 'replaceState'].forEach(function (fn) {
+          var orig = history[fn];
+          history[fn] = function () {
+            var url = arguments[2];
+            if (url && typeof url === 'string') {
+              try {
+                var u = new URL(url, window.location.origin);
+                if (!u.searchParams.has('fbclid')) {
+                  u.searchParams.set('fbclid', _resolvedFbclid);
+                  arguments[2] = u.toString();
+                }
+              } catch (e) { }
+            }
+            return orig.apply(this, arguments);
+          };
+        });
+      }
+
+      function getExternalId() {
+        var key = '_tp_eid';
+        var stored = null;
+        try { stored = localStorage.getItem(key); } catch (e) { }
+        if (!stored) { stored = getCookie(key); }
+        if (stored) return stored;
+        var eid = 'tp_' + genId();
+        try { localStorage.setItem(key, eid); } catch (e) { }
+        document.cookie = key + '=' + eid + ';path=/;max-age=31536000;SameSite=Lax';
+        return eid;
+      }
+
+      function genId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+          var r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+      }
+
+      var persistentEid = getExternalId();
+
+      function getFbLoginId() {
+        try { var stored = localStorage.getItem('_tp_fb_login_id'); if (stored) return stored; } catch (e) { }
+        try { var stored2 = getCookie('_tp_fb_login_id'); if (stored2) return stored2; } catch (e) { }
+        try {
+          if (typeof FB !== 'undefined') {
+            var uid = null;
+            if (FB.getUserID) uid = FB.getUserID();
+            if (!uid && FB.getAuthResponse) {
+              var auth = FB.getAuthResponse();
+              if (auth && auth.userID) uid = auth.userID;
+            }
+            if (uid) { persistFbLoginId(uid); return uid; }
+          }
+        } catch (e) { }
+        return null;
+      }
+
+      function persistFbLoginId(uid) {
+        try { localStorage.setItem('_tp_fb_login_id', uid); } catch (e) { }
+        setCookie('_tp_fb_login_id', uid, 365);
+      }
+
+      var _origFbAsyncInit = window.fbAsyncInit;
+      window.fbAsyncInit = function () {
+        if (typeof _origFbAsyncInit === 'function') _origFbAsyncInit();
+        setTimeout(function () {
+          try {
+            if (typeof FB !== 'undefined' && FB.getLoginStatus) {
+              FB.getLoginStatus(function (resp) {
+                if (resp.authResponse && resp.authResponse.userID) {
+                  persistFbLoginId(resp.authResponse.userID);
+                }
+              });
+            }
+          } catch (e) { }
+        }, 500);
+      };
+
+      window.trackPro = function (eventName, params) {
+        params = params || {};
+        var eventId = params.event_id || genId();
+        var fbLoginId = params.fb_login_id || getFbLoginId();
+
+        var payload = {
+          event_name: eventName,
+          event_id: eventId,
+          event_time: Math.floor(Date.now() / 1000),
+          source_url: window.location.href,
+          referrer_url: document.referrer || null,
+          user_id: USER_ID,
+          fbp: getFbp(),
+          fbc: getFbc(),
+          fb_login_id: fbLoginId,
+          user_data: {
+            email: params.email || null,
+            phone: params.phone || null,
+            first_name: params.first_name || null,
+            last_name: params.last_name || null,
+            city: params.city || null,
+            state: params.state || null,
+            zip_code: params.zip_code || null,
+            country: params.country || null,
+            date_of_birth: params.date_of_birth || null,
+            gender: params.gender || null,
+            external_id: params.external_id || persistentEid
+          },
+          custom_data: params.custom_data || {}
+        };
+
+        fetch(ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': ANON_KEY,
+            'Authorization': 'Bearer ' + ANON_KEY
+          },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(function () { });
+
+        if (typeof fbq === 'function') {
+          fbq('init', '4260013394267682', { external_id: params.external_id || persistentEid });
+          fbq('track', eventName, params.custom_data || {}, { eventID: eventId });
+        }
+      };
+
+      trackPro('PageView');
+
+      var _vcFired = false;
+      function checkScroll() {
+        if (_vcFired) return;
+        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        var docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) - window.innerHeight;
+        if (docHeight > 0 && (scrollTop / docHeight) >= 0.5) {
+          _vcFired = true;
+          trackPro('ViewContent', {
+            custom_data: {
+              content_name: document.title || '',
+              content_url: window.location.href
+            }
+          });
+          window.removeEventListener('scroll', checkScroll);
+        }
+      }
+      window.addEventListener('scroll', checkScroll, { passive: true });
+      setTimeout(checkScroll, 2000);
+
+      var checkoutDomains = ['pay.hotmart.com', 'hotmart.com/product', 'pay.kiwify.com.br', 'kiwify.com.br/checkout', 'checkout.eduzz.com', 'sun.eduzz.com', 'app.monetizze.com.br', 'checkout', 'comprar', 'purchase', 'pay.', 'order'];
+      var _icFired = false;
+
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest ? e.target.closest('a') : null;
+        if (!a || !a.href) return;
+        try {
+          var u = new URL(a.href);
+          if (u.hostname === 'wa.me' || u.hostname === 'api.whatsapp.com' || u.hostname.includes('whatsapp')) {
+            var waPhone = u.pathname.replace(/^\//, '').replace(/[^0-9]/g, '');
+            trackPro('Contact', {
+              custom_data: {
+                contact_method: 'whatsapp',
+                whatsapp_number: waPhone || null,
+                whatsapp_url: a.href
+              }
+            });
+            return;
+          }
+          if (!_icFired) {
+            var href = a.href.toLowerCase();
+            var isCheckout = checkoutDomains.some(function (d) { return href.includes(d); });
+            if (isCheckout) {
+              _icFired = true;
+              trackPro('InitiateCheckout', {
+                custom_data: {
+                  checkout_url: a.href,
+                  value: 0,
+                  currency: 'BRL'
+                }
+              });
+            }
+          }
+        } catch (err) { }
+      }, true);
+    })();
+  </script>
+  <!-- End TrackPro -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LumiphotoIA | Studio</title>
@@ -40,7 +342,13 @@
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-dark);
       color: #ffffff;
-      overflow: hidden;
+      overflow: auto;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        overflow: hidden;
+      }
     }
 
     /* Custom Scrollbar */

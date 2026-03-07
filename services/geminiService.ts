@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+// Gemini API calls are now proxied through the generate-image Edge Function
 import { GenerationConfig, CreationType, VisualStyle, StudioStyle, MascotStyle, MockupStyle, AspectRatio, GeneratedImage, SocialClass, UGCEnvironment, UGCModel } from "../types";
 
 export const generateStudioCreative = async (
@@ -9,7 +9,7 @@ export const generateStudioCreative = async (
   stickerImage?: string | null,
   customModelImage?: string | null,
   environmentImage?: string | null,
-  apiKey?: string
+  authToken?: string
 ): Promise<GeneratedImage[]> => {
   const variations: GeneratedImage[] = [];
 
@@ -18,7 +18,7 @@ export const generateStudioCreative = async (
     const variationId = Math.random().toString(36).substr(2, 9);
 
     try {
-      const variationPrompt = constructPrompt(config, v, customModelImage, !!stickerImage, !!productImage, !!referenceImage);
+      const variationPrompt = constructPrompt(config, v, customModelImage, !!stickerImage, !!productImage, !!referenceImage, !!environmentImage);
 
       // OPTIMIZATION: For PPT Generation, ONLY send the subject image for Slide 1 (Cover) and Slide 4 (Content).
       // For all other slides (Agenda, Section, Data, Contact), we want PURE design without the person to keep it clean.
@@ -33,7 +33,7 @@ export const generateStudioCreative = async (
         }
       }
 
-      const imageUrl = await callImageApi(variationPrompt, config.aspectRatio, variationPrimary, referenceImage, productImage, stickerImage, variationCustomModel, config.studioStyle, config.mascotStyle, config.mockupStyle, config.style, config.socialClass, !!config.isEditableMode, v, config.type, environmentImage, apiKey);
+      const imageUrl = await callImageApi(variationPrompt, config.aspectRatio, variationPrimary, referenceImage, productImage, stickerImage, variationCustomModel, config.studioStyle, config.mascotStyle, config.mockupStyle, config.style, config.socialClass, !!config.isEditableMode, v, config.type, environmentImage, authToken);
       return imageUrl ? { id: variationId, url: imageUrl, originalUrl: imageUrl, variation: v } : null;
     } catch (error: any) {
       console.error(`Variation ${v} failed:`, error);
@@ -81,11 +81,25 @@ const callImageApi = async (
   variationIndex: number = 1,
   type: string = 'Studio Photo',
   environmentImage?: string | null,
-  apiKey?: string
+  authToken?: string
 ) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: apiKey || import.meta.env.VITE_GEMINI_API_KEY || '' });
     const parts: any[] = [];
+
+    // DEBUG: trace which images we received
+    console.log('🔍 callImageApi INPUTS:', {
+      hasPrimary: !!primaryImage,
+      primaryLen: primaryImage?.length || 0,
+      hasReference: !!referenceImage,
+      hasProduct: !!productImage,
+      hasCustomModel: !!customModelImage,
+      hasSticker: !!stickerImage,
+      hasEnvironment: !!environmentImage,
+      studioStyle,
+      mockupStyle,
+      style,
+      type,
+    });
 
     const extractBase64 = (dataUrl: string) => {
       const parts = dataUrl.split(',');
@@ -237,14 +251,15 @@ ROLE: You are an expert Digital Compositor and Art Director.
 
 INPUTS:
 - IMAGE 1: The "HERO TALENT" (The person who MUST appear)
-- IMAGE 2: The "STYLE REFERENCE" (Lighting, Background, Vibe ONLY)
+- IMAGE 2: The "STYLE REFERENCE" (Could be: clothing, background, styled photo, or product)
 
 GOAL:
-Place the HERO TALENT (Image 1) into a scene styled like IMAGE 2.
+Analyze IMAGE 2 to determine what it contains, then create a professional photo
+of the HERO TALENT (Image 1) incorporating the reference appropriately.
 
 EXECUTION STEPS:
-1. ANALYZE Image 2 for background, lighting, and color palette.
-2. PHOTOGRAPH the person from Image 1 in that exact environment.
+1. CLASSIFY Image 2: Is it clothing/outfit? A background? A styled photo? A product?
+2. APPLY the reference: If clothing → dress the person. If background → place them there. If styled photo → copy the style.
 3. POST-PRODUCTION: Add the text overlay specified in the prompt.
 
 CRITICAL RULES:
@@ -345,30 +360,57 @@ EXECUTION: Create a new professional presentation background using these extract
 DO NOT simply crop the image. RE-CREATE the style in a high-resolution 3D or Vector render.
 MANDATORY: Leave negative space for text (PowerPoint style).`;
           } else {
-            // Fallback for other modes (keeping legacy behavior to avoid regressions elsewhere)
-            stylePrompt = `[VISUAL IDENTITY SOURCE]
-BACKGROUND SOURCE: IMAGE 2 (Reference).
-INSTRUCTION: You must act as a Background Artist.
-1. IGNORE default preferences.
-2. COPY the exact background style, patterns, textures, and color palette from Image 2.
-3. CRITICAL: The person in Image 2 is a STYLE MODEL only. DO NOT DRAW THEM.
-4. REPLACE the person in Image 2 with the person from Image 1.
-5. IF YOU DRAW THE PERSON FROM IMAGE 2, THE TASK IS FAILED.
-6. GOAL: The user wants the background to match Image 2, but with their photo (Image 1) in the foreground.`;
+            // INTELLIGENT REFERENCE ANALYSIS - AI determines what the reference contains
+            stylePrompt = `[IMAGE 2 - INTELLIGENT STYLE REFERENCE]
+>>> STEP 1: ANALYZE IMAGE 2 AND CLASSIFY IT <<<
+
+Before generating, you MUST determine what Image 2 contains:
+
+CATEGORY A — CLOTHING/OUTFIT/FASHION ITEM:
+If Image 2 shows clothing (dress, suit, shirt, pants, uniform, costume, outfit on a mannequin, flat-lay clothing, etc.):
+- ACTION: Dress the person from Image 1 in THIS EXACT OUTFIT.
+- PRESERVE: The clothing's exact color, pattern, fabric texture, style, and details.
+- GENERATE: New arms, body pose naturally wearing this clothing.
+- The person MUST look like they are actually wearing this outfit in a professional photo.
+- BACKGROUND: Use a clean professional studio background that complements the outfit.
+
+CATEGORY B — BACKGROUND/ENVIRONMENT/SCENE:
+If Image 2 shows a location, studio setup, nature scene, office, or background environment:
+- ACTION: Place the person from Image 1 INTO this environment.
+- COPY: The exact background style, patterns, textures, lighting, and color palette.
+- The person in Image 2 (if any) is a STYLE MODEL only. DO NOT DRAW THEM.
+- REPLACE the person in Image 2 with the person from Image 1.
+
+CATEGORY C — STYLED PHOTO WITH A PERSON:
+If Image 2 shows a person in a specific professional photo style (headshot, editorial, corporate, etc.):
+- ACTION: Re-create the SAME photo style using the person from Image 1.
+- COPY: Lighting setup, camera angle, pose type, color grading, and overall aesthetic.
+- COPY: The CLOTHING STYLE (similar outfit type, not the exact clothes).
+- DO NOT use the face from Image 2. Use ONLY the face from Image 1.
+- GOAL: "Same photographer, same studio, different person."
+
+CATEGORY D — PRODUCT/OBJECT/LOGO:
+If Image 2 shows a product, logo, brand element, or physical object:
+- ACTION: Integrate this element into the composition with the person from Image 1.
+- The person should be presenting, holding, or interacting with the element.
+
+>>> CRITICAL RULES <<<
+- IDENTITY: The face MUST be from Image 1. NEVER from Image 2.
+- EXPRESSION: Keep the EXACT facial expression from Image 1.
+- If Image 2 contains text or watermarks, IGNORE them completely.`;
           }
 
           parts.push({
             text: `${stylePrompt}
 
-MANDATORY: The background MUST be completely CLEAN and PRISTINE.
-NO watermarks, NO text in background, NO "Designi", NO diagonal patterns.
-Style reference: Adobe Illustrator vector art, professional graphic design quality.${showReferencePixels ? `
+MANDATORY: The output MUST be completely CLEAN and PRISTINE.
+NO watermarks, NO unwanted text, NO "Designi", NO diagonal patterns.
+Quality: Professional photography or Adobe Illustrator vector art quality.${showReferencePixels ? `
 
-[IMAGE 2 - VISUAL STYLE REFERENCE ONLY]
->>> ANALYSIS: This image contains a person. THAT PERSON IS A DISTRACTOR. IGNORE THEM.
->>> ACTION: Extract ONLY the background, lighting, and colors.
->>> CRITICAL FAULT AVOIDANCE: If the output image contains the person from Image 2, the generation is FAILED.
->>> SOLE SUBJECT: Use ONLY the person from Image 1.
+[IMAGE 2 - REFERENCE INPUT]
+>>> ANALYZE this image using the categories above (A/B/C/D).
+>>> APPLY the corresponding action to create the output.
+>>> SOLE SUBJECT: The person from Image 1.
 >>> IGNORE any text or watermarks in this image.` : ''}`
           });
 
@@ -381,16 +423,21 @@ Style reference: Adobe Illustrator vector art, professional graphic design quali
         const asset = extractBase64(customModelImage);
         if (asset) {
           let label = `INPUT IMAGE 1: THE SUBJECT (PROFESSIONAL PHOTO).
-=== PRESERVE EVERYTHING ===
-- Face identity: 100% match
-- Clothing: Keep the EXACT same outfit (color, style, texture)
-- Objects in hand: Keep ANY object the person is holding
-- Pose: Maintain similar body position
-- Hair: Keep exact style and color
-- Overall aesthetic: Match the mood and color palette of this photo
-DO NOT change the person's outfit to corporate/suit unless explicitly requested.`;
+=== FACE DNA CARD (ANALYZE BEFORE GENERATING) ===
+STEP 1: STUDY this face. Identify the 5 features that make this person UNIQUE (what distinguishes them from anyone else?).
+STEP 2: LOCK these features — they are NON-NEGOTIABLE in the output:
+- Face shape (jawline + chin), Nose (bridge + tip), Eyes (shape + color + spacing), Skin tone (EXACT — NEVER alter), Expression (keep IDENTICAL — do NOT add/remove smiles)
+STEP 3: Also preserve: moles, freckles, scars, hair (style + color + texture), eyebrows, age markers.
+CLOTHING: Keep the EXACT same outfit unless the style explicitly requires a change.
+RECOGNITION TEST: The real person MUST say "That's me!" — if not, FAILED.`;
           if (studioStyle) {
-            label = `INPUT IMAGE 1: THE MAIN CHARACTER. PRESERVE FACE IDENTITY EXACTLY. ADAPT CLOTHING AND POSE TO MATCH THE "${studioStyle}" STYLE.`;
+            label = `INPUT IMAGE 1: THE MAIN CHARACTER.
+=== FACE DNA CARD (ANALYZE BEFORE GENERATING) ===
+STEP 1: STUDY this face. Identify the 5 UNIQUE features that make this person recognizable.
+STEP 2: LOCK: face shape, nose, eyes, lips, skin tone, expression, moles/freckles, hair, eyebrows.
+STEP 3: GENERATE the new photo. The face MUST match the locked features exactly.
+ADAPT ONLY: Clothing and pose to match the "${studioStyle}" style. NEVER change the face.
+TEST: If they cannot identify themselves → FAILED.`;
           }
           parts.push({ text: label });
           parts.push({ inlineData: asset });
@@ -398,13 +445,38 @@ DO NOT change the person's outfit to corporate/suit unless explicitly requested.
       } else if (primaryImage) {
         const asset = extractBase64(primaryImage);
         if (asset) {
-          let label = "INPUT IMAGE 1: THE SUBJECT (PERSON). PRESERVE IDENTITY.";
+          let label = `INPUT IMAGE 1: THE SUBJECT (PERSON).
+=== FACE IDENTITY LOCK ===
+PRESERVE: Exact face geometry, jawline, nose, eyes, lips, skin tone, hair, moles, freckles, expression.
+The person MUST be immediately recognizable.`;
           if (isEditing) {
             label = "INPUT IMAGE TO EDIT: PRESERVE COMPOSITION EXACTLY. MODIFY ONLY THE REQUESTED AREAS.";
           } else if (productImage) {
-            label = "INPUT IMAGE 1: THE MAIN CHARACTER. PRESERVE FACE ONLY. BODY POSE MUST BE CHANGED TO HOLD PRODUCT.";
+            label = `INPUT IMAGE 1: THE MAIN CHARACTER.
+=== FACE IDENTITY LOCK ===
+PRESERVE FACE 100%: jawline, nose, eyes, lips, forehead, chin, cheekbones, skin tone, hair, moles, freckles, expression.
+BODY POSE: Must change to hold product. FACE: Must NOT change at all.`;
           } else if (studioStyle) {
-            label = `INPUT IMAGE 1: THE MAIN CHARACTER. PRESERVE FACE IDENTITY EXACTLY. ADAPT CLOTHING AND POSE TO MATCH THE "${studioStyle}" STYLE.`;
+            label = `=== IDENTITY SOURCE: THIS IS THE REAL PERSON TO RE-PHOTOGRAPH ===
+YOUR TASK: Create a BRAND NEW professional photo of THIS PERSON in the "${studioStyle}" style.
+
+=== FACE DNA CARD (ANALYZE BEFORE GENERATING — CRITICAL) ===
+STEP 1: STUDY this face for detail. What makes THIS person unique? Identify their 5 most distinctive features.
+STEP 2: LOCK these features as NON-NEGOTIABLE:
+- FACE SHAPE: Exact jawline + chin + forehead proportions
+- NOSE: Bridge width, tip shape, nostril size (the #1 identifier)
+- EYES: Shape, spacing, color, lid crease
+- SKIN: Exact tone (NEVER lighten/darken), all moles, freckles, scars in correct positions
+- EXPRESSION: Reproduce EXACTLY — do NOT add or remove smiles, do NOT change mouth state
+Also preserve: lips, hair (color + texture + style), eyebrows, age, body type, gender.
+
+STEP 3: GENERATE the new photo while checking each locked feature.
+
+WHAT MUST CHANGE: background, clothing, pose, lighting (all to match "${studioStyle}").
+WHAT MUST NOT CHANGE: face, body type, age, gender, skin color.
+
+SIDE-BY-SIDE TEST: Input and output faces must look like the SAME PERSON on a different day.
+If output = original photo unchanged → FAILED. If face is unrecognizable → FAILED.`;
           }
           parts.push({ text: label });
           parts.push({ inlineData: asset });
@@ -435,11 +507,20 @@ DO NOT change the person's outfit to corporate/suit unless explicitly requested.
       const env = extractBase64(environmentImage);
       if (env) {
         parts.push({
-          text: `[IMAGE 4 - ENVIRONMENT/BACKGROUND REFERENCE]
->>> CRITICAL: Use the environment from THIS image as the background.
->>> IGNORE any person or product in this image.
->>> EXTRACT: Lighting, Scenery, Atmosphere.
->>> GOAL: Place the subject/product into THIS exact environment.`
+          text: `[ENVIRONMENT MOOD REFERENCE — ANALYZE, DO NOT COPY]
+>>> YOUR TASK: ANALYZE this image and extract ABSTRACT CHARACTERISTICS ONLY:
+  1. COLOR TEMPERATURE: Is it warm (golden, amber) or cool (blue, silver)?
+  2. LIGHTING MOOD: Is it soft/diffused or hard/dramatic? What direction?
+  3. DOMINANT COLOR TONES: What are the 2-3 main colors?
+  4. OVERALL ATMOSPHERE: Is it cozy, professional, dramatic, romantic?
+>>> THEN: Create a NEW, CLEAN professional studio/environment background that has SIMILAR color temperature, lighting mood, and atmosphere.
+>>> ABSOLUTELY DO NOT:
+  - Copy or paste ANY object from this image (no lamps, lights, bulbs, decorations, furniture, props)
+  - Place the subject ON TOP of this image like a collage
+  - Replicate any specific visual element from this image
+  - Use this image as a literal background
+>>> THINK OF IT AS: "What would a professional studio look like if it had the same COLOR WARMTH and LIGHTING MOOD as this photo?"
+>>> EXAMPLE: If this image shows warm golden light → create a studio background with warm golden tones and soft warm lighting. NOT a copy of the image.`
         });
         parts.push({ inlineData: env });
       }
@@ -451,33 +532,36 @@ DO NOT change the person's outfit to corporate/suit unless explicitly requested.
     let finalPrompt = prompt;
     parts.push({ text: finalPrompt });
 
-    // @ts-ignore
-    // FIX: Detailed mapping for non-standard aspect ratios
-    let finalAspectRatio = aspectRatio;
-    if (aspectRatio === '4:5') {
-      finalAspectRatio = '3:4';
+    // Send to backend Edge Function (API key is securely stored server-side)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image', // Reverted to previous custom model ID to avoid shared quota limits
-      contents: { parts },
-      config: {
-        imageConfig: { aspectRatio: finalAspectRatio as any }
-      }
+    const response = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ parts, aspectRatio }),
     });
 
-    if (!response.candidates || response.candidates.length === 0) {
-      throw new Error("429 RESOURCE_EXHAUSTED: Limite atingido.");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+      if (response.status === 403) {
+        throw new Error("Créditos insuficientes. Adquira mais créditos para continuar.");
+      }
+      if (response.status === 429) {
+        throw new Error("429: Cota excedida.");
+      }
+      throw new Error(errorData.error || `Erro ${response.status}`);
     }
 
-    const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
-    if (!imagePart || !imagePart.inlineData) {
-      throw new Error("O modelo não gerou a imagem esperada.");
-    }
-
-    return `data: image / png; base64, ${imagePart.inlineData.data} `;
+    const data = await response.json();
+    return `data:image/${data.mimeType?.split('/')[1] || 'png'};base64,${data.imageBase64}`;
   } catch (error: any) {
-    console.error("Gemini API Critical Failure:", error);
+    console.error("Image generation failed:", error);
     if (error.message?.includes('429') || error.message?.toLowerCase().includes('quota')) {
       throw new Error("429: Cota excedida.");
     }
@@ -826,7 +910,7 @@ const getStyleBackground = (style: VisualStyle, variationIndex: number, hasProdu
   return backgrounds[Math.max(0, index)];
 };
 
-const constructPrompt = (config: GenerationConfig, variationIndex: number, customModelImage?: string | null, hasSticker: boolean = false, hasProduct: boolean = false, hasReference: boolean = false): string => {
+const constructPrompt = (config: GenerationConfig, variationIndex: number, customModelImage?: string | null, hasSticker: boolean = false, hasProduct: boolean = false, hasReference: boolean = false, hasEnvironment: boolean = false): string => {
   const { type, style, studioStyle, mascotStyle, productDescription, aspectRatio, copyText, ctaText, useAiAvatar, isEditableMode, useBoxLayout } = config;
 
   // MOCKUP MODE LOGIC
@@ -955,6 +1039,15 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
 
   let validVariationLogic = variationLogic;
 
+  // MAQUIADORA-SPECIFIC VARIATIONS: Unique scenes for each variation
+  if (studioStyle === StudioStyle.MAQUIADORA) {
+    validVariationLogic = [
+      `SCENE: CONFIDENT MUA PORTRAIT. The makeup artist poses confidently at her vanity station, holding a makeup brush near her face. She looks directly at the camera with a professional, self-assured expression. Background: Hollywood mirror with warm bulbs, organized makeup products. The BRUSH MUST BE IN HER HAND with visible fingers gripping it. ABSOLUTELY NO floating or isolated props.`,
+      `SCENE: SELF-APPLICATION. The makeup artist is applying makeup on HERSELF — looking into a mirror while using a brush or sponge on her own face. This is an intimate beauty moment. Props (brush/sponge) MUST be touching her face or in her hands. Background: Vanity mirror with warm lighting. ABSOLUTELY NO floating or isolated props.`,
+      `SCENE: MUA AT WORK WITH CLIENT. The makeup artist is APPLYING MAKEUP ON A CLIENT sitting in front of her. COMPOSITION: The MUA stands/leans behind the seated client, holding a brush near the client's face. The CLIENT is a different person (generate a new face — NOT the same person from the input). The MUA (person from input) is the professional doing the work. The CLIENT sits relaxed. Both faces must be visible. BRUSH MUST BE IN THE MUA'S HAND touching or near the client's face. ABSOLUTELY NO floating or isolated props.`
+    ][variationIndex - 1] || validVariationLogic;
+  }
+
   if (hasReference) {
     validVariationLogic = [
       `TASK: RE-GENERATE SCENE. 1. Create NEW background using colors/shapes from Image 2 (DO NOT COPY PIXELS). 2. Insert Person from Image 1 at Left.`,
@@ -979,6 +1072,33 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   ${validVariationLogic}
   ${watermarkNegativePrompt}
   ${ugcNegativePrompt}
+
+  === STRUCTURAL FIDELITY & ANTI-ARTIFACT RULES (GLOBAL - ALWAYS APPLY) ===
+  BEFORE generating, COUNT the features of every object and person in the input image.
+  The output MUST have the EXACT SAME structural count as the input:
+  
+  OBJECTS:
+  - A cup/mug has EXACTLY 1 handle → output MUST have EXACTLY 1 handle
+  - A chair has EXACTLY 4 legs → output MUST have EXACTLY 4 legs
+  - A car has EXACTLY 4 wheels → output MUST have EXACTLY 4 wheels
+  - GENERAL RULE: Count handles, knobs, buttons, wheels, legs, spouts, lids on EVERY object. The output count MUST MATCH.
+  - NEVER duplicate, add, or remove structural features from any object
+  
+  PEOPLE:
+  - Every person has EXACTLY 2 arms, 2 hands, 5 fingers per hand, 2 legs, 2 eyes, 1 nose, 1 mouth
+  - NEVER generate 3 arms, 6 fingers, extra limbs, merged limbs, or missing limbs
+  
+  SYMMETRY & PROPORTION:
+  - Objects must maintain their real-world proportions and symmetry
+  - If an object is asymmetric (e.g., a mug with handle on one side), keep it asymmetric — do NOT mirror it
+  - Clothing must follow the body naturally — no floating fabric, no impossible folds
+  
+  ANTI-DUPLICATION:
+  - NEVER duplicate the main subject or any significant object
+  - If there is 1 cup in the input, there must be EXACTLY 1 cup in the output
+  - If there is 1 person in the input, there must be EXACTLY 1 person in the output (unless explicitly requested)
+  
+  SELF-CHECK: Before finalizing, verify: "Does every object have the correct number of parts? Are there any duplicated features?" If not, regenerate.
   `;
 
   // 1. PHOTO-BASED PATH (CUSTOM MODEL UPLOADED)
@@ -1048,9 +1168,32 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
        *** PROFESSIONAL STUDIO PHOTOGRAPHY MODE (CUSTOM SUBJECT) ***
        ================================================================================
        
-       SUBJECT INTEGRATION (CRITICAL):
-       1. IDENTITY PRESERVATION: KEEP THE FACE 100% IDENTICAL to the uploaded photo.
-       2. LIGHTING & SKIN: Maintain realistic skin texture (commercial retouch).
+       === FACE DNA CARD (ANALYZE BEFORE GENERATING — TOP PRIORITY) ===
+       STEP 1: STUDY the input face. What makes THIS person unique? Identify 5 distinctive features.
+       STEP 2: LOCK these as NON-NEGOTIABLE in the output:
+       - FACE SHAPE: jawline + chin + forehead (round? angular? V-shaped?)
+       - NOSE: bridge width + tip shape + nostril size (the #1 identifier)
+       - EYES: shape + spacing + color + lid crease
+       - SKIN TONE: exact match — NEVER lighten, darken, or change undertone. Keep ALL moles, freckles, scars.
+       - EXPRESSION: keep IDENTICAL — do NOT add/remove smiles, do NOT change mouth state or teeth visibility.
+       Also preserve: lips, eyebrows, hair (style + color + texture + parting), age.
+       
+       === BODY DNA CARD (EQUALLY CRITICAL AS FACE) ===
+       STEP 1: ANALYZE the person's BODY TYPE from the input photo. Is the person slim, average, curvy, athletic, plus-size?
+       STEP 2: LOCK the body type as NON-NEGOTIABLE:
+       - BODY WEIGHT: Preserve the EXACT weight appearance. Do NOT make the person heavier OR thinner.
+       - BODY SHAPE: Preserve EXACT body proportions — shoulder width, waist, hips, arms.
+       - TORSO WIDTH: Match EXACTLY. Do NOT widen the torso or add bulk to the body.
+       - ARMS: Match the person's actual arm thickness from the input photo.
+       - CLOTHING FIT: Use WELL-FITTED clothing on the person's actual body. NOT oversized or baggy clothing that creates illusion of larger body.
+       - SAFETY BIAS: IF IN DOUBT about body size, make the person slightly SLIMMER rather than heavier. NEVER add weight.
+       BODY DISTORTION TEST: If the output person looks heavier or wider than the input → FAILED. REGENERATE.
+       
+       MULTIPLE PEOPLE: If more than one person, apply this card to EACH person individually.
+       
+       RECOGNITION TEST: The real person must say "That's me!" — if not, FAILED.
+       
+       LIGHTING & SKIN: Maintain realistic skin texture (commercial retouch level).
        `;
     }
 
@@ -1118,7 +1261,29 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - BACKGROUND: Realistic environment matching the description. NO ARTIFICIAL OVERLAYS.
   - HIERARCHY: Focus 100% on the Subject (Person) and the Environment.
   
-  ${hasReference ? `
+  ${hasReference && isStudioPhoto && studioStyle ? `
+  === STUDIO PRESET + REFERENCE PHOTO ACTIVE ===
+  ${getStudioPresets(studioStyle)}
+  
+  === REFERENCE IMAGE GUIDANCE (Image 2 — USE FOR POSE, LIGHTING & ENVIRONMENT) ===
+  A REFERENCE IMAGE has been provided. Use it as follows:
+  
+  ⚠️ CRITICAL IDENTITY RULE:
+  - The PERSON in the output MUST be the SAME person from Image 1 (primary photo)
+  - PRESERVE from Image 1: face, gender, body type, skin tone, hair, age, ethnicity
+  - DO NOT use the person from the reference image! Only use their POSE and ENVIRONMENT.
+  
+  REPLICATE FROM REFERENCE IMAGE:
+  - POSE and body language — match the exact pose, hand position, body angle
+  - LIGHTING setup — match the lighting direction, intensity, color temperature
+  - ENVIRONMENT/BACKGROUND — match the setting, backdrop, and atmosphere
+  - CAMERA ANGLE — match the framing, distance, and perspective
+  - OVERALL MOOD — match the energy, vibe, and feel of the reference photo
+  
+  Think: "Put the person from Image 1 into the EXACT SCENE and POSE of Image 2"
+  The reference photo OVERRIDES the preset's pose, background, and lighting descriptions.
+  The preset's STYLE elements (outfit type, vibe, quality) should still apply.
+  ` : hasReference ? `
   === STYLE REFERENCE ACTIVE (PRESERVE IDENTITY!) ===
   A style reference image has been provided. IGNORE all preset styles.
   
@@ -1133,26 +1298,73 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - Color palette and tones
   - Clothing STYLE (but adapted to the subject's body)
   - Overall composition style
+  - POSE and body language — replicate the exact pose from the reference
   
-  Think: "Photograph the person from Image 1 using the STYLE of Image 2"
+  Think: "Photograph the person from Image 1 using the STYLE and POSE of Image 2"
   ` : (isStudioPhoto && studioStyle ? `
   === STUDIO PRESET APPLIED: ${studioStyle} ===
   ${getStudioPresets(studioStyle)}
   
-  IMPORTANT: The above preset defines the EXACT style, background, and lighting for this photo.
-  Follow these instructions PRECISELY. Do not deviate from the preset.
+  ${hasEnvironment ? `
+  === ENVIRONMENT MOOD INFLUENCE (APPLY TO BACKGROUND) ===
+  The user has provided an ENVIRONMENT MOOD REFERENCE image.
+  ANALYZE that image and extract ONLY:
+  - Color temperature (warm golden / cool blue / neutral)
+  - Lighting mood (soft/dramatic/bright)
+  - Dominant color tones (2-3 main colors)
+  
+  THEN CREATE A NEW BACKGROUND for this photo that:
+  - Uses SIMILAR color temperature and lighting mood as the environment image
+  - Is a CLEAN, PROFESSIONAL studio/location background — NOT a copy of the environment image
+  - Does NOT contain ANY objects, props, lamps, bulbs, decorations, or furniture from the environment image
+  - Looks like the subject was NATURALLY PHOTOGRAPHED in a space with that lighting mood
+  
+  DO NOT paste the subject on top of the environment image. CREATE a new scene.
+  KEEP from the preset above: pose style, clothing guidelines, and composition.
+  === END ENVIRONMENT INFLUENCE ===
+  ` : `IMPORTANT: The above preset defines the EXACT style, background, and lighting for this photo.
+  Follow these instructions PRECISELY. Do not deviate from the preset.`}
+
+  === TRANSFORMATION TASK (CRITICAL — APPLIES TO ALL STUDIO STYLES) ===
+  YOUR JOB IS TO CREATE A BRAND NEW PHOTOGRAPH of this person in the style described above.
+  Do NOT simply return, retouch, or slightly modify the input photo. The output MUST show:
+  - A COMPLETELY DIFFERENT BACKGROUND matching the preset style (NOT the original photo's background)
+  - PROFESSIONAL LIGHTING matching the preset (NOT the original photo's lighting)
+  - APPROPRIATE CLOTHING/STYLING for the selected preset
+  - A NEW PROFESSIONAL POSE appropriate for the style
+  
+  === FACE & BODY ANCHORING PROTOCOL (EXECUTE BEFORE GENERATING) ===
+  BEFORE creating the new image, complete these steps:
+  1. EXTRACT FACE: What are the 5 most UNIQUE features of this face?
+  2. EXTRACT BODY: What is this person's body type and build?
+  3. LOCK BOTH: Face features AND body type are NON-NEGOTIABLE.
+  4. GENERATE: Create the new photo while continuously checking face AND body.
+  5. VERIFY FACE: Do ALL 5 unique facial features match?
+  6. VERIFY BODY: Does the output person have the SAME body weight? If heavier → FAILED.
+  If ANY mismatch → REGENERATE.
+  
+  WHAT MUST CHANGE: background, clothing style, pose, lighting, environment.
+  WHAT MUST NOT CHANGE: face, body type, body weight, body proportions, skin tone, hair.
+  === END TRANSFORMATION TASK ===
 
   ${(studioStyle && (studioStyle as string).includes('Família')) || studioStyle === StudioStyle.FAMILY_PICNIC ? `
-  === FAMILY MODE CROWD CONTROL (CRITICAL) ===
+  === FAMILY MODE CROWD CONTROL ===
   STRICT RULE: Count the number of people in the INPUT IMAGE (Image 1).
-  GENERATE EXACTLY THAT MANY PEOPLE.
-  DO NOT ADD EXTRA FAMILY MEMBERS.
+  GENERATE EXACTLY THAT MANY PEOPLE. PRESERVE EACH PERSON'S IDENTITY.
+  DO NOT ADD EXTRA FAMILY MEMBERS. DO NOT REMOVE ANYONE.
   
-  - If Image 1 has 1 person -> Output 1 person (Solo portrait in family setting).
-  - If Image 1 has 3 people -> Output 3 people.
-  - HALLUCINATION CHECK: Do not generate fake husbands, wives, or children.
-  - EXCEPTION: Only add people if the User Custom Instructions EXPLICITLY ask for "Add a family", "Add a husband", etc.
+  - If Image 1 has 1 person -> Output 1 person.
+  - If Image 1 has 2 people -> Output EXACTLY 2 people.
+  - If Image 1 has 3 people -> Output EXACTLY 3 people.
+  - Each person's face, skin tone, hair, body type, age, and gender must match EXACTLY.
+  - EXCEPTION: Only add people if the User Custom Instructions EXPLICITLY ask for it.
   ` : ''}
+  
+  === PEOPLE COUNT RULE (ALL STYLES) ===
+  Count the EXACT number of people in the INPUT IMAGE.
+  The OUTPUT MUST contain the SAME number of people. NO MORE, NO LESS.
+  DO NOT invent, hallucinate, or add any person not present in the input.
+  Each person's face must follow the FACE DNA CARD rules above.
   ${(studioStyle && (studioStyle as string).includes('Aniver') && config.birthdayAge) ? `
   === BIRTHDAY AGE CONTEXT (CRITICAL) ===
   THE PERSON IS CELEBRATING THEIR ${config.birthdayAge}th BIRTHDAY.
@@ -1166,18 +1378,28 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   
   HUMAN ELEMENT RULES:
   - RAW PHOTOGRAPHY: Real Brazilian person, Canon 5D quality. NO AI/3D LOOK.
-  - SKIN: Highly detailed, natural texture, pores visible.
-  - LIGHTING: Cinematic Studio Lighting.
-  - FRAMING: AMERICAN SHOT / MEDIUM SHOT. NEVER FULL BODY.
+  - FACE FIDELITY: The face is the MOST IMPORTANT element. It must be a 100% match to the input photo.
+  - BODY FIDELITY: The body type and weight MUST match the input photo EXACTLY. Do NOT make the person heavier or wider.
+  - SKIN: Highly detailed, natural texture, pores visible. PRESERVE exact skin tone.
+  - LIGHTING: Cinematic Studio Lighting. Light must enhance the face, not distort it.
+  - FRAMING: AMERICAN SHOT / MEDIUM SHOT. NEVER FULL BODY. Close-up framing avoids body distortion.
   - ANATOMY: CORRECT human body proportions. Normal head-to-body ratio (1:7 or 1:8).
   - NO DISTORTION: Head size must be proportional to body. NO oversized or undersized heads.
+  - BODY WEIGHT: PRESERVE EXACTLY from input. Do NOT make the person look heavier, wider, or bulkier than the input.
+  - CLOTHING FIT: Clothing must be WELL-FITTED to the person's actual body. NOT oversized, baggy, or puffy clothing.
   - NATURAL POSE: Realistic body positioning, no awkward or impossible angles.
+  - FACE VERIFICATION: Before finalizing, verify the output face matches the input face in ALL of these:
+    jawline shape, nose shape, eye shape/color, lip shape, forehead, chin, cheekbones, eyebrows, skin tone, hair, moles/freckles.
+  - BODY VERIFICATION: Compare body in output vs input. The person must appear the SAME weight and build.
   
   === ABSOLUTELY FORBIDDEN FOR PHOTOS ===
   - NO floating app icons, emojis, or social media icons
   - NO geometric shapes (spheres, cubes, circles)
   - NO text overlays or buttons
   - NO graphic design elements of ANY kind
+  - NO face modifications (smoothing, reshaping, lightening, aging, de-aging)
+  - NO body modifications (widening, thickening, adding weight, changing proportions, making heavier)
+  - NO oversized or baggy clothing that creates illusion of a larger body
   - This must look like a REAL PHOTOGRAPH from a professional camera`;
   }
 
@@ -1825,14 +2047,26 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
     ${style === VisualStyle.DESIGNI_PD_PRO ? `- PRODUCT FIDELITY (CRITICAL): DO NOT CHANGE THE PRODUCT. IF A NOTEBOOK IS UPLOADED, USE THAT EXACT COVER ART. DO NOT GENERATE A GENERIC CARTOON NOTEBOOK. USE THE IMAGE 2.` : ''}
   `;
 
+  // FINAL EXPRESSION ENFORCEMENT (placed at end of prompt for maximum effect)
+  prompt += `\n\n=== FINAL MANDATORY CHECK: FACIAL EXPRESSION ===
+  BEFORE GENERATING, RE-ANALYZE EACH PERSON'S FACE IN THE INPUT IMAGE:
+  - What is their mouth doing? (closed, slightly open, smiling, neutral)
+  - Are teeth visible? (yes/no)
+  - What emotion do they show? (neutral, happy, serious, subtle smile)
+  REPLICATE THAT EXACT STATE. DO NOT DEFAULT TO "HAPPY" OR "SMILING".
+  IF MOUTH IS CLOSED → OUTPUT MOUTH MUST BE CLOSED.
+  IF NO TEETH VISIBLE → OUTPUT MUST NOT SHOW TEETH.
+  THIS OVERRIDES ANY "STUDIO PHOTOGRAPHY" TENDENCY TO ADD SMILES.
+  === END EXPRESSION CHECK ===\n`;
+
   // SHOT TYPE / FRAMING
   if (config.shotType) {
     const shotInstructions: Record<string, string> = {
-      closeup: 'FRAMING: Close-up portrait shot. Frame from the chest/shoulders up. Focus on the face and upper body only. Do NOT show legs or full body.',
-      american: 'FRAMING: American shot (medium shot). Frame from approximately mid-thigh up. Show the upper body and hands but cut off below the knees.',
-      fullbody: 'FRAMING: Full body shot. Show the entire person from head to toe. Include the full body, legs, and feet in the frame.',
+      closeup: 'FRAMING (MANDATORY — OVERRIDE ALL): Close-up portrait shot. Frame from the chest/shoulders up ONLY. Focus on the face and upper body. Do NOT show legs, knees, or full body under ANY circumstance. This framing instruction OVERRIDES any style preset that suggests full body.',
+      american: 'FRAMING (MANDATORY — OVERRIDE ALL): American shot (medium shot). Frame from approximately mid-thigh up. Show the upper body and hands but cut off below the knees. This framing instruction OVERRIDES any style preset.',
+      fullbody: 'FRAMING (MANDATORY — OVERRIDE ALL): Full body shot. Show the entire person from head to toe. Include the full body, legs, and feet in the frame.',
     };
-    prompt += `\n\n=== PHOTO FRAMING (MANDATORY) ===\n${shotInstructions[config.shotType]}\n=== END FRAMING ===\n`;
+    prompt += `\n\n=== PHOTO FRAMING (MANDATORY — HIGHEST PRIORITY) ===\n${shotInstructions[config.shotType]}\nThis framing instruction takes ABSOLUTE PRIORITY over any style, preset, or layout instruction.\n=== END FRAMING ===\n`;
   }
 
   // USER CUSTOM INSTRUCTIONS
@@ -2331,7 +2565,7 @@ const getStudioPresets = (style: StudioStyle): string => {
 
     // NEW PROFESSIONS
     case StudioStyle.DESIGNER_GRAFICO: return "STYLE: Creative Graphic Designer. LAYOUT: Modern creative workspace. BACKGROUND: Studio with dual monitors, color swatches, mood boards on wall, tablet. Props: Stylus, coffee, pantone books. LIGHTING: Soft screen glow mixed with daylight.";
-    case StudioStyle.MAQUIADORA: return "STYLE: Professional Makeup Artist / MUA. LAYOUT: Beauty influencer portrait. BACKGROUND: Vanity mirror with Hollywood bulbs, makeup brushes, palettes, ring light reflection. Props: Makeup brush, sponge, mirror. LIGHTING: Flattering focused beauty lighting (Ring Light).";
+    case StudioStyle.MAQUIADORA: return "PRIMARY TASK: RE-PHOTOGRAPH this person as a PROFESSIONAL MAKEUP ARTIST (MUA). CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Modern Beauty Professional (2024 Instagram MUA aesthetic). BACKGROUND: Chic modern vanity area with Hollywood mirror bulbs (warm glow), organized makeup products on clean marble or acrylic surface, soft bokeh. WARDROBE: MODERN and ELEGANT — fitted black top, minimalist blazer, or chic apron. NO costume-like outfits, NO 80s fashion, NO sequins, NO sparkly/metallic fabrics. Think modern Instagram beauty influencer. ABSOLUTE PROPS BAN (CRITICAL — READ CAREFULLY): EVERY makeup tool (brush, sponge, palette, lipstick) MUST be physically connected to a HUMAN HAND with visible fingers gripping it, OR resting flat on a surface (table/counter). FORBIDDEN COMPOSITIONS: close-up of a brush alone, floating brush without hands, props hovering in air, still-life of makeup products without a person. The PERSON must ALWAYS be the MAIN SUBJECT occupying at least 60% of the frame. If a brush appears in the image, a hand MUST be holding it. NO EXCEPTIONS. LIGHTING: Flattering beauty ring light or softbox, even glowing illumination. IDENTITY: 100% face preservation. VIBE: Modern, professional, aspirational beauty content.";
     case StudioStyle.NUTRICIONISTA: return "STYLE: Nutritionist / Dietitian. LAYOUT: Welcoming health professional. BACKGROUND: Bright modern clinic with fruit bowl, measuring tape, anatomical charts or healthy food imagery. Props: Apple, measuring tape, tablet. LIGHTING: Fresh, clean, high-key bright.";
 
     // ======================
@@ -2353,6 +2587,11 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.BRIDAL_LUXURY: return "STYLE: Bridal Editorial. LAYOUT: Romantic & Dreamy. BACKGROUND: Floral arch, soft white drapes, cathedral bokeh. LIGHTING: Ethereal backlight, dreamy haze.";
     case StudioStyle.MEN_GROOMING: return "STYLE: Men's Grooming / Barber. LAYOUT: Masculine & Sharp. BACKGROUND: Vintage barber chair, leather textures, shaving tools. LIGHTING: Contrast Rembrandt lighting.";
     case StudioStyle.PERFUME_ELEGANCE: return "STYLE: Perfume Campaign. LAYOUT: Scent visual representation. BACKGROUND: Abstract floral swirls, golden liquid effects, glass reflections. LIGHTING: Translucent backlighting.";
+    case StudioStyle.MANICURE: return "STYLE: Professional Manicure & Nail Artist Portrait. LAYOUT: Beauty professional in their modern nail salon workspace. BACKGROUND: Elegant nail salon with organized nail polish collections in ombre gradient display, LED ring light, clean white marble workspace, soft pink and white interior decor. LIGHTING: Bright, clean beauty lighting with soft shadows, ring light reflection. POSE: The nail technician is shown working on beautiful nail art, or displaying finished nails with pride, or posing confidently with professional tools. Hands and nails should be prominent. PROPS: Nail polish bottles, nail art brushes, UV lamp, elegant manicure tools, fresh flowers. OUTFIT: Professional and stylish uniform or chic outfit. VIBE: Professional beauty expert, Instagram nail artist aesthetic, clean and glamorous salon environment, precision and artistry.";
+    case StudioStyle.DESIGNER_SOBRANCELHA: return "STYLE: Professional Eyebrow Designer Portrait. LAYOUT: Beauty professional specializing in eyebrow design in a modern aesthetics studio. BACKGROUND: Clean, modern beauty studio with ring light, magnifying lamp, professional eyebrow tools organized neatly, white and rose gold decor, minimalist aesthetic clinic interior. LIGHTING: Soft, flattering beauty lighting, ring light creating catch lights in eyes, professional and clean. POSE: The eyebrow designer is shown carefully shaping or measuring eyebrows with precision tools, or proudly displaying their work, or posing with threading/microblading tools. Close attention to detail and precision. PROPS: Eyebrow ruler, threading thread, microblading pen, mapping pencil, magnifying lamp, before/after examples on wall. OUTFIT: Professional lab coat or aesthetic uniform, clean and polished look. VIBE: Precision beauty artist, microblading expert, clean clinical aesthetic, confident professional, Instagram brow artist.";
+    case StudioStyle.DEPILADORA: return "STYLE: Professional Waxing Specialist & Aesthetician Portrait. LAYOUT: Beauty professional in a modern, clean aesthetics clinic. BACKGROUND: Clean white and pastel clinic interior with professional treatment bed, organized waxing products, warm wax heater, clean towels, spa-like atmosphere. Gentle ambient lighting. LIGHTING: Soft, clean clinical lighting with warm tones, professional and inviting. POSE: The aesthetician is shown confidently posing in her clinic, holding professional tools, or preparing a treatment area with care and expertise. Welcoming and professional demeanor. PROPS: Wax warmer, spatulas, clean towels, skincare products, professional uniform, treatment bed. OUTFIT: Clean white lab coat or professional aesthetics uniform. VIBE: Professional beauty clinic, skin care expert, clean and hygienic environment, trustworthy and skilled, modern aesthetics professional.";
+    case StudioStyle.PENTEADOS: return "STYLE: Professional Hairstylist & Updo Specialist Portrait. LAYOUT: Creative hairstylist in a modern salon creating beautiful hairstyles. BACKGROUND: Elegant hair salon with professional mirrors, styling stations, hair tools organized beautifully, warm salon lighting, modern decor. LIGHTING: Warm, flattering salon lighting that highlights hair textures and the stylist's work, golden tones. POSE: The hairstylist is shown creating an elaborate updo, braiding hair artistically, or displaying a finished masterpiece hairstyle. Hands working with hair should be prominent, showing skill and creativity. PROPS: Professional brushes, bobby pins, hair accessories, curling iron, braiding tools, flower crowns, elegant hair clips. OUTFIT: Stylish and fashionable outfit befitting a creative professional. VIBE: Hair artist, creative genius, bridal hair specialist, salon queen, Instagram hairstylist, artistry and elegance.";
+
 
     // CASUAL EXTRA
     case StudioStyle.YOGA_WELLNESS: return "STYLE: Yoga & Mindfulness. LAYOUT: Meditative pose. BACKGROUND: Bamboo floor studio, sunrise view, zen garden. LIGHTING: Warm golden sunrise.";
@@ -2362,13 +2601,7 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.MUSICIAN_VIBE: return "STYLE: Musician / Artist. LAYOUT: With instrument. BACKGROUND: Recording studio, vinyl records, acoustic panels. LIGHTING: Moody artistic spotlight.";
     case StudioStyle.DIY_CRAFTS: return "STYLE: DIY / Crafter. LAYOUT: Hands-on creativity. BACKGROUND: Craft table, colorful yarn, paint brushes, organized chaos. LIGHTING: Bright work-lamp lighting.";
 
-    // FAMILY EXTRA
-    case StudioStyle.FAMILY_STUDIO_CLEAN: return "STYLE: Modern Family Portrait. LAYOUT: Closely grouped. BACKGROUND: Solid white or light grey seamless cyclorama. LIGHTING: Even softbox lighting, no shadows.";
-    case StudioStyle.FAMILY_LIFESTYLE_HOME: return "STYLE: Lifestyle Home. LAYOUT: Candid interaction. BACKGROUND: Blurred living room, cozy sofa, sunlight window. LIGHTING: Natural window light.";
-    case StudioStyle.FAMILY_GOLDEN_HOUR: return "STYLE: Outdoor Sunset. LAYOUT: Walking or hugging. BACKGROUND: Field of tall grass, sun flare, warm horizon. LIGHTING: Strong backlight sun.";
-    case StudioStyle.FAMILY_BEACH: return "STYLE: Beach Vacation. LAYOUT: Playful. BACKGROUND: White sand, blue ocean, dunes. LIGHTING: Bright sunlight.";
-    case StudioStyle.FAMILY_CHRISTMAS: return "STYLE: Holiday Special. LAYOUT: Festive. BACKGROUND: Christmas tree out of focus, bokeh lights, fireplace. LIGHTING: Warm cozy glow.";
-    case StudioStyle.FAMILY_PICNIC: return "STYLE: Family Picnic. LAYOUT: Sitting on blanket. BACKGROUND: Green park grass, picnic basket, trees. LIGHTING: Dappled sunlight through trees.";
+    // FAMILY styles are defined below with strict identity, expression & count rules
     case StudioStyle.MATERNITY_SOFT: return "STYLE: Maternity Shoot. LAYOUT: Tender bump focus. BACKGROUND: Sheer curtains, white bedroom, soft floral. LIGHTING: High-key angelic glow.";
     case StudioStyle.NEWBORN_ART: return "STYLE: Newborn Art. LAYOUT: Sleeping baby (if applicable) or holding baby. BACKGROUND: Soft fur blankets, knit textures, woven basket. LIGHTING: Very soft window light.";
     case StudioStyle.KIDS_PLAYGROUND: return "STYLE: Kids at Play. LAYOUT: Action freeze. BACKGROUND: Colorful playground, slides, park. LIGHTING: Bright daylight.";
@@ -2408,15 +2641,89 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.BDAY_JARDIM: return "STYLE: Birthday Photoshoot - Enchanted Garden. LAYOUT: Person in an enchanted garden setting with flowers and soft decorations. BACKGROUND: Lush green garden with flower arches, hanging florals, fairy lights intertwined with greenery, rustic wooden elements. LIGHTING: Soft golden hour sunlight filtering through leaves, magical and dreamy. POSE: Sitting among flowers, walking through garden arch, smelling flowers. VIBE: Romantic, whimsical, fairytale birthday magic, boho chic.";
     case StudioStyle.BDAY_POOL_PARTY: return "STYLE: Birthday Photoshoot - Pool Party Summer. LAYOUT: Vibrant summer pool celebration. BACKGROUND: Crystal clear pool water, tropical plants, inflatable pool toys (flamingos, donuts), colorful towels. LIGHTING: Bright daylight, sun reflections on water, summer warmth. POSE: Sitting by pool edge, splashing, sunbathing, tropical cocktail in hand. PROPS: Pool floats, tropical flowers, fruit drinks, sunglasses. VIBE: Summer vibes, tropical birthday, fun and fresh.";
     case StudioStyle.BDAY_NEON_GLOW: return "STYLE: Birthday Photoshoot - Neon Glow Party. LAYOUT: Person in a neon-lit party environment. BACKGROUND: Dark room with neon lights (pink, blue, purple), LED strips, luminous birthday decorations, glow sticks, UV reactive elements. LIGHTING: Blacklight/UV mixed with colored neon LED strips, dramatic and moody. POSE: Dancing, partying, DJ vibe, holding glow sticks. VIBE: Night club birthday, rave aesthetic, Gen-Z party vibes, electric and energetic.";
+    // ANIVERSÁRIO MASCULINO
+    case StudioStyle.BDAY_CHURRASCO: return "STYLE: Birthday Photoshoot - BBQ & Beer Celebration. LAYOUT: Man celebrating birthday at a premium barbecue setup. BACKGROUND: Rustic outdoor barbecue area with a professional grill, smoke rising, wooden table with craft beers, charcuterie board, and string lights overhead. Warm brick or wood-panel backdrop. LIGHTING: Warm golden hour sunlight mixed with fire glow from the grill, creating a cozy masculine atmosphere. POSE: Confident and relaxed, holding a beer or tongs, laughing with pride near the grill, alpha male energy. PROPS: Premium grill, cold beer bottles, meat cuts, rustic wooden decor, birthday banner. VIBE: Masculine celebration, bro-style party, outdoor BBQ king, warm and inviting.";
+    case StudioStyle.BDAY_ESPORTE: return "STYLE: Birthday Photoshoot - Sports Champion. LAYOUT: Man celebrating birthday with a sports victory theme. BACKGROUND: Stadium-inspired backdrop with dramatic spotlights, confetti falling, trophy display, sports memorabilia. Could feature football, basketball, or general sports aesthetic. LIGHTING: Stadium-style dramatic spotlights with rim lighting, epic and cinematic. POSE: Victorious pose - arms raised holding trophy, fist pump, champion celebration, powerful stance. PROPS: Golden trophy, medal, sports ball, confetti, championship banner with birthday message. VIBE: Champion energy, victorious celebration, masculine power, sports hero birthday.";
+    case StudioStyle.BDAY_BOTECO: return "STYLE: Birthday Photoshoot - Retro Bar/Boteco. LAYOUT: Man celebrating at a vintage Brazilian boteco (retro bar). BACKGROUND: Classic boteco environment with checkered tablecloths, vintage beer signs, old wooden bar counter, retro posters on walls, hanging light bulbs. LIGHTING: Warm tungsten bar lighting, vintage bulbs casting golden glow, intimate and nostalgic. POSE: Sitting at bar counter or standing with beer mug raised for a toast, relaxed and cool. PROPS: Draft beer, bar snacks (petiscos), retro beer brand signs, vintage radio, playing cards. VIBE: Nostalgic Brazilian boteco, retro masculine coolness, old-school celebration, classic guy's night out.";
+    case StudioStyle.BDAY_WHISKY_VIP: return "STYLE: Birthday Photoshoot - Whisky VIP Lounge. LAYOUT: Sophisticated man celebrating in a luxury lounge setting. BACKGROUND: Dark upscale lounge with leather armchairs, mahogany wood paneling, crystal decanters, dim ambient lighting, cigar lounge aesthetic. LIGHTING: Low-key dramatic lighting with warm amber tones, spotlight on the person, luxurious shadows. POSE: Seated in leather armchair holding whisky glass, sophisticated and powerful, James Bond energy. PROPS: Crystal whisky glass, premium bottle, leather chair, cigars, dark velvet curtains, birthday cake with dark theme. VIBE: Ultra-masculine luxury, gentleman's club, VIP exclusive celebration, power and refinement.";
+    case StudioStyle.BDAY_AVENTURA: return "STYLE: Birthday Photoshoot - Outdoor Adventure. LAYOUT: Man celebrating birthday in an epic outdoor adventure setting. BACKGROUND: Mountain summit, forest clearing, or lakeside camp with bonfire. Camping gear, backpack, hiking boots visible. Natural landscape with dramatic sky. LIGHTING: Golden hour sunlight or campfire glow, natural and epic, warm outdoor tones. POSE: Standing on mountain peak with arms spread, sitting by campfire, or adventure-ready pose with backpack. PROPS: Campfire, camping gear, hiking boots, adventure map, birthday cake in outdoor setting, lanterns. VIBE: Adventure spirit, outdoor masculine energy, mountain king, freedom and nature celebration.";
+    case StudioStyle.BDAY_GAMER: return "STYLE: Birthday Photoshoot - Gamer Birthday Setup. LAYOUT: Man celebrating birthday in an epic gaming setup environment. BACKGROUND: Premium gaming room with RGB LED lighting, multiple monitors, gaming PC with custom lights, gaming chair, LED strips in purple/blue/green colors. LIGHTING: RGB ambient lighting, monitor glow on face, neon accents, moody and tech-forward. POSE: Sitting in gaming chair with headset, victory pose with controller, or standing in front of epic setup. PROPS: Gaming headset, controller, keyboard with RGB, energy drinks, birthday-themed gaming decorations, LED numbers. VIBE: Gamer culture celebration, tech-savvy birthday, e-sports energy, modern masculine party.";
 
     // FAMILY STYLES - STRICT IDENTITY & COUNT RULES
     // FAMILY STYLES - STRICT IDENTITY & COUNT RULES
     // FAMILY STYLES - STRICT IDENTITY & COUNT RULES
-    case StudioStyle.FAMILY_STUDIO_CLEAN: return "STYLE: Classic Commercial Family Photography. LAYOUT: High-Key Infinite White. BACKGROUND: Pure white cyclorama studio. CRITICAL: COUNT PEOPLE IN INPUT AND MATCH EXACTLY. IF 2 PEOPLE, GENERATE 2. DO NOT REMOVE ANYONE. EXPRESSION: MATCH INPUT FACE. DO NOT FORCE SMILE. LIGHTING: Large softboxes, bright, airy, shadowless high-key lighting. VIBE: Clean, timeless, high-end.";
-    case StudioStyle.FAMILY_LIFESTYLE_HOME: return "STYLE: Cozy Home Lifestyle. LAYOUT: Candid family moment. BACKGROUND: Blurred living room, soft beige tones. CRITICAL: STRICTLY PRESERVE ALL SUBJECTS. IF 2 PEOPLE (E.G. MOTHER AND DAUGHTER), MUST GENERATE 2 PEOPLE. DO NOT CROP ANYONE OUT. EXPRESSION: NATURAL, CALM. DO NOT FORCE LAUGHTER. LIGHTING: Natural soft window light. VIBE: Authentic, comfortable, warmth.";
-    case StudioStyle.FAMILY_GOLDEN_HOUR: return "STYLE: Outdoor Emotions. LAYOUT: Cinematic Backlit. BACKGROUND: Open field at sunset. CRITICAL: MAINTAIN EXACTLY THE SAME PEOPLE AS INPUT. IF SINGLE PERSON, KEEP SINGLE. IF 2+ PEOPLE, KEEP EVERYONE. DO NOT ADD OR REMOVE ANYONE. EXPRESSION: SERENE, EMOTIONAL. LIGHTING: Warm golden backlight (Rim light). VIBE: Cinematic, nostalgic.";
-    case StudioStyle.FAMILY_BEACH: return "STYLE: Coastal Vacation. LAYOUT: Bright & Airy Outdoor. BACKGROUND: Blurred white sand beach. CRITICAL: MATCH SUBJECT COUNT EXACTLY. NO MISSING PEOPLE. NO EXTRA CHILDREN. EXPRESSION: NATURAL RELAXED LOOK. LIGHTING: High-key natural sunlight. VIBE: Summer, freedom, breeze.";
-    case StudioStyle.FAMILY_CHRISTMAS: return "STYLE: Magical Christmas Card. LAYOUT: Festive Holiday Portrait. BACKGROUND: Christmas tree with bokeh lights. CRITICAL: FAMILY PORTRAIT - PRESERVE ALL FACES. DO NOT INVENT CHARACTERS OR REMOVE FAMILY MEMBERS. EXPRESSION: GENTLE, NO OVER-THE-TOP SMILING. LIGHTING: Warm glowing ambient light. VIBE: Magical, festive, tradition.";
+    case StudioStyle.FAMILY_STUDIO_CLEAN: return "PRIMARY TASK: RE-PHOTOGRAPH this person in a PROFESSIONAL FAMILY STUDIO. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Classic Commercial Family Photography — like a premium portrait studio session. BACKGROUND: Pure white (#FFFFFF) seamless cyclorama — absolutely ZERO elements from the original photo's background. WARDROBE: Dress them in clean studio-appropriate clothing (white, cream, light grey, soft pastels). POSE: Natural relaxed studio pose (standing, sitting on white cube/stool, or leaning casually). LIGHTING: Large softboxes, bright, airy, shadowless high-key lighting with soft catchlights in eyes. POST-PROCESSING: Clean commercial retouch, bright whites, magazine-quality. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation — the person MUST be recognizable. Keep their natural expression. VIBE: Clean, timeless, high-end family portrait.";
+    case StudioStyle.FAMILY_LIFESTYLE_HOME: return "PRIMARY TASK: RE-PHOTOGRAPH this person in a COZY HOME SETTING. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Candid Lifestyle Family Photography. BACKGROUND: Beautiful warm living room with soft beige/cream tones, couch, bookshelf, natural textures — a COMPLETELY NEW environment, not the original background. WARDROBE: Comfortable casual clothing (earth tones, knitwear, soft fabrics). POSE: Natural candid moment — reading together, laughing on couch, playing on carpet. LIGHTING: Soft natural window light with warm golden tones. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation. Keep natural expression. VIBE: Authentic, warm, comfortable.";
+    case StudioStyle.FAMILY_GOLDEN_HOUR: return "PRIMARY TASK: RE-PHOTOGRAPH this person in a GOLDEN HOUR OUTDOOR SCENE. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Cinematic Outdoor Family Photography. BACKGROUND: Wide open field, meadow, or hillside at SUNSET with golden hour light — a COMPLETELY NEW environment. WARDROBE: Flowing fabrics in warm earth tones (amber, rust, cream). POSE: Walking together, holding hands, or embracing against the sunset. LIGHTING: Warm golden backlight creating dramatic rim light silhouettes and lens flare. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation. Keep natural expression. VIBE: Cinematic, emotional, nostalgic, romantic.";
+    case StudioStyle.FAMILY_BEACH: return "PRIMARY TASK: RE-PHOTOGRAPH this person at the BEACH. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Bright Coastal Family Photography. BACKGROUND: Beautiful white sand beach with turquoise water blur, gentle waves, clear sky — a COMPLETELY NEW environment. WARDROBE: Light summer clothing (white linen, light blue, sandy tones). POSE: Walking barefoot on sand, sitting on beach, playing with waves. LIGHTING: Bright high-key natural sunlight with ocean reflections. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation. Keep natural expression. VIBE: Summer, freedom, joy, coastal breeze.";
+    case StudioStyle.FAMILY_CHRISTMAS: return "PRIMARY TASK: RE-PHOTOGRAPH this person in a MAGICAL CHRISTMAS SCENE. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Festive Holiday Portrait Photography. BACKGROUND: Beautifully decorated Christmas tree with warm bokeh lights, wrapped presents, fireplace, cozy holiday decor — a COMPLETELY NEW environment. WARDROBE: Festive clothing (red/green sweaters, matching pajamas, or elegant holiday attire). POSE: Gathered around tree, holding a gift, warm family embrace. LIGHTING: Warm glowing ambient light from Christmas lights and fireplace. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation. Keep natural expression. VIBE: Magical, festive, cozy, traditional.";
+    case StudioStyle.FAMILY_PICNIC: return "PRIMARY TASK: RE-PHOTOGRAPH this person at a FAMILY PICNIC. CREATE A COMPLETELY NEW IMAGE — do NOT return the original photo. STYLE: Outdoor Family Picnic Photography. BACKGROUND: Lush green park or garden with picnic blanket, wicker basket, wildflowers, trees — a COMPLETELY NEW environment. WARDROBE: Casual relaxed clothing (sundresses, khakis, soft cotton shirts). POSE: Sitting on checkered blanket together, sharing food, enjoying nature. LIGHTING: Warm dappled sunlight filtering through tree canopy. PEOPLE COUNT: Preserve the exact number of people from the input. IDENTITY: 100% face preservation. Keep natural expression. VIBE: Relaxed, natural, togetherness, golden afternoon.";
+
+    // POLÍTICO STYLES
+    case StudioStyle.POLITICO_BANDEIRA: return "STYLE: Political Portrait - Flag Drape. LAYOUT: The candidate wearing a white social shirt with the BRAZILIAN FLAG draped over the shoulders like a cape/shawl. BACKGROUND: Clean light grey or white gradient studio backdrop. POSE: Confident, hands crossed on chest touching the flag, or one hand on heart. EXPRESSION: MATCH INPUT EXACTLY. Serious, determined, trustworthy. DO NOT FORCE SMILE. LIGHTING: Professional studio softbox, clean and bright. VIBE: Patriotic, trustworthy, leadership, institutional. CRITICAL: The flag must be the Brazilian flag (green, yellow, blue). Do NOT invent symbols or coats of arms.";
+    case StudioStyle.POLITICO_COMICIO: return "STYLE: Political Portrait - Rally/Campaign. LAYOUT: Close-up or medium shot of candidate. BACKGROUND: Solid colored studio backdrop — use a VIBRANT SOLID COLOR (blue, yellow, orange, or red gradient). Clean, no objects. POSE: Natural, approachable, looking at camera. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: White or light social shirt, clean and professional. LIGHTING: Professional editorial lighting with rim light separating subject from background. VIBE: Energetic, hopeful, modern political campaign, clean and professional.";
+    case StudioStyle.POLITICO_GABINETE: return "STYLE: Political Portrait - Office/Cabinet. LAYOUT: Formal seated or standing portrait. BACKGROUND: Elegant office with dark wood bookshelf, Brazilian flag stand visible, institutional decor. POSE: Seated at desk or standing beside it, formal and authoritative. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: Dark suit with tie, very formal. LIGHTING: Warm ambient office lighting with professional fill light. VIBE: Authority, governance, institutional, statesmanship.";
+    case StudioStyle.POLITICO_CAMPANHA_RURAL: return "STYLE: Political Portrait - Community/Rural Campaign. LAYOUT: Candidate in outdoor community setting. BACKGROUND: Blurred rural or small-town scene — farmland, community market, or simple neighborhood. POSE: Walking, greeting, or standing with open arms gesture. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: Casual shirt (polo or button-down), no tie, sleeves rolled up. LIGHTING: Natural golden hour outdoor light. VIBE: Approachable, man-of-the-people, grassroots, humble.";
+
+    // PALCO & ORATÓRIA STYLES — Realistic Event Photography (NOT CGI)
+    case StudioStyle.PALESTRANTE_PALCO: return "STYLE: REALISTIC EVENT PHOTOGRAPHY — Professional Speaker at Conference. CAMERA: Canon 5D Mark IV, 85mm f/1.8 lens, shot from audience level at medium distance. FRAMING: MEDIUM SHOT from waist up, NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT make the person thinner or heavier. Do NOT widen the torso or change body shape in any way. BACKGROUND: Real conference stage with warm spotlights, subtle stage backdrop (dark or branded), blurred audience heads visible in foreground creating depth. Bokeh from stage lights. LIGHTING: Warm amber/white stage spotlight from above and slightly front, creating natural facial highlights. Soft fill from side. NO neon, NO blue LED walls, NO lens flares. Natural event photography lighting like a professional conference photographer would capture. POSE: Speaking naturally with one hand gesturing at chest level, or holding a headset microphone. Relaxed, confident posture — NOT exaggerated theatrical poses. PROPS: Small headset microphone on ear (skin-colored or black). OUTFIT: Smart blazer (beige, navy, or black) over a simple shirt or blouse. Professional but not overdone. VIBE: Real conference speaker captured by event photographer. Warm, authentic, professional. Like a photo that would appear in a Forbes or LinkedIn article. NEGATIVE: CGI look, neon lights, LED screens, lens flares, full body shot, artificial lighting, body distortion, weight change, oversized or undersized body parts, 3D render look.";
+    case StudioStyle.COACH_MENTOR: return "STYLE: REALISTIC PORTRAIT — Business Coach & Mentor. CAMERA: Canon 5D, 50mm f/1.4, shallow depth of field. FRAMING: MEDIUM CLOSE-UP from chest up, or MEDIUM SHOT from waist up. NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT alter body shape in any way. BACKGROUND: Clean, modern coaching space — blurred bookshelf with business books, warm-toned office with natural light from window, or elegant neutral studio backdrop. Soft, organic background. LIGHTING: Warm natural window light from one side creating soft shadows. Golden hour warmth. Professional portrait lighting — NOT harsh or clinical. POSE: Confident but approachable — slight lean forward, one hand gesturing as explaining, or arms naturally at sides. Warm, genuine smile. Natural coaching conversation energy. PROPS: Small elements visible in background only (books, whiteboard edge). Nothing in hands unless a pen or notebook. OUTFIT: Smart casual — well-fitted blazer over casual shirt, or professional polo. Clean and approachable. VIBE: Trusted business mentor photographed for their coaching website. Warm, human, inviting. Like a professional headshot for a life coach's Instagram. NEGATIVE: CGI look, artificial lighting, full body shot, body distortion, weight change, stock photo feel, corporate sterile look.";
+    case StudioStyle.PASTOR_LIDER: return "STYLE: REALISTIC PORTRAIT — Modern Protestant Pastor & Church Leader. CAMERA: Canon 5D, 70mm f/2.0, professional portrait lens. FRAMING: MEDIUM SHOT from waist up, or MEDIUM CLOSE-UP. NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT alter body shape in any way. BACKGROUND: MODERN EVANGELICAL CHURCH — contemporary worship stage with soft LED stage lights (warm purple/blue worship lighting), modern church auditorium, dark stage backdrop with subtle cross logo or church branding projected on screen behind. Clean, modern megachurch atmosphere (Hillsong/Elevation style). Blurred congregation seats or worship team in background. NOT a traditional Catholic cathedral — NO stained glass, NO gothic arches, NO ornate altars. LIGHTING: Warm modern stage lighting — soft LED worship lights creating atmospheric purple/warm tones. Professional church broadcast lighting quality. Warm and inviting, like a modern worship service. POSE: Speaking passionately with one hand gesturing naturally, or holding a Bible casually at side. Warm, genuine smile. Charismatic preacher energy — NOT stiff or overly formal. PROPS: Modern wireless headset microphone, Bible held casually (not open on pulpit). Music stand or transparent lectern (modern, not wooden pulpit). OUTFIT: Modern smart casual — fitted blazer over untucked shirt (NO tie), or stylish button-up with rolled sleeves. Contemporary pastor look. NO pastoral vestments, NO robes, NO clerical collar. VIBE: Modern evangelical church leader. Like a portrait for a contemporary church's Instagram or YouTube channel. Warm, relatable, Spirit-filled, young church energy. Think Hillsong, Elevation Church, or Lagoinha style. NEGATIVE: CGI look, Catholic cathedral, stained glass, gothic architecture, clerical vestments, robes, old-fashioned church, candles, incense, full body shot, body distortion, weight change.";
+    case StudioStyle.TEDX_SPEAKER: return "STYLE: REALISTIC EVENT PHOTOGRAPHY — TEDx Speaker on Stage. CAMERA: Canon 5D Mark IV, 135mm f/2.0 telephoto lens (compresses background beautifully), shot from audience seats. FRAMING: MEDIUM SHOT from waist up, or CLOSE-UP during passionate moment. NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT alter body shape in any way. BACKGROUND: Iconic TED-style dark stage with a round red carpet circle on the floor (blurred below frame), minimal dark backdrop. Subtle warm spotlight glow. A few blurred audience heads in the foreground creating the 'shot from the crowd' feel. Very minimal stage design — the focus is entirely on the speaker. LIGHTING: Single warm spotlight from above creating a pool of light on the speaker. Soft fill from front. Warm amber tones. The rest of the stage is dark, creating natural contrast. NO neon, NO colored LED, NO lens flares. POSE: Speaking with one hand gesturing naturally at chest height, making a meaningful point. Authentic, vulnerable body language. Walking or standing naturally, NOT theatrical. PROPS: Small clicker/remote in one hand (barely visible). Headset microphone on ear. OUTFIT: Smart casual — fitted blazer over plain t-shirt, or button-up shirt without tie. Authentic and intellectual. VIBE: Intimate, powerful TED talk captured by event photographer. Like a real photo from ted.com. Authentic, inspiring, intellectual. NEGATIVE: CGI look, neon lights, LED screens, full body shot, body distortion, weight change, exaggerated poses, concert lighting, 3D render.";
+    case StudioStyle.COMUNICADOR_MC: return "STYLE: REALISTIC EVENT PHOTOGRAPHY — Event Host & MC on Stage. CAMERA: Canon 5D, 85mm f/1.8, fast lens for low-light event photography. FRAMING: MEDIUM SHOT from waist up. NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT alter body shape in any way. BACKGROUND: Real event stage with warm and colorful stage lighting (subtle purple/blue/magenta washes), blurred LED screens, blurred audience in the dark creating atmosphere. Professional corporate event or gala setting. Stage backdrop with warm tones. LIGHTING: Key spotlight from front-above on the MC, colorful rim lighting from stage washes (purple/blue accent, not overwhelming). Natural event photography lighting. Warm and energetic but realistic. POSE: Holding a wireless handheld microphone naturally, smiling warmly, one hand gesturing to engage the audience. Confident and charismatic but NATURAL — not exaggerated theatrical poses. PROPS: Wireless handheld microphone, subtle earpiece visible. OUTFIT: Stylish fitted suit or elegant outfit. Well-dressed for a gala or corporate event. Fashionable but professional. VIBE: Charismatic event host captured by the event photographer. High-energy but real. Like a photo from a corporate event recap gallery. NEGATIVE: CGI look, confetti explosion, concert-style neon, full body shot, body distortion, weight change, cartoon-like effects, oversaturated colors, 3D render.";
+
+    // INSPIRACIONAL — Viral Instagram Profile Photo Styles (IDENTITY-FIRST)
+    case StudioStyle.INSP_FUNDO_BOLD_RED: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH — must look like a real camera photo, not AI. STYLE: Bold solid red background studio portrait. FRAMING: Close-up, head and shoulders only. BACKGROUND: Solid flat red (#CC0000) backdrop paper, completely uniform. LIGHTING: Beauty dish from front-right, fill from left. Catchlights in eyes. SKIN: Real texture with visible pores. POSE: Slight head tilt, intense eye contact, serious. OUTFIT: Simple fitted black t-shirt or turtleneck. NEGATIVE: Different person, changed face, AI look, plastic skin, CGI, gradients, full body, body distortion, weight change.";
+    case StudioStyle.INSP_FUNDO_BOLD_BLUE: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH — must look like a real camera photo, not AI. STYLE: Bold solid blue background studio portrait. FRAMING: Close-up, head and shoulders only. BACKGROUND: Solid flat royal blue (#1a3a8a) backdrop paper, completely uniform. LIGHTING: Softbox from front-left, blue color spill on edges. Catchlights in eyes. SKIN: Real texture with visible pores. POSE: Direct eye contact, chin slightly raised, confident. OUTFIT: Clean white t-shirt for contrast. NEGATIVE: Different person, changed face, AI look, plastic skin, CGI, gradients, full body, body distortion, weight change.";
+    case StudioStyle.INSP_IMPACTO_CINEMATIC: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Dark cinematic with venetian blind shadows on face. FRAMING: Tight close-up, face and upper chest. BACKGROUND: Nearly black. LIGHTING: Single hard side light through venetian blinds creating horizontal stripe shadows across the face. Chiaroscuro. Cool blue-teal tones. The stripe shadows are MANDATORY. POSE: Hands clasped in prayer position near chin, intense eye contact, dead serious. OUTFIT: Black turtleneck. NEGATIVE: Different person, changed face, AI look, plastic skin, bright lighting, smiling, colorful, full body, body distortion, weight change.";
+    case StudioStyle.INSP_NEON_BICOLOR: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Dual-color gel light portrait. FRAMING: Medium close-up or 3/4 profile. BACKGROUND: Black with swirling red and blue long-exposure light trails. LIGHTING: RED gel from left, BLUE gel from right — split lighting, colors meet at nose bridge. Real photography gels. POSE: Strong 3/4 profile, intense gaze, jaw defined by dual lighting. OUTFIT: Plain black t-shirt. NEGATIVE: Different person, changed face, AI look, plastic skin, flat lighting, daylight, full body, body distortion, weight change.";
+    case StudioStyle.INSP_HOME_OFFICE: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Authentic creator portrait in home office. FRAMING: Medium shot from waist up. BACKGROUND: Blurred modern home office — monitor, bookshelf, plant, desk lamp. Shallow DOF bokeh. LIGHTING: Natural window light mixed with warm desk lamp. Cozy, ambient. POSE: Relaxed seated, direct eye contact, slight smile or neutral. Authentic 'caught in the moment' energy. OUTFIT: Casual dark t-shirt, glasses if person wears them. NEGATIVE: Different person, changed face, AI look, studio lighting, formal suit, full body, body distortion, weight change.";
+    case StudioStyle.INSP_EDITORIAL_ELEGANTE: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Elegant editorial beauty portrait. FRAMING: Tight close-up, face and upper chest. BACKGROUND: Warm blurred beige/cream with creamy bokeh. LIGHTING: Beauty dish from front, reflector below chin. Even, flattering. Warm tones. Catchlights centered in eyes. SKIN: Luminous but real — visible pores, natural glow. POSE: Hand touching chin/jaw, slight head tilt, confident warmth. OUTFIT: Elegant light blazer over dark top, small gold earrings. NEGATIVE: Different person, changed face, AI look, plastic skin, heavy makeup, harsh shadows, full body, body distortion, weight change.";
+    case StudioStyle.INSP_GOLDEN_HOUR: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Golden hour backlit portrait outdoors. FRAMING: Medium close-up from chest up. BACKGROUND: Outdoor golden hour — warm bokeh, sun low on horizon. LIGHTING: Backlit sun creating glowing rim light on hair/shoulders. Face lit by warm bounce light. Color temperature 3500K-4000K. Subtle lens flare. POSE: Relaxed, natural expression. Genuine smile or contemplative. Hair moving with breeze. OUTFIT: Casual light-colored top. NEGATIVE: Different person, changed face, AI look, studio lighting, indoor, overcast, cold colors, full body, body distortion, weight change.";
+    case StudioStyle.INSP_PRETO_BRANCO: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. MANDATORY: ENTIRE IMAGE IN BLACK AND WHITE — zero color. STYLE: High-contrast fine-art B&W portrait. FRAMING: Tight close-up, face filling frame. BACKGROUND: Solid dark gray or black. LIGHTING: Rembrandt lighting from 45°, dramatic contrast, deep blacks and bright whites. One side in shadow. SKIN: Extreme B&W detail — texture, pores, contours visible. POSE: Direct unflinching eye contact, minimal. OUTFIT: Black turtleneck, disappears into background. NEGATIVE: Color, any color, different person, changed face, AI look, plastic skin, even lighting, full body, body distortion, weight change.";
+    case StudioStyle.INSP_STREET_URBAN: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Urban street-style editorial portrait. FRAMING: Medium close-up or medium shot from waist up. BACKGROUND: Blurred urban environment — graffiti wall, concrete, city street with lights in bokeh. LIGHTING: Natural urban light — overcast or dramatic light between buildings. POSE: Leaning against wall, hands in pockets, confident swagger. OUTFIT: Streetwear — leather/denim/bomber jacket, simple t-shirt. Sunglasses optional. NEGATIVE: Different person, changed face, AI look, studio backdrop, rural, corporate, full body, body distortion, weight change.";
+    case StudioStyle.INSP_SMOKE_MYSTERY: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Atmospheric smoke/haze studio portrait. FRAMING: Medium close-up or close-up. BACKGROUND: Dark studio with real fog/haze drifting through scene. Thin wisps catching light. LIGHTING: Single backlight or side light illuminating smoke particles — volumetric rays. Low-key, cool temperature. Face stays sharp while edges soften in haze. POSE: Intense, mysterious, serious eye contact. OUTFIT: All black — turtleneck or blazer. NEGATIVE: Different person, changed face, AI look, CGI smoke, bright lighting, colorful, happy, full body, body distortion, weight change.";
+    case StudioStyle.INSP_LUZ_NATURAL: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Intimate natural window-light portrait. FRAMING: Tight close-up, face and upper chest. BACKGROUND: Clean white/cream wall, soft curtain. LIGHTING: Single window as only light source — soft directional natural light from one side. Beautiful natural falloff. Warm daylight 5500K. No artificial light. POSE: Intimate, looking at camera with soft genuine eyes, slight smile. Head turned toward light. OUTFIT: Simple white or neutral top. NEGATIVE: Different person, changed face, AI look, studio lighting, ring light, flash, outdoor, full body, body distortion, weight change.";
+    case StudioStyle.INSP_POWER_PORTRAIT: return "#1 PRIORITY: FACE IDENTITY — The output person must be IMMEDIATELY recognizable as the EXACT same person from the input photo. Preserve every facial feature: nose shape, eye spacing, jawline, skin tone, moles, expression. If the face doesn't match perfectly → FAILED. HIERARCHY: IDENTITY > REALISM > STYLE. ULTRA-REALISTIC PHOTOGRAPH. STYLE: Dark executive power portrait. FRAMING: Medium shot from waist up or medium close-up. BACKGROUND: Very dark, near-black with subtle vignette. LIGHTING: Key light from 45°, underexposed by 1 stop. Face well-lit, everything else in shadow. Subtle rim light. Cool-neutral temperature. POSE: Arms crossed (power pose), chin slightly elevated, serious commanding expression. OUTFIT: Dark well-tailored suit/blazer, dark shirt, watch. CEO energy. NEGATIVE: Different person, changed face, AI look, bright background, smiling, casual, outdoor, colorful, full body, body distortion, weight change.";
+
+    // OFÍCIOS & SERVIÇOS STYLES
+    case StudioStyle.DENTISTA: return "STYLE: Dentist Professional Portrait. LAYOUT: Confident dentist in a modern dental clinic. BACKGROUND: Clean, modern dental clinic with dental chair, overhead dental lamp, professional equipment, organized instruments, white and blue clinical interior. LIGHTING: Bright, clean clinical lighting — professional and trustworthy atmosphere. POSE: Standing confidently in clinic wearing white lab coat and disposable gloves, holding dental mirror or displaying professional tools. Warm, trustworthy smile. PROPS: Dental chair, instruments, overhead lamp, x-ray on lightbox, teeth model. OUTFIT: Clean white lab coat, disposable gloves, professional dental attire. VIBE: Trustworthy healthcare professional, modern dentistry, patient comfort, clinical excellence.";
+    case StudioStyle.PEDREIRO: return "STYLE: Construction Worker (Pedreiro) Professional Portrait. LAYOUT: Proud construction worker at an active building site. BACKGROUND: Construction site with brick walls being built, scaffolding, construction materials, concrete structures, clear sky. LIGHTING: Golden hour outdoor sunlight, warm and heroic atmosphere, natural construction site light. POSE: Standing confidently with arms crossed or holding construction tools (trowel, level), wearing hard hat and safety vest. Strong, hardworking expression showing pride and skill. PROPS: Hard hat, safety vest, trowel, brick wall, cement mixer, measuring tape, construction boots. OUTFIT: Work clothes with safety gear — hard hat, reflective vest, work boots, gloves. VIBE: Blue-collar pride, skilled tradesman, builder of dreams, strength and reliability.";
+    case StudioStyle.ELETRICISTA: return "STYLE: Electrician Professional Portrait. LAYOUT: Skilled electrician working with electrical systems. BACKGROUND: Professional worksite with electrical panel open, organized wiring, circuit breakers, conduit runs, clean professional environment. LIGHTING: Mixed — work lamp lighting with ambient industrial light. Professional and technical atmosphere. POSE: Working on an electrical panel with tools or standing confidently with multimeter and wire strippers. Focused, skilled expression. PROPS: Multimeter, wire strippers, electrical tape, hard hat, tool belt, safety glasses, electrical panel. OUTFIT: Professional work uniform, safety glasses, insulated gloves, tool belt. VIBE: Technical expertise, safety-conscious professional, electrical mastery, reliable service.";
+    case StudioStyle.MECANICO: return "STYLE: Auto Mechanic Professional Portrait. LAYOUT: Skilled mechanic in a modern auto repair shop. BACKGROUND: Clean, organized garage with car on lift, tool wall with pegboard, diagnostic equipment, tire racks, professional workshop. LIGHTING: Workshop fluorescent mixed with natural garage door light. Professional and industrious atmosphere. POSE: Standing next to a car holding wrench or diagnostic tool, or leaning on car hood with confident expression. Skilled and experienced look. PROPS: Wrench set, diagnostic laptop, car on lift, toolbox, tire, engine parts. OUTFIT: Clean work jumpsuit or mechanic uniform, logo cap, work boots. VIBE: Automotive expertise, trusted mechanic, precision diagnostics, reliable car care professional.";
+    case StudioStyle.CHEF_COZINHEIRO: return "STYLE: Professional Chef Portrait. LAYOUT: Talented chef in a professional restaurant kitchen. BACKGROUND: Stainless steel professional kitchen with flames from stove, steam rising, organized mise en place, copper pots hanging, commercial kitchen equipment. LIGHTING: Warm dramatic kitchen lighting — fire glow mixed with overhead kitchen lights, cinematic and passionate. POSE: Plating a beautiful dish with precision, or standing with arms crossed holding chef's knife, or flambéing dramatically. Passionate and creative expression. PROPS: Chef's knife, copper pans, flames, plated gourmet dish, fresh ingredients, cutting board. OUTFIT: Crisp white chef coat (double-breasted), chef's toque or bandana, apron. VIBE: Culinary artistry, Michelin-quality passion, fire and flavor, master of the kitchen.";
+    case StudioStyle.PROFESSOR: return "STYLE: Teacher / Educator Professional Portrait. LAYOUT: Inspiring teacher in a modern classroom environment. BACKGROUND: Bright, modern classroom with smart board or whiteboard with educational content, bookshelves, organized student desks, educational posters, globe. LIGHTING: Bright, warm classroom lighting — natural window light mixed with overhead fixtures. Inviting and intellectual atmosphere. POSE: Standing at whiteboard explaining a concept, or sitting at desk with open books, or interacting with educational materials. Approachable, wise expression. PROPS: Whiteboard marker, books, laptop, globe, ruler, educational charts, glasses on desk. OUTFIT: Smart casual — blazer with button-up, or professional but welcoming attire. VIBE: Inspiring educator, knowledge sharer, mentor, nurturing intellect, passionate teacher.";
+    case StudioStyle.ENFERMEIRO: return "STYLE: Nurse Professional Portrait. LAYOUT: Compassionate nurse in a modern hospital setting. BACKGROUND: Clean, modern hospital corridor or patient care area. Medical equipment, monitors, clean white walls, hospital signage. Professional healthcare environment. LIGHTING: Bright, clean clinical lighting — professional and caring atmosphere. Soft fill light on face. POSE: Standing confidently with stethoscope, checking patient chart, or walking purposefully through hospital corridor. Caring, competent expression. PROPS: Stethoscope, patient chart, scrubs, medical supplies, hospital badge, blood pressure cuff. OUTFIT: Clean scrubs (blue, green, or teal), stethoscope around neck, hospital ID badge. VIBE: Healthcare hero, compassionate caregiver, dedicated professional, lifesaver, patient advocate.";
+    case StudioStyle.FARMACEUTICO: return "STYLE: Pharmacist Professional Portrait. LAYOUT: Knowledgeable pharmacist in a modern pharmacy. BACKGROUND: Modern pharmacy interior with organized medicine shelves, prescription counter, labeled medication drawers, pharmacy signage, clean and professional. LIGHTING: Bright, clean pharmacy lighting — professional and trustworthy. Even illumination. POSE: Standing behind pharmacy counter, holding medication bottle, or checking prescriptions on computer. Knowledgeable, approachable expression. PROPS: Medication bottles, prescription papers, mortar and pestle, pharmacy computer, lab coat, pharmacy scale. OUTFIT: Clean white lab coat over professional clothing, pharmacy name badge. VIBE: Trusted health advisor, pharmaceutical expertise, community health guardian, accessible professional.";
+    case StudioStyle.BOMBEIRO: return "STYLE: Firefighter (Bombeiro) Hero Portrait. LAYOUT: Heroic firefighter in full gear. BACKGROUND: Fire station with fire truck visible, or dramatic scene with smoke in background. Firefighting equipment, emergency lighting. LIGHTING: Dramatic lighting with warm orange/red tones — heroic and powerful. Backlighting creating silhouette edge. Cinematic emergency atmosphere. POSE: Standing tall in full turnout gear with helmet, or carrying equipment, or looking back over shoulder heroically. Brave, determined expression. PROPS: Firefighter helmet, turnout coat, fire truck, fire hose, axe, oxygen tank. OUTFIT: Full firefighter bunker gear — turnout coat, pants, boots, helmet, reflective stripes. VIBE: Everyday hero, courage under fire, protector, brave service, community defender.";
+    case StudioStyle.CONTADOR: return "STYLE: Accountant / Financial Professional Portrait. LAYOUT: Sharp professional in a modern corporate office. BACKGROUND: Clean modern office with desk, multiple monitors showing spreadsheets/charts, financial books, organized files, calculator, professional corporate decor. LIGHTING: Professional office lighting — warm desk lamp mixed with ambient office light. Executive atmosphere. POSE: Seated at desk with laptop and financial documents, or standing confidently near bookshelf, or analyzing charts. Analytical, confident expression. PROPS: Laptop with spreadsheets, calculator, financial reports, pen, glasses, coffee mug, filing cabinet. OUTFIT: Professional suit or blazer, tie optional, clean and corporate. VIBE: Financial precision, strategic thinker, number cruncher, trusted advisor, business acumen.";
+    case StudioStyle.CAMINHONEIRO: return "STYLE: Truck Driver (Caminhoneiro) Professional Portrait. LAYOUT: Proud truck driver next to their rig. BACKGROUND: Large truck (semi/trailer) on an open highway or at a truck stop, dramatic sky, open road stretching to horizon. Brazilian highway atmosphere. LIGHTING: Golden hour sunlight creating warm, epic atmosphere. Long shadows and warm tones. Highway romanticism. POSE: Leaning confidently against truck cab, or standing tall in front of the rig with arms crossed, or climbing into cab. Strong, reliable expression. PROPS: Large truck/trailer, cap, sunglasses, thermos, CB radio, road map, truck keys. OUTFIT: Casual work clothes — jeans, flannel or polo shirt, cap, comfortable boots. VIBE: Road warrior, freedom of the highway, reliable transporter, Brazilian trucker pride, king of the road.";
+    case StudioStyle.AGRICULTOR: return "STYLE: Farmer / Agribusiness Professional Portrait. LAYOUT: Proud farmer in their productive field. BACKGROUND: Lush green crop field (soybeans, corn, coffee, or sugarcane), modern agriculture equipment or tractor in background, beautiful rural Brazilian landscape, dramatic sky. LIGHTING: Golden hour sunlight over the fields, warm earth tones, epic agricultural landscape lighting. Natural and majestic. POSE: Standing proudly in the field surveying crops, or next to tractor, or holding harvested produce. Content, hardworking expression showing pride in the land. PROPS: Straw hat, work gloves, tractor, harvested crops, soil, farming tools. OUTFIT: Rural work clothes — hat, flannel shirt, jeans, work boots, practical farming attire. VIBE: Agricultural pride, Brazilian agro power, land steward, harvest celebration, rural prosperity.";
+
+    // TIKTOK VIRAL STYLES 🔥 — Natural, candid, iPhone-quality aesthetic photos
+    case StudioStyle.TIKTOK_MIRROR: return "STYLE: TikTok Mirror Selfie Aesthetic. CRITICAL: This must look like a REAL iPhone mirror selfie, NOT a professional photo. LAYOUT: Person taking a selfie in a trendy full-length mirror. BACKGROUND: Aesthetic bedroom or bathroom — fairy lights, plants, cute decor, organized vanity. Natural and lived-in but aesthetic space. LIGHTING: Natural window light, soft and warm. NO studio lighting. Natural phone screen glow. POSE: Holding phone up to take mirror selfie, one hand on hip or fixing hair, casual and effortless. Phone should be visible in mirror. Not overly posed — natural and candid. OUTFIT: Trendy casual — crop top, jeans, loungewear, or going-out outfit. Fashion-forward but not overdressed. VIBE: Gen Z aesthetic, Instagram story quality, effortlessly cool, 'just took this casually' energy. CAMERA: iPhone quality, slight noise, natural depth.";
+    case StudioStyle.TIKTOK_BEACH: return "STYLE: TikTok Beach Golden Hour. CRITICAL: This must look like a candid beach photo taken by a friend with iPhone, NOT professional photography. LAYOUT: Person at the beach during golden hour sunset. BACKGROUND: Ocean waves, golden sunset sky, wet sand reflections, palm trees silhouette. Tropical Brazilian beach paradise. LIGHTING: Warm golden hour sunset light hitting face and body, natural sun flare, lens flare from iPhone camera. No flash. POSE: Walking on the shoreline, looking at sunset, wind blowing hair, laughing naturally, or candid profile shot. Completely unposed and natural. OUTFIT: Beachwear — bikini/swim shorts, sarong, sunglasses pushed up on head, shell necklace. VIBE: Sunset paradise, summer forever, golden skin glow, beach bum aesthetic, vacation mode. CAMERA: iPhone photo quality, slightly warm color grading.";
+    case StudioStyle.TIKTOK_PARTY: return "STYLE: TikTok Party & Nightlife. CRITICAL: This must look like a real party photo with iPhone FLASH, NOT studio lighting. LAYOUT: Person at a party, nightclub, or celebration. BACKGROUND: Dark club/party environment with colorful LED lights, disco ball reflections, drinks on table, blurred dancing people. Party chaos. LIGHTING: iPhone flash hitting face directly — creating that characteristic flat flash look with dark background. Red eye possible. Harsh but fun. POSE: Holding a drink (cocktail/champagne), taking a flash selfie, dancing, laughing with mouth open, arm around friends (blurred). Pure fun energy. OUTFIT: Going-out outfit — party dress, heels, or stylish club wear. Glitter, sparkles, statement accessories. VIBE: Night out energy, living your best life, party queen/king, flash photography aesthetic, chaotic fun. CAMERA: iPhone flash photography, slightly grainy, party aesthetic.";
+    case StudioStyle.TIKTOK_CAR: return "STYLE: TikTok Car Selfie Aesthetic. CRITICAL: This must look like a real selfie taken inside a car, NOT a professional photo. LAYOUT: Person sitting in the driver or passenger seat of a nice car. BACKGROUND: Car interior visible — steering wheel, dashboard, sunroof or window with golden light, rearview mirror. Clean modern car interior. LIGHTING: Natural golden hour or afternoon light streaming through car window, creating dramatic light/shadow on face. Sun visor shadow. Natural and warm. POSE: Casual car selfie — one hand on steering wheel, sunglasses on, looking at camera or looking cool and unbothered, peace sign or no-hands confident pose. OUTFIT: Casual cool — sunglasses, cap, casual tee, chain necklace. Effortlessly stylish. VIBE: Main character driving aesthetic, unbothered and cool, road trip energy, 'POV you're in my passenger seat'. CAMERA: iPhone front camera quality, close-up, dashboard visible.";
+    case StudioStyle.TIKTOK_MORNING: return "STYLE: TikTok 'That Girl' Morning Routine. CRITICAL: This must look like a real lifestyle photo, NOT a professional shoot. LAYOUT: Person enjoying a perfect morning routine. BACKGROUND: Bright, clean bedroom or kitchen with morning sun streaming in. White sheets, plants, organized minimalist aesthetic. Cozy and aspirational. LIGHTING: Soft morning sunlight through white curtains, golden and dreamy. Natural window light creating warm atmosphere. POSE: Sitting in bed with journal and coffee, doing skincare in bathroom mirror, preparing a healthy breakfast (avocado toast, green smoothie), or doing yoga stretches. Serene and peaceful. OUTFIT: Cute loungewear — matching set, silk pajamas, oversized sweater, messy bun. Clean and put-together but casual. PROPS: Green smoothie, journal, candle, skincare products, matcha latte, fresh fruit bowl, yoga mat. VIBE: 'That girl' aesthetic, clean girl, healthy lifestyle, morning motivation, self-care queen, Pinterest-worthy morning. CAMERA: iPhone quality, warm color grading, soft focus.";
+    case StudioStyle.TIKTOK_GYM: return "STYLE: TikTok Gym Mirror Selfie. CRITICAL: This must look like a real gym mirror selfie taken with iPhone, NOT professional fitness photography. LAYOUT: Person taking a mirror selfie at the gym. BACKGROUND: Modern gym with mirrors, weight racks, treadmills, and equipment visible. Gym floor and lighting. Industrial fitness environment. LIGHTING: Harsh gym fluorescent lighting mixed with some natural light. Gym lighting that shows muscle definition. Not flattering — real gym lighting. POSE: Classic gym mirror selfie — flexing slightly, showing off workout fit, phone held up in mirror, post-workout sweat glow. One arm flexing or hands on waist. Confident but casual. OUTFIT: Trendy gym wear — matching sports set, compression leggings, crop top or tank, training shoes, AirPods in. Fitness influencer style. VIBE: #gymtok, fitness motivation, gains progress, workout complete, post-pump selfie, gym rat aesthetic. CAMERA: iPhone mirror selfie quality, gym lighting, slightly sweaty glow.";
+    case StudioStyle.TIKTOK_OOTD: return "STYLE: TikTok OOTD (Outfit of the Day) Street Style. CRITICAL: This must look like a friend took this with their phone on the street, NOT a fashion photoshoot. LAYOUT: Full-body or 3/4 shot showing complete outfit on an urban street. BACKGROUND: Trendy urban backdrop — colorful wall, graffiti, modern architecture, coffee shop front, tree-lined street. City aesthetic. LIGHTING: Natural outdoor daylight, golden hour preferred. Street shadows and natural city light. POSE: Casual model stance — one hand fixing hair, walking naturally, leaning on wall, or looking off to the side. Confident but not runway-posing. Natural and effortless. OUTFIT: Complete trendy outfit — coordinated streetwear, layered look, statement sneakers or boots, accessories (bag, sunglasses, jewelry). Fashion-forward Gen Z/millennial style. VIBE: Street style blogger, fashion TikToker, 'rate my fit', outfit inspo, effortlessly fashionable. CAMERA: iPhone portrait mode, blurred background bokeh, full body visible.";
+    case StudioStyle.TIKTOK_ROOFTOP: return "STYLE: TikTok Rooftop Sunset. CRITICAL: This must look like a candid photo on a rooftop, NOT a professional portrait. LAYOUT: Person on a rooftop terrace during golden hour sunset. BACKGROUND: City skyline panorama, dramatic sunset sky with orange/purple/pink colors, rooftop furniture (loungers, string lights), drinks on table. Urban paradise. LIGHTING: Dramatic sunset backlighting creating golden rim light on hair and body. Warm and cinematic but natural. Sun setting behind city buildings. POSE: Leaning on rooftop railing looking at view, sitting on lounge with drink, standing with wind in hair looking at sunset, or candid laughing photo. Relaxed and living-the-moment. OUTFIT: Chic casual — sundress, linen outfit, or stylish going-out look. Sunglasses, cocktail in hand. VIBE: Main character energy, living my best life, rooftop season, golden hour magic, city views queen. CAMERA: iPhone quality, lens flare from sunset, warm tones.";
+    case StudioStyle.TIKTOK_CAFE: return "STYLE: TikTok Coffee Shop Aesthetic. CRITICAL: This must look like a cozy café photo taken with iPhone, NOT a branded shoot. LAYOUT: Person sitting in a trendy, aesthetic coffee shop. BACKGROUND: Cute café interior — exposed brick, plants hanging, vintage furniture, pastry display, warm lighting. Cozy third-wave coffee shop. LIGHTING: Warm, soft café ambient lighting. Natural light from café windows. Cozy and inviting golden tones. POSE: Sitting at a cute table with latte art coffee, reading a book, typing on MacBook, looking out the window thoughtfully, or smiling at camera with coffee cup. Cozy and comfortable. PROPS: Beautiful latte art, croissant or pastry, cute notebook, MacBook, phone on table, books, plants. OUTFIT: Casual chic — oversized sweater, turtleneck, cozy cardigan, beanie, minimalist jewelry. Cozy intellectual aesthetic. VIBE: Book lover, coffee addict, cozy girl aesthetic, study date, café hopping, intellectual cool. CAMERA: iPhone quality, warm color grading, bokeh on coffee cup.";
+    case StudioStyle.TIKTOK_FESTIVAL: return "STYLE: TikTok Music Festival / Concert. CRITICAL: This must look like an excited concert/festival photo taken by a friend, NOT professional event photography. LAYOUT: Person at a music festival or live concert. BACKGROUND: Stage lights in distance, massive crowd, LED wristbands glowing, confetti in air, laser show effects, festival grounds with tents and lights. Epic live music atmosphere. LIGHTING: Dynamic colored stage lights (purple, blue, pink, green) illuminating face. Phone flash or LED wristband glow. Dark background with colorful light splashes. POSE: Hands up in the air dancing, singing along, holding up phone recording, festival peace sign, jumping with crowd. Pure ecstasy and joy. On someone's shoulders or in the front row. OUTFIT: Festival fashion — glitter on face, crop top, high-waisted shorts, chunky boots, flower crown, body chains, neon accessories, face gems, temporary tattoos. VIBE: Festival season, music is life, crowd surfing energy, main stage vibes, Lollapalooza/Rock in Rio energy. CAMERA: iPhone photo in dark concert environment, motion blur possible, colorful light streaks.";
+
+    // ADVOGADOS ESPECIAL ⚖️
+    case StudioStyle.ADV_MINIMALISTA: return "STYLE: Minimalist Lawyer Portrait. LAYOUT: Standing portrait, arms crossed or hands clasped. BACKGROUND: Clean pure white or very light gray studio background with soft shadows on floor. NO furniture, NO props, NO distractions — ONLY the clean backdrop. WARDROBE: Dark navy or black blazer over white blouse/shirt. Crisp, clean lines. LIGHTING: High-key professional studio lighting, soft and even, like a premium LinkedIn headshot. POSE: Confident, authoritative, arms crossed. VIBE: Apple-style minimalism, modern law firm partner.";
+    case StudioStyle.ADV_MODERNO: return "STYLE: Modern Contemporary Lawyer. LAYOUT: Half-body portrait, relaxed confident pose. BACKGROUND: Soft neutral gray or beige gradient background. Ultra-clean, no distractions. WARDROBE: Modern suit WITHOUT tie, open collar, charcoal or light gray suit. Contemporary and approachable. LIGHTING: Soft studio lighting from the side, subtle shadow for depth. POSE: Relaxed confident expression, hands at sides or one in pocket. VIBE: Modern startup lawyer, approachable yet professional, Silicon Valley legal counsel aesthetic.";
+    case StudioStyle.ADV_ESCRITORIO: return "STYLE: Clean Office Lawyer Portrait. LAYOUT: Seated at a modern minimalist desk, looking at camera. BACKGROUND: Clean bright office with organized law bookshelves slightly blurred behind. White/cream walls, modern furniture. A laptop or legal books on the desk. WARDROBE: Professional blazer in cream, navy, or charcoal. LIGHTING: Natural daylight from large windows, bright and warm. POSE: Sitting confidently, hands on desk or gesturing naturally. VIBE: Senior associate at a modern boutique law firm.";
+    case StudioStyle.ADV_EXECUTIVO_DARK: return "STYLE: Executive Dark Portrait - Distinguished Lawyer. LAYOUT: Half-body portrait, classic formal pose. BACKGROUND: Dark moody background — deep charcoal or very dark navy. Subtle warm rim light. NO visible room elements, just dark gradient. WARDROBE: Classic navy or dark suit with tie, formal and distinguished. LIGHTING: Dramatic Rembrandt-style lighting with warm key light from one side, subtle fill. Rich shadows for gravitas. POSE: Serious, authoritative, hands clasped or one hand adjusting jacket. VIBE: Supreme Court justice, senior partner, distinguished legal authority.";
+    case StudioStyle.ADV_EDITORIAL: return "STYLE: Editorial Fashion-Forward Lawyer. LAYOUT: Fashion editorial pose, leaning against wall or in a power stance. BACKGROUND: Minimalist architectural background — concrete wall, modern art gallery, or clean geometric shapes. Urban chic. WARDROBE: Fashion-forward professional — black turtleneck with blazer, or monochrome outfit. Delicate gold jewelry. LIGHTING: Editorial photography lighting — dramatic directional light, fashion magazine quality. POSE: Fashion editorial poses — leaning, looking away then back at camera, power stance. VIBE: Vogue Business magazine cover, fashion meets law, modern female lawyer breaking stereotypes.";
+    case StudioStyle.ADV_CORPORATIVO: return "STYLE: Corporate Premium Lawyer with City View. LAYOUT: Standing portrait with panoramic city visible. BACKGROUND: Floor-to-ceiling glass windows with city skyline behind, blurred bokeh of buildings and sky. Premium corner office feel. WARDROBE: Sharp tailored suit in light gray or navy, polished shoes, subtle accessories. LIGHTING: Natural backlight from windows creating a halo effect, supplemented by office lighting. Golden hour cityscape behind. POSE: Standing confidently, one hand in pocket, looking at camera with assured expression. VIBE: Managing partner of a top-tier international law firm, penthouse office views.";
+
+    // RESTAURAÇÃO DE FOTOS STYLES
+    case StudioStyle.RESTAURACAO_RETRATO: return "STYLE: Old Photo Restoration - Portrait. TASK: RESTORE AND ENHANCE this old/damaged photograph. DO NOT generate a new person or scene. PRESERVE the EXACT same person, pose, clothing, and background from the input image. RESTORE: Fix scratches, stains, fading, discoloration, blur, grain, and damage. ENHANCE: Improve clarity, sharpness, and detail. Add natural skin texture and realistic lighting. MAINTAIN: The exact same facial features, expression, hairstyle, clothing, and composition. OUTPUT: A high-quality, restored version of the SAME photo — as if it was taken with a modern camera. DO NOT change the person's appearance, age, or add elements not present in the original.";
+    case StudioStyle.RESTAURACAO_FAMILIA: return "STYLE: Old Photo Restoration - Family/Group. TASK: RESTORE AND ENHANCE this old family/group photograph. CRITICAL: PRESERVE EVERY PERSON exactly as they appear. Count all people and maintain the exact same count. RESTORE: Fix all damage (scratches, tears, fading, stains, water damage, fold marks). ENHANCE: Improve all faces with clarity while keeping their EXACT original expression and features. DO NOT change anyone's expression. DO NOT add or remove people. MAINTAIN: Same composition, same background, same clothing, same poses. OUTPUT: A pristine, high-resolution version of the original family photo.";
+    case StudioStyle.RESTAURACAO_COLORIZAR: return "STYLE: Photo Colorization - B&W to Color. TASK: CONVERT this black-and-white or sepia photograph to FULL REALISTIC COLOR. PRESERVE: The EXACT same person, pose, expression, clothing, background, and composition. COLORIZE NATURALLY: Apply realistic skin tones, hair colors, clothing colors, and background colors based on the era and context of the photo. Use historically accurate color palettes. ENHANCE: Improve clarity and detail while adding color. DO NOT modify the composition, expression, or any element — only ADD COLOR. OUTPUT: A naturally colorized, high-quality version that looks like it was originally taken in color.";
 
     default: return "Professional studio lighting with clean photographic composition.";
   }
@@ -2508,7 +2815,7 @@ export const editGeneratedImage = async (
   imageBase64: string,
   prompt: string,
   aspectRatio: string = "1:1",
-  apiKey?: string
+  authToken?: string
 ): Promise<string> => {
   try {
     // Basic validation
@@ -2535,7 +2842,7 @@ export const editGeneratedImage = async (
     // However, callImageApi response is string | null.
     // Reuse callImageApi with specialized editing flag
     // Reuse callImageApi with specialized editing flag
-    const newImageUrl = await callImageApi(editingPrompt, aspectRatio, imageBase64, null, null, null, null, undefined, undefined, undefined, undefined, undefined, true, 1, 'Editing', apiKey);
+    const newImageUrl = await callImageApi(editingPrompt, aspectRatio, imageBase64, null, null, null, null, undefined, undefined, undefined, undefined, undefined, true, 1, 'Editing', undefined, authToken);
 
     if (!newImageUrl) {
       throw new Error("Falha ao editar imagem.");

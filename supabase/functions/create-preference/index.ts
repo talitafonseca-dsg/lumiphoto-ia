@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const { plan, payer_email, referral_code } = await req.json();
+        const { plan, payer_email, referral_code, affiliate_code, whatsapp, source_page, utm_source, utm_medium, utm_campaign } = await req.json();
 
         if (!plan || !PLANS[plan]) {
             return new Response(
@@ -86,10 +86,28 @@ Deno.serve(async (req: Request) => {
 
         const SITE_URL = "https://www.lumiphotoia.online";
 
-        // Build external_reference with optional referral_code
+        // Build external_reference with optional referral_code and affiliate_code
         const externalRef: Record<string, string> = { plan: plan, email: payer_email };
         if (referral_code) {
             externalRef.referral_code = referral_code;
+        }
+        if (affiliate_code) {
+            externalRef.affiliate_code = affiliate_code;
+        }
+        if (whatsapp) {
+            externalRef.whatsapp = whatsapp;
+        }
+        if (source_page) {
+            externalRef.source_page = source_page;
+        }
+        if (utm_source) {
+            externalRef.utm_source = utm_source;
+        }
+        if (utm_medium) {
+            externalRef.utm_medium = utm_medium;
+        }
+        if (utm_campaign) {
+            externalRef.utm_campaign = utm_campaign;
         }
 
         const preferenceData = {
