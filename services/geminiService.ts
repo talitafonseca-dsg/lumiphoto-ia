@@ -333,7 +333,9 @@ ${referenceDescription}
 Apply the CLOTHING, LIGHTING, POSE, and BACKGROUND from the style description above.`}
 
 CRITICAL: The person in the output MUST be the person from the image provided below.
-Use their exact face, hair, skin tone, body type, and age. No other person's face is allowed.`
+Use their exact face, hair, skin tone, body type, and age. No other person's face is allowed.
+HAIR RULE: The subject's HAIR COLOR, STYLE, and TEXTURE must be preserved EXACTLY as shown in their photo.
+IGNORE any hair descriptions from the style reference or product — those describe a different person's hair.`
           });
         } else {
           // FALLBACK: Analysis failed — send reference with minimal instructions
@@ -355,7 +357,9 @@ Apply those style elements to the person in the next image.]`
           if (asset) {
             parts.push({
               text: `[THE SUBJECT — THIS is the person for the output photo]
-This is the ONLY person allowed in the output. Use their exact face, hair, skin tone, body type, age.
+This is the ONLY person allowed in the output.
+Preserve EXACTLY: face, HAIR COLOR, hair style, hair texture, skin tone, body type, age.
+Do NOT change hair color — keep the EXACT hair from this photo.
 Dress them in the outfit described above and place in the environment described above.` });
             parts.push({ inlineData: asset });
             hasSubject = true;
@@ -368,7 +372,9 @@ Dress them in the outfit described above and place in the environment described 
             const label = hasSubject
               ? `[Additional angle of THE SUBJECT — use to better understand their facial features.]`
               : `[THE SUBJECT — THIS is the person for the output photo]
-This is the ONLY person allowed in the output. Use their exact face, hair, skin tone, body type, age.
+This is the ONLY person allowed in the output.
+Preserve EXACTLY: face, HAIR COLOR, hair style, hair texture, skin tone, body type, age.
+Do NOT change hair color — keep the EXACT hair from this photo.
 Dress them in the outfit described above and place in the environment described above.`;
 
             parts.push({ text: label });
