@@ -992,30 +992,24 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
 
   if (hasReference) {
     validVariationLogic = [
-      `TASK: INTELLIGENT REFERENCE RECREATION.
-      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
-      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
-      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
-      COMPOSITION: Person from Image 1 at CENTER-LEFT. Eye contact with camera.
-      LIGHTING: Extract the lighting mood from Image 2 (warm/cool/dramatic/soft) and APPLY it to the new scene.
-      POSE: Analyze any pose in Image 2 and create a SIMILAR but not identical pose.
-      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`,
-      `TASK: INTELLIGENT REFERENCE RECREATION.
-      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
-      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
-      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
-      COMPOSITION: Person from Image 1 at CENTER. Full or 3/4 body shot.
-      LIGHTING: Extract the lighting mood from Image 2 and APPLY it. Different angle than Variation 1.
-      POSE: Create a confident, natural pose inspired by Image 2 but NOT identical.
-      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`,
-      `TASK: INTELLIGENT REFERENCE RECREATION.
-      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
-      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
-      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
-      COMPOSITION: Person from Image 1 at CENTER-RIGHT. Close-up or editorial framing.
-      LIGHTING: Extract the color grading from Image 2 and apply a cinematic version.
-      POSE: Dynamic or editorial pose inspired by Image 2's energy.
-      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`
+      `STYLE-TRANSFER PHOTO SESSION (Variation 1):
+      You received a STYLE SOURCE image and a SUBJECT image.
+      Create a NEW professional photo of THE SUBJECT (the person from the last image you received).
+      Apply the clothing, lighting, pose style, and mood from the STYLE SOURCE (the first image you received).
+      COMPOSITION: The subject at center-left. Eye contact with camera. 3/4 body or full body.
+      The output must show THE SUBJECT's face, hair, skin tone, and body type — styled with the look from the STYLE SOURCE.`,
+      `STYLE-TRANSFER PHOTO SESSION (Variation 2):
+      You received a STYLE SOURCE image and a SUBJECT image.
+      Create a NEW professional photo of THE SUBJECT (the person from the last image you received).
+      Apply the clothing, lighting, pose style, and mood from the STYLE SOURCE (the first image you received).
+      COMPOSITION: The subject at center. Full or 3/4 body shot. Confident pose.
+      The output must show THE SUBJECT's face, hair, skin tone, and body type — styled with the look from the STYLE SOURCE.`,
+      `STYLE-TRANSFER PHOTO SESSION (Variation 3):
+      You received a STYLE SOURCE image and a SUBJECT image.
+      Create a NEW professional photo of THE SUBJECT (the person from the last image you received).
+      Apply the clothing, lighting, pose style, and mood from the STYLE SOURCE (the first image you received).
+      COMPOSITION: The subject at center-right. Close-up or editorial framing.
+      The output must show THE SUBJECT's face, hair, skin tone, and body type — styled with the look from the STYLE SOURCE.`
     ][variationIndex - 1];
   }
 
