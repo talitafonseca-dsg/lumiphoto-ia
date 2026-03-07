@@ -367,25 +367,30 @@ MANDATORY: Leave negative space for text (PowerPoint style).`;
 Before generating, you MUST determine what Image 2 contains:
 
 CATEGORY A — CLOTHING/OUTFIT/FASHION ITEM:
-If Image 2 shows clothing (dress, suit, shirt, pants, uniform, costume, outfit on a mannequin, flat-lay clothing, etc.):
-- ACTION: Dress the person from Image 1 in THIS EXACT OUTFIT.
-- PRESERVE: The clothing's exact color, pattern, fabric texture, style, and details.
-- GENERATE: New arms, body pose naturally wearing this clothing.
-- The person MUST look like they are actually wearing this outfit in a professional photo.
-- BACKGROUND: Use a clean professional studio background that complements the outfit.
+If Image 2 shows clothing (dress, suit, shirt, pants, uniform, costume, outfit on a mannequin, flat-lay clothing, jumpsuit, accessories, shoes, etc.):
+- ACTION: ANALYZE the garment — identify the type, color, fabric, pattern, cut, and style details.
+- ACTION: Then CREATE A BRAND NEW PROFESSIONAL PHOTO of the person from Image 1 WEARING this exact type of outfit.
+- The person from Image 1 must be the SOLE SUBJECT of the output image.
+- PRESERVE: The clothing's exact color, pattern, fabric texture, style, and design details on the person's body.
+- GENERATE: A completely NEW body pose with natural arms and hands. The person must look like they are WEARING the clothes, not posing next to them.
+- BACKGROUND: Generate a NEW professional studio or lifestyle background that complements the outfit. Do NOT copy the background from Image 2.
+- ABSOLUTELY FORBIDDEN: Do NOT simply reproduce, crop, or return Image 2 as the output. The output must be a NEW photo of the person from Image 1.
+- ABSOLUTELY FORBIDDEN: Do NOT show the clothing item separately — it must be ON the person's body.
+- TEST: If the output looks like Image 2 with minor edits → FAILED. The output must clearly show the PERSON from Image 1 wearing the garment.
 
 CATEGORY B — BACKGROUND/ENVIRONMENT/SCENE:
 If Image 2 shows a location, studio setup, nature scene, office, or background environment:
-- ACTION: Place the person from Image 1 INTO this environment.
-- COPY: The exact background style, patterns, textures, lighting, and color palette.
+- ACTION: Place the person from Image 1 INTO this type of environment.
+- EXTRACT: The lighting style, color palette, atmosphere, and spatial composition from Image 2.
+- GENERATE: A NEW background INSPIRED by Image 2 — do NOT pixel-copy the background.
 - The person in Image 2 (if any) is a STYLE MODEL only. DO NOT DRAW THEM.
-- REPLACE the person in Image 2 with the person from Image 1.
+- REPLACE any person in Image 2 with the person from Image 1.
 
 CATEGORY C — STYLED PHOTO WITH A PERSON:
 If Image 2 shows a person in a specific professional photo style (headshot, editorial, corporate, etc.):
 - ACTION: Re-create the SAME photo style using the person from Image 1.
-- COPY: Lighting setup, camera angle, pose type, color grading, and overall aesthetic.
-- COPY: The CLOTHING STYLE (similar outfit type, not the exact clothes).
+- EXTRACT: Lighting setup, camera angle, pose type, color grading, clothing style, and overall aesthetic.
+- DRESS: The person from Image 1 in a SIMILAR outfit (same type/style, adapted to their body).
 - DO NOT use the face from Image 2. Use ONLY the face from Image 1.
 - GOAL: "Same photographer, same studio, different person."
 
@@ -394,10 +399,18 @@ If Image 2 shows a product, logo, brand element, or physical object:
 - ACTION: Integrate this element into the composition with the person from Image 1.
 - The person should be presenting, holding, or interacting with the element.
 
->>> CRITICAL RULES <<<
-- IDENTITY: The face MUST be from Image 1. NEVER from Image 2.
-- EXPRESSION: Keep the EXACT facial expression from Image 1.
-- If Image 2 contains text or watermarks, IGNORE them completely.`;
+>>> ABSOLUTE ANTI-REPRODUCTION RULE <<<
+The output image must ALWAYS be a NEW CREATION featuring the person from Image 1.
+NEVER return Image 2 as-is or with minor modifications.
+NEVER produce an output where Image 1's person is absent.
+The FACE and IDENTITY in the output MUST come from Image 1.
+The STYLE INSPIRATION (lighting, clothing, pose, mood) comes from Image 2.
+If Image 2 contains text or watermarks, IGNORE them completely.
+
+>>> SELF-CHECK BEFORE FINALIZING <<<
+1. Is the person from Image 1 clearly visible and recognizable? If NO → REGENERATE.
+2. Does the output look like a copy of Image 2? If YES → REGENERATE.
+3. Has the style/clothing/mood from Image 2 been applied? If NO → REGENERATE.`;
           }
 
           parts.push({
@@ -1050,9 +1063,30 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
 
   if (hasReference) {
     validVariationLogic = [
-      `TASK: RE-GENERATE SCENE. 1. Create NEW background using colors/shapes from Image 2 (DO NOT COPY PIXELS). 2. Insert Person from Image 1 at Left.`,
-      `TASK: RE-GENERATE SCENE. 1. Create NEW background using colors/shapes from Image 2 (DO NOT COPY PIXELS). 2. Insert Person from Image 1 at Center.`,
-      `TASK: RE-GENERATE SCENE. 1. Create NEW background using colors/shapes from Image 2 (DO NOT COPY PIXELS). 2. Insert Person from Image 1 at Right.`
+      `TASK: INTELLIGENT REFERENCE RECREATION.
+      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
+      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
+      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
+      COMPOSITION: Person from Image 1 at CENTER-LEFT. Eye contact with camera.
+      LIGHTING: Extract the lighting mood from Image 2 (warm/cool/dramatic/soft) and APPLY it to the new scene.
+      POSE: Analyze any pose in Image 2 and create a SIMILAR but not identical pose.
+      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`,
+      `TASK: INTELLIGENT REFERENCE RECREATION.
+      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
+      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
+      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
+      COMPOSITION: Person from Image 1 at CENTER. Full or 3/4 body shot.
+      LIGHTING: Extract the lighting mood from Image 2 and APPLY it. Different angle than Variation 1.
+      POSE: Create a confident, natural pose inspired by Image 2 but NOT identical.
+      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`,
+      `TASK: INTELLIGENT REFERENCE RECREATION.
+      STEP 1: ANALYZE Image 2 — What does it contain? (Clothing? Background? Styled photo? Product?)
+      STEP 2: If CLOTHING → Dress the person from Image 1 in that outfit. If BACKGROUND → Place person there. If STYLED PHOTO → Recreate the style.
+      STEP 3: Generate a BRAND NEW professional photo. DO NOT reproduce Image 2.
+      COMPOSITION: Person from Image 1 at CENTER-RIGHT. Close-up or editorial framing.
+      LIGHTING: Extract the color grading from Image 2 and apply a cinematic version.
+      POSE: Dynamic or editorial pose inspired by Image 2's energy.
+      ABSOLUTE BAN: The output must NOT look like a copy/crop of Image 2. It must be a NEW photo featuring the person from Image 1.`
     ][variationIndex - 1];
   }
 
