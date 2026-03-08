@@ -224,6 +224,750 @@ export enum StudioStyle {
   ADV_CORPORATIVO = 'Corporativo Premium',
 }
 
+// =============================================
+// DELIVERY STUDIO — 24 estilos exclusivos
+// =============================================
+export enum DeliveryStyle {
+  // GRUPO 1 — FOCO NO PRODUTO
+  FOOD_STUDIO_DARK = 'Estúdio Escuro Premium',
+  FOOD_STUDIO_WHITE = 'Estúdio Clean Branco',
+  FOOD_CLOSEUP = 'Close-up Apetitoso',
+  FOOD_FLATLAY_EDITORIAL = 'Flat Lay Editorial',
+  FOOD_FLATLAY_MINIMAL = 'Flat Lay Minimalista',
+  FOOD_OVERHEAD_RUSTIC = 'Mesa Rústica Overhead',
+
+  // GRUPO 2 — AMBIENTES / LIFESTYLE
+  FOOD_ENV_HOME = 'Recebido em Casa',
+  FOOD_ENV_KITCHEN = 'Cozinha Caseira',
+  FOOD_ENV_DINNERTABLE = 'Mesa de Jantar',
+  FOOD_ENV_BOTECO = 'Boteco & Barzinho',
+  FOOD_ENV_FOODTRUCK = 'Food Truck / Feira',
+  FOOD_ENV_PICNIC = 'Piquenique ao Ar Livre',
+  FOOD_ENV_BEACH = 'Praia & Verão',
+  FOOD_ENV_NIGHT_OUT = 'Noite & Restaurante',
+  FOOD_ENV_ROOFTOP = 'Rooftop Urbano',
+
+  // GRUPO 3 — COM PESSOA / AVATAR
+  FOOD_PERSON_TASTING = 'Degustação',
+  FOOD_PERSON_DELIVERY = 'Recebendo a Entrega',
+  FOOD_PERSON_CHEF = 'Chef Apresentando',
+  FOOD_PERSON_INFLUENCER = 'Influencer de Food',
+  FOOD_PERSON_FAMILY = 'Família à Mesa',
+
+  // GRUPO 4 — REDES SOCIAIS
+  FOOD_SOCIAL_VERTICAL = 'Story / Reels Vertical',
+  FOOD_SOCIAL_PROMO = 'Promoção do Dia',
+  FOOD_SOCIAL_MENU = 'Foto de Cardápio',
+  FOOD_SOCIAL_TRIO = 'Trio de Produtos',
+
+  // GRUPO 5 — UGC & VIRAL (conteúdo caseiro autêntico)
+  FOOD_UGC_UNBOXING = 'UGC: Unboxing do Pedido',
+  FOOD_UGC_BITE = 'UGC: Momento da Mordida',
+  FOOD_UGC_REACTION = 'UGC: Reação de Aprovação',
+  FOOD_UGC_AESTHETIC = 'UGC: Aesthetic Caseiro',
+
+  // GRUPO 6 — MARCA & LOGO (identidade visual)
+  FOOD_BRAND_PACKAGING = 'Embalagem com Logo',
+  FOOD_BRAND_STOREFRONT = 'Fachada da Loja',
+  FOOD_BRAND_INSTITUTIONAL = 'Foto Institucional',
+  FOOD_BRAND_UNIFORM = 'Equipe com Uniforme',
+  FOOD_BRAND_PAPERBAG = 'Sacola Brandada',
+  FOOD_BRAND_CUP = 'Copo / Embalagem de Bebida',
+  FOOD_BRAND_PIZZABOX = 'Caixa de Produto Brandada',
+  FOOD_BRAND_MENU = 'Cardápio Digital',
+  FOOD_BRAND_SHIRT = 'Camiseta da Marca',
+  FOOD_BRAND_STICKER = 'Adesivo no Produto',
+}
+
+export type DeliveryStyleMeta = {
+  label: string;
+  description: string;
+  color: string;
+  icon: string;
+  category: 'Foco no Produto' | 'Ambientes' | 'Com Pessoa' | 'Redes Sociais' | 'UGC & Viral' | 'Marca & Logo';
+  avatarEnabled: boolean;
+  logoEnabled?: boolean;
+  prompt: string;
+};
+
+
+export const DeliveryStyleMetaMap: Record<DeliveryStyle, DeliveryStyleMeta> = {
+  [DeliveryStyle.FOOD_STUDIO_DARK]: {
+    label: 'Estúdio Escuro Premium',
+    description: 'Fundo preto, iluminação lateral dramática estilo Michelin',
+    color: 'from-zinc-800/80',
+    icon: '🖤',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Food photography masterpiece. IDENTIFY the food in the provided image and recreate it as a professional studio shot.
+SCENE: Matte black background, single dramatic side rim light (warm amber/golden), soft shadow gradient. Michelin-star restaurant aesthetic.
+LIGHTING: Hard directional light from the left, creating deep shadows and highlighting textures. Subtle golden bounce fill from the right.
+COMPOSITION: Food centered or slightly off-center, hero close-up angle (45° overhead to straight-on). Negative space on one side.
+DETAILS: Make every texture pop — caramelized edges, steam wisps, glistening sauces, melted cheese pulls if applicable.
+STYLE: Ultra-premium dark food photography. Magazine cover quality. No props except perhaps a dark slate or wooden board underneath.
+OUTPUT: Photorealistic, NOT illustrated. Real photograph aesthetic.`,
+  },
+
+  [DeliveryStyle.FOOD_STUDIO_WHITE]: {
+    label: 'Estúdio Clean Branco',
+    description: 'Fundo branco, luz soft diffuse, estilo cardápio digital',
+    color: 'from-slate-100/20',
+    icon: '⬜',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Food photography for digital menu / iFood listing. IDENTIFY the food in the provided image.
+SCENE: Pure white (#FFFFFF) seamless background, soft diffused lighting from all sides. Clean, professional, appetizing.
+LIGHTING: Soft box lighting from above and sides, zero harsh shadows, even exposure. The food should look bright and fresh.
+COMPOSITION: Food perfectly centered, slight overhead angle (30–45°). Clean negative space all around.
+DETAILS: Vibrant natural colors, fresh textures, zero clutter. The food must look delicious and hygienic.
+PROPS: Minimal — perhaps a white plate, clean wooden board, or nothing at all.
+STYLE: Professional food catalog photography. Think iFood premium listing. Clean and appetizing.
+OUTPUT: Photorealistic. Bright and clean.`,
+  },
+
+  [DeliveryStyle.FOOD_CLOSEUP]: {
+    label: 'Close-up Apetitoso',
+    description: 'Macro: queijo derretendo, vapor, textura em detalhes',
+    color: 'from-amber-600/30',
+    icon: '🔬',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Extreme close-up macro food photography. IDENTIFY the food in the provided image and shoot it in ultra-close detail.
+SCENE: Tight macro shot, bokeh background, focus on the most appetizing texture detail of the food.
+LIGHTING: Dramatic macro lighting emphasizing textures — cheese pulls, melted chocolate, crispy skin, glistening glazes, steam wisps above hot food.
+COMPOSITION: Fill 80% of the frame with the most craveable part of the dish. Shallow depth of field, blurred background.
+DETAILS: Every texture magnified — bubbling cheese, charred crust, dripping sauce, powdered sugar snow, fresh herb fibers.
+STYLE: Food porn photography. Designed to make the viewer crave the food immediately. Hyper-detailed, almost uncomfortable closeness.
+OUTPUT: Photorealistic macro photograph with cinematic color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_FLATLAY_EDITORIAL]: {
+    label: 'Flat Lay Editorial',
+    description: 'Vista de cima, ingredientes ao redor, estética de revista',
+    color: 'from-rose-600/20',
+    icon: '🗞️',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Editorial flat lay food photography. IDENTIFY the food in the provided image.
+SCENE: Perfectly composed overhead (bird's eye / top-down, 90°) shot. The food is the hero surrounded by complementary props and ingredients.
+BACKGROUND: Rustic marble, dark slate, linen cloth, aged wood — choose the most appropriate for the food type.
+PROPS: Scatter relevant ingredients around the hero dish — fresh herbs, spices, raw ingredients, napkins, utensils. Balanced negative space.
+LIGHTING: Even, soft overhead diffused light with subtle shadows creating depth. No harsh direct light.
+COMPOSITION: Rule of thirds, asymmetric arrangement, intentional negative space for text placement if needed.
+STYLE: Bon Appétit / Food & Wine magazine editorial. Aspirational yet authentic Brazilian food culture.
+OUTPUT: Photorealistic overhead photograph with warm editorial color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_FLATLAY_MINIMAL]: {
+    label: 'Flat Lay Minimalista',
+    description: 'Vista de cima clean, 1–2 props, fundo neutro',
+    color: 'from-stone-400/20',
+    icon: '⬜',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Minimalist flat lay food photography. IDENTIFY the food in the provided image.
+SCENE: Top-down (90°) shot. The food is centered with extreme negative space. Only 1 or 2 complementary props maximum.
+BACKGROUND: Clean neutral surface — warm white, light grey, soft beige linen, or light concrete. Spotlessly clean.
+PROPS: Only what is essential — perhaps a single fork, a small herb sprig, or a minimal garnish. NO clutter.
+LIGHTING: Soft, shadowless natural-style light. Even and calm.
+COMPOSITION: Centered or slightly offset, generous negative space. Muji / Japanese aesthetic minimalism.
+STYLE: Clean, modern, Scandinavian-Brazilian minimalism. Instagram-worthy simplicity.
+OUTPUT: Photorealistic, high contrast clean photograph. Calm and elegant.`,
+  },
+
+  [DeliveryStyle.FOOD_OVERHEAD_RUSTIC]: {
+    label: 'Mesa Rústica Overhead',
+    description: 'Vista aérea, madeira envelhecida, props de cozinha artesanal',
+    color: 'from-amber-900/30',
+    icon: '🪵',
+    category: 'Foco no Produto',
+    avatarEnabled: false,
+    prompt: `Rustic overhead food photography. IDENTIFY the food in the provided image.
+SCENE: Top-down (90°) bird's eye shot on a rustic aged wooden table. Warm, homemade, authentic feeling.
+SURFACE: Dark reclaimed wood OR worn terracotta tile OR aged butcher block. Visible grain, authentic imperfections.
+PROPS: Cast iron pan, ceramic bowls, rustic pottery, linen napkins, vintage cutlery, fresh herbs scattered naturally, small wooden spoon.
+LIGHTING: Warm golden hour window light from the side, creating soft shadows that reveal the wood texture.
+COMPOSITION: Full table scene — not just the hero dish, but surrounding props creating a full "just cooked" moment.
+STYLE: Brazilian countryside kitchen meets Tuscany. Honest, comforting, artisanal food culture.
+OUTPUT: Photorealistic with warm, slightly desaturated film-style color grading.`,
+  },
+
+  // ---- AMBIENTES ----
+
+  [DeliveryStyle.FOOD_ENV_HOME]: {
+    label: 'Recebido em Casa',
+    description: 'Sofá, mesa de sala, embalagem aberta — delivery chegou',
+    color: 'from-amber-400/20',
+    icon: '🏠',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Delivery-at-home lifestyle food photography. IDENTIFY the food in the provided image.
+SCENE: Cozy living room or dining table setting. The delivery has just arrived, packaging is open, the food is being revealed.
+ENVIRONMENT: Warm home interior — couch visible in background, coffee table, soft ambient light from a lamp or TV glow. Comfortable and relatable.
+PROPS: Delivery bag or box open nearby, perhaps a drink (soda, juice), napkins, maybe a phone showing the delivery app rating screen.
+LIGHTING: Warm home ambient lighting — table lamp glow, late evening comfortable tone.
+COMPOSITION: The food is the hero, environment tells the "delivery received" story. 45° angle shot.
+STYLE: Authentic Brazilian home delivery moment. Real, relatable, aspirational comfort.
+OUTPUT: Photorealistic lifestyle photograph. Warm, inviting, honest.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_KITCHEN]: {
+    label: 'Cozinha Caseira',
+    description: 'Bancada, azulejos, luz de tarde, comida caseira',
+    color: 'from-yellow-500/20',
+    icon: '🔥',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Home kitchen lifestyle food photography. IDENTIFY the food in the provided image.
+SCENE: Brazilian home kitchen counter. The food is freshly plated, moments after cooking or delivery arrival.
+ENVIRONMENT: Kitchen tiles in background (azulejos), countertop with some cooking items — a cutting board, a pot in background, some herbs. Warm afternoon light through a window.
+LIGHTING: Soft natural afternoon window light, warm color temperature (3000K), gentle shadows.
+COMPOSITION: Food on counter with kitchen context visible but not overwhelming. 45° angle.
+STYLE: Authentic, real, comforting. Like your neighbor's kitchen who makes amazing food. Brazilian casa vibe.
+OUTPUT: Photorealistic lifestyle photograph with warm, homey color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_DINNERTABLE]: {
+    label: 'Mesa de Jantar',
+    description: 'Velas, taças, jantar especial ou romântico',
+    color: 'from-rose-900/30',
+    icon: '🕯️',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Romantic dinner table food photography. IDENTIFY the food in the provided image.
+SCENE: Elegantly set dining table. Special occasion or date night setting.
+ENVIRONMENT: White linen tablecloth or dark wood table, wine glasses (full or empty), candles casting warm bokeh in background, fine dining silverware.
+LIGHTING: Candlelight as primary light source — warm amber tones, soft romantic glow. No harsh lights.
+COMPOSITION: The dishes are the hero, table setting creates luxury context. Slight overhead 60° angle.
+PROPS: Wine glasses, candles, perhaps flowers, elegant napkin fold.
+STYLE: Special occasion dining. Premium restaurant meets intimate home dinner. Brazilian date night energy.
+OUTPUT: Photorealistic photograph with warm candlelight color grading. Romantic and aspirational.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_BOTECO]: {
+    label: 'Boteco & Barzinho',
+    description: 'Mesa rústica, cerveja/chopp, luzes quentes de bar',
+    color: 'from-yellow-700/30',
+    icon: '🍺',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Brazilian boteco / bar food photography. IDENTIFY the food in the provided image.
+SCENE: Classic Brazilian boteco atmosphere. The food is a bar snack / petisco served at a casual neighborhood bar.
+ENVIRONMENT: Rustic wooden table, beer bottles or chopp glasses nearby, bar counter in soft background bokeh. String lights or neon sign glow in background.
+LIGHTING: Warm incandescent bar lighting, amber tones, bokeh lights in background creating depth.
+PROPS: Cold beer bottle (Brahma, Skol, or generic), coasters, small napkins, salt shaker.
+COMPOSITION: Food and drinks together tell the boteco story. Slight low angle (eye level or slightly below).
+STYLE: Classic Brazilian boteco culture. Friendly, informal, delicious. "Pelada depois do trabalho" energy.
+OUTPUT: Photorealistic with warm amber bar lighting color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_FOODTRUCK]: {
+    label: 'Food Truck / Feira',
+    description: 'Ambiente urbano externo, concreto, street food energy',
+    color: 'from-zinc-600/20',
+    icon: '🚚',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Food truck / street food market photography. IDENTIFY the food in the provided image.
+SCENE: Outdoor street food setting — food truck or gastronomy fair. Urban, energetic, vibrant atmosphere.
+ENVIRONMENT: Concrete or asphalt surface, colorful food truck in soft background, string lights overhead, crowd bokeh in distance. Daytime outdoor light.
+LIGHTING: Bright outdoor daylight or golden hour sun from the side. Vibrant and energetic.
+PROPS: Paper wrapper, branded paper bag, wooden skewer, napkin holder. Street food presentation.
+COMPOSITION: The food feels freshly made and handed to you. Slightly low angle for impact.
+STYLE: Brazilian gastronomic fair energy. Vibrant, authentic, street food culture. Festival de gastronomia vibes.
+OUTPUT: Photorealistic with vibrant, high-energy outdoor color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_PICNIC]: {
+    label: 'Piquenique ao Ar Livre',
+    description: 'Gramado, cesto de vime, luz natural de dia',
+    color: 'from-green-600/20',
+    icon: '🌿',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Outdoor picnic food photography. IDENTIFY the food in the provided image.
+SCENE: Green park or garden picnic setting. The food is arranged on a picnic blanket outdoors.
+ENVIRONMENT: Green grass, checkered or linen picnic blanket, wicker basket nearby, trees providing dappled afternoon shade. Fresh natural surroundings.
+LIGHTING: Beautiful natural afternoon sun through leaves — dappled golden light, warm and soft.
+PROPS: Wicker picnic basket, fruit scattered nearby, wildflowers, a bottle of juice or wine.
+COMPOSITION: Bird's eye or 45° angle showing food on the picnic blanket with environment.
+STYLE: Relaxed, healthy, outdoor Brazilian leisure. Açaí-in-the-park energy. Happy and natural.
+OUTPUT: Photorealistic with vibrant, fresh outdoor natural lighting color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_BEACH]: {
+    label: 'Praia & Verão',
+    description: 'Areia, coquetel, sombra de coqueiro, vibe tropical',
+    color: 'from-cyan-500/20',
+    icon: '🏖️',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Brazilian beach / summer food photography. IDENTIFY the food in the provided image.
+SCENE: Tropical beach setting. The food is enjoyed at the beach — perfect for açaí, cold drinks, grilled snacks, watermelon.
+ENVIRONMENT: Fine sand, turquoise water bokeh in background, palm tree shadow, warm tropical sun. Brazilian summer paradise.
+LIGHTING: Bright tropical sun with hard shadows and vibrant saturation. Sun high or golden hour side light.
+PROPS: Beach towel, sunscreen bottle (small), coconut drink, sunglasses, tropical flowers.
+COMPOSITION: Food on sand or beach chair armrest. The sea is visible in the blurred background.
+STYLE: Brazilian summer beach culture. Praia de Ipanema energy. Vibrant, joyful, tropical.
+OUTPUT: Photorealistic with high saturation, warm tropical color grading. Blue sky, turquoise water tones.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_NIGHT_OUT]: {
+    label: 'Noite & Restaurante',
+    description: 'Mesa de restaurante noturno, luzes bokeh, clima festivo',
+    color: 'from-indigo-900/30',
+    icon: '🌙',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Upscale night restaurant food photography. IDENTIFY the food in the provided image.
+SCENE: Premium restaurant at night. The food is served at an elegant dinner table with a lively atmosphere in the background.
+ENVIRONMENT: Restaurant interior — dark ambient, warm point lights creating bokeh, other tables blurred in background, professional restaurant table setting.
+LIGHTING: Restaurant pendant lights from above, warm amber point lights, beautiful bokeh from background lights. Dramatic and premium.
+PROPS: Wine glasses, premium plates, restaurant napkin, small candle on table.
+COMPOSITION: Tight shot of the dish with restaurant atmosphere bokeh in background. 45° angle.
+STYLE: Premium Brazilian restaurant experience. Dinner out vibes. Aspirational "vale a pena o delivery" energy.
+OUTPUT: Photorealistic with dramatic restaurant night lighting, rich color grading.`,
+  },
+
+  [DeliveryStyle.FOOD_ENV_ROOFTOP]: {
+    label: 'Rooftop Urbano',
+    description: 'Varanda com vista da cidade à noite, clima premium',
+    color: 'from-violet-900/30',
+    icon: '🌆',
+    category: 'Ambientes',
+    avatarEnabled: false,
+    prompt: `Rooftop urban food photography. IDENTIFY the food in the provided image.
+SCENE: Upscale rooftop bar or restaurant terrace with city skyline view at dusk or night.
+ENVIRONMENT: City lights bokeh in the background, elevated terrace with urban panorama, modern rooftop furniture, fairy lights overhead.
+LIGHTING: City glow ambient light, golden hour transitioning to night, warm string lights, urban blue-orange color contrast.
+PROPS: City skyline visible behind, modern terrace chair/table edge, perhaps a cocktail nearby.
+COMPOSITION: Food in foreground with blurred city lights creating magical bokeh background.
+STYLE: Premium urban rooftop lifestyle. "Vista linda da cidade" energy. Sophisticated and aspirational.
+OUTPUT: Photorealistic with cinematic blue-hour/golden-hour urban color grading.`,
+  },
+
+  // ---- COM PESSOA ----
+
+  [DeliveryStyle.FOOD_PERSON_TASTING]: {
+    label: 'Degustação 😋',
+    description: 'Pessoa comendo, expressão de aprovação genuína',
+    color: 'from-orange-500/20',
+    icon: '😋',
+    category: 'Com Pessoa',
+    avatarEnabled: true,
+    prompt: `Food tasting lifestyle photography. IDENTIFY the food in the provided image.
+TASK: Create a photo of a PERSON genuinely enjoying this food — mid-bite or reaction moment.
+PERSON: If a person photo is provided, use their exact face and identity. If not, generate a happy young Brazilian adult.
+EXPRESSION: Natural, genuine enjoyment — eyes slightly closed in bliss, authentic smile, "this is amazing" reaction. NOT forced/fake.
+COMPOSITION: Person holding or eating the food, food visible and recognizable. Waist-up shot.
+ENVIRONMENT: Simple complementary background — home, restaurant, or clean studio.
+LIGHTING: Warm, flattering lifestyle lighting.
+STYLE: Authentic UGC (User Generated Content) style — real person, real reaction, not overly produced. Brazilian social media vibe.
+OUTPUT: Photorealistic lifestyle photograph.`,
+  },
+
+  [DeliveryStyle.FOOD_PERSON_DELIVERY]: {
+    label: 'Recebendo a Entrega',
+    description: 'Mãos abrindo sacola/caixa, unboxing do delivery',
+    color: 'from-emerald-600/20',
+    icon: '📦',
+    category: 'Com Pessoa',
+    avatarEnabled: true,
+    prompt: `Delivery unboxing lifestyle photography. IDENTIFY the food in the provided image.
+TASK: Create a photo of a PERSON receiving or unboxing a food delivery order. The moment of delightful surprise.
+PERSON: If a person photo is provided, use their exact face and identity. If not, generate a happy young Brazilian adult.
+ACTION: Person opening a delivery bag or box, the food is being revealed. Hands interacting with the packaging.
+EXPRESSION: Excitement and delight — eyes wide, big smile, anticipation.
+ENVIRONMENT: Home doorway or living room setting. Casual and relatable.
+LIGHTING: Warm home ambient lighting.
+STYLE: Authentic delivery experience moment. iFood unboxing energy. Real, relatable, makes viewers want to order.
+OUTPUT: Photorealistic lifestyle photograph.`,
+  },
+
+  [DeliveryStyle.FOOD_PERSON_CHEF]: {
+    label: 'Chef Apresentando',
+    description: 'Cozinheiro apresentando o prato com orgulho, avental',
+    color: 'from-white/10',
+    icon: '👨‍🍳',
+    category: 'Com Pessoa',
+    avatarEnabled: true,
+    prompt: `Chef presenting dish food photography. IDENTIFY the food in the provided image.
+TASK: Create a photo of a PROFESSIONAL CHEF proudly presenting this dish to the camera.
+PERSON: If a person photo is provided, use their exact face, wearing a white chef's coat and apron. If not, generate a proud Brazilian chef, mid-40s, warm expression.
+ACTION: Chef holding the plate forward at chest level, presenting it directly to camera. Proud, confident posture.
+EXPRESSION: Pride and passion for the craft. Warm smile that says "I made this and it's perfect."
+ENVIRONMENT: Restaurant kitchen or clean cooking environment. Stainless steel or brick in background.
+LIGHTING: Professional kitchen lighting, slightly dramatic.
+STYLE: Professional food business marketing. "The chef who made your meal wants you to see it" energy.
+OUTPUT: Photorealistic professional photograph.`,
+  },
+
+  [DeliveryStyle.FOOD_PERSON_INFLUENCER]: {
+    label: 'Influencer de Food',
+    description: 'Mão estendida para câmera, ângulo de Reels',
+    color: 'from-pink-500/20',
+    icon: '📱',
+    category: 'Com Pessoa',
+    avatarEnabled: true,
+    prompt: `Food influencer / content creator photography. IDENTIFY the food in the provided image.
+TASK: Create a photo of a FOOD CONTENT CREATOR holding this food toward the camera — classic influencer shot.
+PERSON: If a person photo is provided, use their exact face and identity. If not, generate a stylish young Brazilian food influencer (22–30 years old).
+ACTION: Person holding the food extended toward camera, slightly tilted, close enough to see detail. One hand hold. Classic food influencer framing.
+EXPRESSION: Excited, conversational — like they're about to say "You HAVE to try this!" directly to their audience.
+ENVIRONMENT: Clean, aesthetic background — café, bright kitchen, patterned wall. Trendy and photogenic.
+LIGHTING: Ring light style or bright natural light. Clean and flattering.
+STYLE: Instagram / TikTok food content creator. 2024 food reel energy.
+OUTPUT: Photorealistic content creator photograph.`,
+  },
+
+  [DeliveryStyle.FOOD_PERSON_FAMILY]: {
+    label: 'Família à Mesa',
+    description: 'Refeição em grupo, prato no centro, alegria',
+    color: 'from-amber-400/20',
+    icon: '👨‍👩‍👧',
+    category: 'Com Pessoa',
+    avatarEnabled: true,
+    prompt: `Family meal lifestyle food photography. IDENTIFY the food in the provided image.
+TASK: Create a warm family meal scene centered around this food.
+PEOPLE: Brazilian family at a dinner table — 3 to 4 people of different ages (parents + children or friends). If a person photo is provided, include them as the main family member.
+ACTION: Family gathered around the table, the food is the centerpiece. People reaching for it, serving each other, laughing.
+EXPRESSION: Joy, warmth, togetherness. Genuine family happiness.
+ENVIRONMENT: Brazilian home dining room or kitchen table. Warm and inviting.
+LIGHTING: Warm home ambient light, golden tones.
+STYLE: "Domingo em família" energy. Brazilian family culture. The most comforting image of belonging.
+OUTPUT: Photorealistic lifestyle photograph, wide enough to see multiple people and the food together.`,
+  },
+
+  // ---- REDES SOCIAIS ----
+
+  [DeliveryStyle.FOOD_SOCIAL_VERTICAL]: {
+    label: 'Story / Reels Vertical',
+    description: 'Composição 9:16 atraente para Stories e TikTok',
+    color: 'from-fuchsia-600/20',
+    icon: '📱',
+    category: 'Redes Sociais',
+    avatarEnabled: false,
+    prompt: `Vertical social media food photography (9:16). IDENTIFY the food in the provided image.
+TASK: Create a VERTICAL composition (9:16 ratio) optimized for Instagram Stories and TikTok.
+COMPOSITION: Food in the lower 60% of the frame, upper 40% has clean space for text overlay. Dynamic and eye-catching scroll-stop composition.
+BACKGROUND: Complementary to the food — dark dramatic or bright natural. Must look premium on a phone screen.
+LIGHTING: Dramatic and photogenic — designed to be visually arresting on a small screen.
+STYLE ELEMENTS: Could include subtle gradient overlays at top/bottom, or a very clean hero shot. Think: swipe-worthy, thumb-stopping.
+TEXT SPACE: Leave clear space in top third for price/offer text overlay.
+STYLE: Premium food content for Brazilian social media. Made for mobile-first viewing.
+OUTPUT: Photorealistic, optimized for mobile vertical format.`,
+  },
+
+  [DeliveryStyle.FOOD_SOCIAL_PROMO]: {
+    label: 'Promoção do Dia',
+    description: 'Arte com destaque de preço/oferta ao lado da foto',
+    color: 'from-red-600/20',
+    icon: '🏷️',
+    category: 'Redes Sociais',
+    avatarEnabled: false,
+    prompt: `Food promotion / offer social media post. IDENTIFY the food in the provided image.
+TASK: Create a promotional composite image — the food photo on one side, bold price/offer graphic on the other.
+LAYOUT: Split composition: 60% hero food photo (left or center) + 40% bold graphic space (right or overlay).
+GRAPHIC ELEMENTS: Bold promotional badge showing "OFERTA" or "PROMOÇÃO" in bright red/yellow/orange. Price tag area clearly visible. Bold Brazilian promotional design language.
+FOOD SECTION: The food looks absolutely delicious, maximum appetite appeal.
+BACKGROUND: Bold, high-contrast gradient (red-orange or black-red). Promotional energy.
+TYPOGRAPHY SPACE: Leave clear areas for text: dish name, price, and call to action.
+STYLE: Brazilian food delivery promotion. iFood/Rappi/McDonald's promotional energy — bold, urgent, appetizing.
+OUTPUT: Photorealistic food with bold graphic promotional elements.`,
+  },
+
+  [DeliveryStyle.FOOD_SOCIAL_MENU]: {
+    label: 'Foto de Cardápio',
+    description: 'Composição clean para cardápio digital — iFood otimizado',
+    color: 'from-blue-600/20',
+    icon: '📋',
+    category: 'Redes Sociais',
+    avatarEnabled: false,
+    prompt: `Digital menu / iFood listing food photography. IDENTIFY the food in the provided image.
+TASK: Create the perfect dish photo optimized for iFood digital menu — clean, appetizing, and professional.
+COMPOSITION: Food perfectly centered, slight overhead (30–45°). Clean background without distraction. The food fills about 70% of the frame.
+BACKGROUND: Clean — white, light grey, or very simple complementary color. Professional and hygienic looking.
+LIGHTING: Even, bright, appetizing. No dark shadows. The food must look fresh and clean.
+DETAILS: Every element visible and appetizing. Portion size clear. Garnishes perfect.
+STYLE: Professional food menu photography. Think McDonald's menu images or premium iFood listing. Clean, clear, mouthwatering.
+OUTPUT: Photorealistic, bright, clean. Optimized for thumbnail display.`,
+  },
+
+  [DeliveryStyle.FOOD_SOCIAL_TRIO]: {
+    label: 'Trio de Produtos',
+    description: '3 produtos compostos juntos em uma cena harmoniosa',
+    color: 'from-violet-600/20',
+    icon: '✨',
+    category: 'Redes Sociais',
+    avatarEnabled: false,
+    prompt: `Food trio composition photography. IDENTIFY the food in the provided image.
+TASK: Create a beautiful composition featuring THREE versions or variations of this type of food — a trio showcase.
+COMPOSITION: Three food items arranged in a visually balanced triangle or row. Each item slightly different (different flavor, topping, or presentation).
+BACKGROUND: Dark premium or marble surface. The trio arrangement creates visual impact.
+LIGHTING: Even, dramatic lighting that makes all three items look equally stunning.
+ARRANGEMENT: Hero item centered and slightly larger, flanked by two supporting items. Asymmetric but balanced.
+STYLE: "Menu showcase" or "choose your favorite" social media post energy. Great for promoting variety.
+OUTPUT: Photorealistic composition showing a complete food trio.`,
+  },
+
+  // ================================================
+  // GRUPO 5 — UGC & VIRAL
+  // ================================================
+  [DeliveryStyle.FOOD_UGC_UNBOXING]: {
+    label: 'UGC: Unboxing do Pedido',
+    description: 'Foto caseira de quem abriu o delivery, real e autêntico',
+    color: 'from-rose-500/20',
+    icon: '📦',
+    category: 'UGC & Viral',
+    avatarEnabled: true,
+    logoEnabled: false,
+    prompt: `UGC (User Generated Content) food unboxing photography. IDENTIFY the food in the provided image.
+SCENE: Realistic home setting — kitchen counter, coffee table, or lap. Delivery bag/box nearby. Casual, authentic moment of receiving and opening the food.
+STYLE: Shot on phone camera aesthetic. Slightly imperfect exposure, natural shadows, no professional lighting. The kind of photo a real customer would post on Instagram Stories.
+PROPS: Delivery packaging (generic or branded), maybe a napkin or drink nearby. Home background visible but not overly styled.
+PERSON: ${/*avatar hint*/ 'If avatar provided, show hands or person in background. If not, focus on hands holding or reaching for the food.'}
+AUTHENTICITY: This looks 100% real. NOT a studio shot. The food looks delicious but in an approachable way.
+OUTPUT: Photorealistic UGC photo. Phone camera quality. Authentic Brazilian delivery culture aesthetic.`,
+  },
+
+  [DeliveryStyle.FOOD_UGC_BITE]: {
+    label: 'UGC: Momento da Mordida',
+    description: 'Foto casual do produto sendo degustado, estilo reels virais',
+    color: 'from-orange-500/20',
+    icon: '😋',
+    category: 'UGC & Viral',
+    avatarEnabled: true,
+    logoEnabled: false,
+    prompt: `UGC viral food bite moment photography. IDENTIFY the food in the provided image.
+SCENE: Close-up of the food being eaten or held. Melting cheese, sauce dripping, bite taken — show the most mouthwatering moment.
+STYLE: "Money shot" but with phone camera authenticity. Like a viral TikTok or Reels thumbnail. Slightly messy, very real, extremely appetizing.
+PERSON: If avatar provided, show them mid-bite or holding the food up close. Expression of delight/approval.
+LIGHTING: Natural window light or warm indoor light. Imperfect but flattering.
+COMPOSITION: Close-up hero shot, slight bokeh, food filling most of the frame.
+AUTHENTICITY: Feels like real customer content, not a photoshoot. People want to try this immediately.
+OUTPUT: Photorealistic UGC photo. Viral food content aesthetic.`,
+  },
+
+  [DeliveryStyle.FOOD_UGC_REACTION]: {
+    label: 'UGC: Reação de Aprovação',
+    description: 'Pessoa reagindo positivamente ao produto, estilo depoimento',
+    color: 'from-yellow-500/20',
+    icon: '🤩',
+    category: 'UGC & Viral',
+    avatarEnabled: true,
+    logoEnabled: false,
+    prompt: `UGC food reaction / testimonial photography. IDENTIFY the food in the provided image.
+SCENE: Person genuinely reacting to the food — thumbs up, wide smile, amazed expression — holding the product clearly visible.
+STYLE: Casual selfie or friend-taking-photo style. Real environment (home, table, outdoor). Not posed or stiff.
+PERSON: Must be present and showing clear positive reaction. Food prominently visible in hand or nearby.
+LIGHTING: Natural light preferred. Authentic indoor or outdoor setting.
+PURPOSE: This looks like a real customer review photo. Used for testimonials, stories, social proof.
+AUTHENTICITY: Zero studio vibe. Pure UGC energy. Would fit perfectly in a "what our customers say" highlight.
+OUTPUT: Photorealistic authentic UGC photo. Warm, human, trustworthy.`,
+  },
+
+  [DeliveryStyle.FOOD_UGC_AESTHETIC]: {
+    label: 'UGC: Aesthetic Caseiro',
+    description: 'Flat lay caseiro com toque pessoal, estilo Pinterest/TikTok',
+    color: 'from-pink-500/20',
+    icon: '🌸',
+    category: 'UGC & Viral',
+    avatarEnabled: false,
+    logoEnabled: false,
+    prompt: `UGC aesthetic food photography. IDENTIFY the food in the provided image.
+SCENE: Cozy home setup — wooden table, marble counter, or blanket. Food styled casually but with a personal aesthetic touch. Flowers, a book, a cute mug nearby.
+STYLE: Between professional and casual. Pinterest-worthy but clearly not a studio. "I styled this at home" energy. Brazilian food aesthetics on TikTok.
+LIGHTING: Warm golden hour or window light. Soft shadows. Instagram-worthy despite being "casual."
+PROPS: Personal items — fairy lights, notebooks, small plants, colored fabric. Nothing generic.
+COMPOSITION: Slight overhead angle, thoughtful but imperfect arrangement. Story-worthy single shot.
+OUTPUT: Photorealistic aesthetic UGC. Warm, personal, relatable. Would get thousands of saves.`,
+  },
+
+  // ================================================
+  // GRUPO 6 — MARCA & LOGO
+  // ================================================
+  [DeliveryStyle.FOOD_BRAND_PACKAGING]: {
+    label: 'Embalagem com Logo',
+    description: 'Produto na embalagem branded com logo da marca visível',
+    color: 'from-blue-500/20',
+    icon: '🎁',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Brand packaging food photography. IDENTIFY the food in the provided image.
+TASK: Create a premium shot of this food delivered in branded packaging. If a logo image is provided, apply it clearly to the packaging, bag, box, or wrapper.
+PACKAGING: Custom-designed delivery bag, box, or container. Logo prominently displayed. Brand colors extracted from the logo applied to the packaging design.
+FOOD: Partially visible inside or beside the packaging — appetizing and fresh.
+SCENE: Clean surface (marble, dark wood, or light background). Professional product shot aesthetic.
+LIGHTING: Soft, even light that highlights the packaging and makes the logo crisp and legible.
+STYLE: Premium delivery brand photography. Think high-end restaurant packaging or boutique food brand.
+OUTPUT: Photorealistic branded packaging shot. The logo must be clearly readable.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_STOREFRONT]: {
+    label: 'Fachada da Loja',
+    description: 'Fachada do estabelecimento com logo e identidade visual da marca',
+    color: 'from-indigo-500/20',
+    icon: '🏪',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Restaurant / food business storefront photography. IDENTIFY the food type in the provided image.
+TASK: Create a professional exterior shot of a food business storefront that sells this type of food. If a logo is provided, display it prominently on the signage, awning, or facade.
+STOREFRONT: Modern, appealing restaurant or food shop exterior. Logo on sign above entrance. Brand colors applied to facade decor and details.
+SCENE: Daytime exterior, slightly warm golden light. Inviting entrance. Clean sidewalk. Urban Brazilian neighborhood feel.
+STYLE: Real estate photography meets food branding. The kind of photo used on Google Maps or iFood listing cover.
+DETAILS: Menu board visible with items listed. Windows showing interior. A sign with the food business name.
+OUTPUT: Photorealistic storefront. Warm, inviting, professional Brazilian food establishment.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_INSTITUTIONAL]: {
+    label: 'Foto Institucional',
+    description: 'Composição de marca com produto, logo e cores institucionais',
+    color: 'from-cyan-500/20',
+    icon: '🎨',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Brand institutional food photography. IDENTIFY the food in the provided image.
+TASK: Create a high-end institutional brand photo combining this food with the brand identity. If a logo is provided, extract its colors and apply them as a theme — background colors, accent elements, gradient overlays.
+COMPOSITION: Food as hero, brand elements as supporting cast. Logo displayed elegantly (not intrusively). Brand palette colors in background, props, or overlay.
+STYLE: Corporate food brand photography. Used for website headers, presentations, press kits. Think brand lookbook for a premium food delivery service.
+MOOD: Aspirational, luxurious, aligned with brand personality.
+DETAILS: Consistent color palette throughout. Typography-ready space if needed. Logo crisp and proud.
+OUTPUT: Photorealistic institutional brand photo. Cohesive, premium, brandable.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_UNIFORM]: {
+    label: 'Equipe com Uniforme',
+    description: 'Equipe ou entregador com uniforme branded segurando o produto',
+    color: 'from-teal-500/20',
+    icon: '👕',
+    category: 'Marca & Logo',
+    avatarEnabled: true,
+    logoEnabled: true,
+    prompt: `Brand uniform / team food photography. IDENTIFY the food in the provided image.
+TASK: Show a food business team member or delivery person wearing branded uniform holding or delivering this food. If a logo is provided, apply it to the uniform (shirt, cap, apron) and any packaging.
+PERSON: If avatar provided, show them dressed in branded uniform. If not, generate an appropriate team member.
+UNIFORM: T-shirt, cap, or apron with brand logo clearly visible. Colors match brand identity.
+FOOD: Held proudly or being delivered. Fresh, appetizing presentation.
+SCENE: Either at the restaurant entrance, kitchen door, or delivery moment. Professional but warm.
+STYLE: "Meet our team" or "powered by passion" photography. Used for social media team posts or brand introduction content.
+OUTPUT: Photorealistic branded team photo. Prideful, professional, human.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_PAPERBAG]: {
+    label: 'Sacola Brandada',
+    description: 'Sacola de papel kraft com logo impressa, produto dentro',
+    color: 'from-amber-600/20',
+    icon: '🛍️',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Branded paper bag food mockup photography. IDENTIFY the food in the provided image.
+TASK: Create a premium product shot featuring a kraft paper delivery bag with the brand logo clearly printed on it. Food is visible inside or placed beside the bag.
+BAG: High-quality kraft paper bag. Logo printed large and centered on the front. Brand colors used as accent (handles, tissue paper inside, stamp or sticker).
+FOOD: Partially visible at the top of the bag, or arranged beside it on the surface. Fresh and appetizing.
+SURFACE: Marble counter, wooden table, or concrete. Clean and premium.
+LIGHTING: Warm, soft light from one side. Shadows that give depth to the bag.
+STYLE: Premium food delivery brand unboxing moment. Looks like an editorial lifestyle shot.
+OUTPUT: Photorealistic branded bag mockup. Logo legible and prominent.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_CUP]: {
+    label: 'Copo / Embalagem de Bebida',
+    description: 'Copo, lata ou embalagem de bebida com logo da marca',
+    color: 'from-sky-600/20',
+    icon: '🥤',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Branded cup / beverage packaging food mockup photography. IDENTIFY the food in the provided image.
+TASK: Create a premium beverage packaging mockup where the brand logo appears clearly on a cup, can, or bottle.
+PACKAGING: Paper cup, clearbox, or branded container with the logo wrapped around it. Colors from the logo applied to the packaging design and sleeve.
+PAIRING: The food product sits beside or behind the packaging as a natural combo suggestion.
+SCENE: Clean counter or bar top. Premium, modern aesthetic.
+LIGHTING: Even, bright, product-photography style. Logo facing camera, fully readable.
+STYLE: Fast food & delivery brand identity shot. Think branded café cup or artisan delivery box.
+OUTPUT: Photorealistic branded cup / beverage packaging mockup. Logo must be clearly readable.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_PIZZABOX]: {
+    label: 'Caixa de Produto Brandada',
+    description: 'Caixa fechada ou aberta com logo e produto dentro',
+    color: 'from-red-600/20',
+    icon: '📦',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Branded product box food mockup photography. IDENTIFY the food in the provided image.
+TASK: Create a premium product shot of a delivery box (pizza box, burger box, or general food box) with the brand logo prominently displayed. Box can be open showing the food inside, or closed with food beside it.
+BOX: Custom delivery box — white or kraft. Logo printed on lid, large and centered. Brand colors used on interior tissue or liner paper.
+FOOD: Visible inside the open box or placed artfully beside the closed box.
+SCENE: Dark wood table or marble surface. Side lighting that reveals the box texture.
+STYLE: Premium artisan food delivery brand. Like a high-end custom packaging reveal.
+OUTPUT: Photorealistic branded box mockup. Logo crisp and brand identity strong.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_MENU]: {
+    label: 'Cardápio Digital',
+    description: 'Imagem estilo menu digital ou banner do iFood com logo',
+    color: 'from-violet-600/20',
+    icon: '📋',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Digital menu / food app banner style food photography. IDENTIFY the food in the provided image.
+TASK: Create a professional digital menu card or iFood/delivery app banner image featuring this food.
+LAYOUT: Food as the hero. Brand logo in the corner or centered at top. Name or category text space available.
+BACKGROUND: Gradient background using brand colors from the logo, or a complementary dark/light surface.
+FOOD: Perfectly lit, appetizing, centered or slightly off-center with room for text overlay.
+STYLE: Like a professional iFood listing banner, Instagram food menu post, or digital menu display.
+TYPOGRAPHY READY: Leave clean space near top or bottom for text overlays.
+OUTPUT: Photorealistic digital menu-style image. Clear, clean, brand-consistent.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_SHIRT]: {
+    label: 'Camiseta da Marca',
+    description: 'Camiseta ou moletom estampado com logo e produto em cena',
+    color: 'from-emerald-600/20',
+    icon: '👚',
+    category: 'Marca & Logo',
+    avatarEnabled: true,
+    logoEnabled: true,
+    prompt: `Branded t-shirt / apparel food photography. IDENTIFY the food in the provided image.
+TASK: Create a lifestyle photo featuring a branded t-shirt or hoodie with the brand logo. Person (if provided) wears the branded apparel while holding or being near the food.
+APPAREL: Fitted or relaxed t-shirt / hoodie. Logo prominently printed on chest or front. Colors match brand identity.
+PERSON: If avatar provided, show them wearing the branded shirt, holding the food in a relaxed, confident pose.
+FOOD: Held in hand or placed on nearby surface. Always visible and appetizing.
+SCENE: Clean lifestyle background — kitchen, café entrance, or outdoor urban setting.
+STYLE: Brand ambassador / merchandise photography. Like an influencer post promoting a food brand.
+OUTPUT: Photorealistic branded apparel lifestyle photo. Logo visible and shirt looks premium.`,
+  },
+
+  [DeliveryStyle.FOOD_BRAND_STICKER]: {
+    label: 'Adesivo no Produto',
+    description: 'Adesivo/lacre da marca no produto ou embalagem delivery',
+    color: 'from-lime-600/20',
+    icon: '🔖',
+    category: 'Marca & Logo',
+    avatarEnabled: false,
+    logoEnabled: true,
+    prompt: `Branded sticker / seal food packaging photography. IDENTIFY the food in the provided image.
+TASK: Create an authentic delivery moment photo where the brand logo appears as a sticker, seal, or label on the packaging of the food product.
+STICKER: Round or rectangular branded sticker / wax seal on the delivery bag, box lid, or food container. Logo printed sharp and readable. Brand colors on the sticker border.
+PACKAGING: Generic kraft bag, white box, or clear container — elevated by the branded sticker.
+FOOD: Visible inside or nearby. The sticker seals the package or decorates the container.
+SCENE: Dark surface with dramatic lighting highlighting the sticker detail.
+STYLE: Premium artisan food brand. Think handcrafted bakery or boutique restaurant delivery.
+OUTPUT: Photorealistic branded sticker mockup. Sticker detail sharp, authentic, premium.`,
+  },
+};
+
+
+
+
+
 export enum MascotStyle {
   PIXAR_3D = 'Estilo Disney/Pixar 3D',
   CARTOON_2D = 'Cartoon Clássico 2D',

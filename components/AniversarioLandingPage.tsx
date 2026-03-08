@@ -8,14 +8,18 @@ import {
     Palette, Users
 } from 'lucide-react';
 import FAQSection, { aniversarioFaqs } from './FAQSection';
+import StudioTrialUpload from './StudioTrialUpload';
 
 interface AniversarioLandingPageProps {
     onGetStarted: () => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
+    onFreeTrialGenerate?: (parts: any[], aspectRatio: string, trialType: string) => void;
+    isTrialGenerating?: boolean;
+    trialError?: string;
 }
 
-export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin, onFreeTrialGenerate, isTrialGenerating, trialError }) => {
     const [isMuted, setIsMuted] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -84,30 +88,18 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
 
             {/* ===== STICKY HEADER ===== */}
             <nav className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
-                <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-7 w-auto object-contain" />
-                        <span className="hidden sm:inline text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMIPHOTO<span className="text-white">IA</span></span>
+                <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 w-auto object-contain" />
+                        <div className="flex flex-col leading-none">
+                            <span className="text-[11px] font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
+                            <span className="text-[7px] font-black uppercase tracking-[0.15em] text-violet-400">🎂 Aniversário</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onLogin || onGetStarted}
-                            className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors"
-                        >
-                            Entrar
-                        </button>
-                        <button
-                            onClick={onViewStudio || onGetStarted}
-                            className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors"
-                        >
-                            Ver Estúdio
-                        </button>
-                        <button
-                            onClick={scrollToPricing}
-                            className="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-lg font-black text-xs text-black uppercase tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
-                        >
-                            Escolher Pacote
-                        </button>
+                    <div className="flex items-center gap-1">
+                        <button onClick={onLogin || onGetStarted} className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap">Entrar</button>
+                        <button onClick={onViewStudio || onGetStarted} className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap">Estúdio</button>
+                        <button onClick={scrollToPricing} className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-lg font-black text-[10px] text-black uppercase tracking-wide hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all whitespace-nowrap">Ver Pacotes</button>
                     </div>
                 </div>
             </nav>
@@ -166,6 +158,25 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
                             </button>
 
                             <p className="text-white/20 text-xs mt-4">A partir de R$ 57 • Pagamento único • Sem mensalidade</p>
+
+                            {/* FREE TRIAL CTA */}
+                            {onFreeTrialGenerate && (
+                                <div className="mt-8 p-5 rounded-2xl border border-pink-500/20 bg-pink-500/[0.04]">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="px-3 py-1 bg-pink-500/20 text-pink-400 text-[10px] font-black uppercase rounded-full border border-pink-500/30">🎁 TESTE GRÁTIS</span>
+                                        <span className="text-white/30 text-[10px]">Sem cadastro, sem cartão</span>
+                                    </div>
+                                    <StudioTrialUpload
+                                        onTrialGenerate={onFreeTrialGenerate}
+                                        isGenerating={isTrialGenerating}
+                                        error={trialError}
+                                        accentColor="from-pink-500 to-rose-400"
+                                        ctaLabel="Gerar 3 Estilos Grátis"
+                                        descriptionLabel="Envie uma selfie e veja 3 ensaios: Inspiracional, Casual e Aniversário Dourado"
+                                        trialType="aniversario"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Right: Before/After Showcase (Desktop) */}
@@ -888,6 +899,25 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
 
             {/* ===== FAQ ===== */}
             <FAQSection extraFaqs={aniversarioFaqs} accentColor="pink" />
+
+            {/* ===== MP CREDIBILITY BAR ===== */}
+            <div className="border-t border-white/5 bg-[#050505] py-5 px-6">
+                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+                    <div className="flex items-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="opacity-50"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#00B1EA" stroke="none" /></svg>
+                        <span className="text-white/40 text-[11px] font-bold">Mercado Pago</span>
+                        <span className="text-white/20 text-[10px]">— Pagamento 100% Seguro</span>
+                    </div>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">🔒 Criptografia SSL</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">🛡️ Garantia 7 dias</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">⚡ Acesso imediato</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">💳 Cartão, Pix ou Boleto</span>
+                </div>
+            </div>
 
             {/* ===== FOOTER ===== */}
             <footer className="border-t border-white/5 bg-[#030303] py-8">

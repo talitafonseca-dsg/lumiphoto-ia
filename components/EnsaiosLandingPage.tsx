@@ -8,14 +8,18 @@ import {
     Play, Volume2, VolumeX
 } from 'lucide-react';
 import FAQSection, { ensaioFaqs } from './FAQSection';
+import StudioTrialUpload from './StudioTrialUpload';
 
 interface EnsaiosLandingPageProps {
     onGetStarted: () => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
+    onFreeTrialGenerate?: (parts: any[], aspectRatio: string, trialType: string) => void;
+    isTrialGenerating?: boolean;
+    trialError?: string;
 }
 
-export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin, onFreeTrialGenerate, isTrialGenerating, trialError }) => {
     const [selectedScenario, setSelectedScenario] = useState(1);
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoRef2 = useRef<HTMLVideoElement>(null);
@@ -107,29 +111,32 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
 
             {/* ===== STICKY HEADER ===== */}
             <nav className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
-                <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-7 w-auto object-contain" />
-                        <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMIPHOTO<span className="text-white">IA</span></span>
+                <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 w-auto object-contain" />
+                        <div className="flex flex-col leading-none">
+                            <span className="text-[11px] font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
+                            <span className="text-[7px] font-black uppercase tracking-[0.15em] text-orange-400">📸 Ensaios</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={onLogin || onGetStarted}
-                            className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors"
+                            className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap"
                         >
                             Entrar
                         </button>
                         <button
                             onClick={onViewStudio || onGetStarted}
-                            className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors"
+                            className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap"
                         >
-                            Ver Estúdio
+                            Estúdio
                         </button>
                         <button
                             onClick={scrollToPricing}
-                            className="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-lg font-black text-xs text-black uppercase tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
+                            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 rounded-lg font-black text-[10px] text-black uppercase tracking-wide hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all whitespace-nowrap"
                         >
-                            Escolher Pacote
+                            Ver Pacotes
                         </button>
                     </div>
                 </div>
@@ -194,6 +201,24 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
                             </button>
 
                             <p className="text-white/20 text-xs mt-4">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
+
+                            {/* FREE TRIAL CTA */}
+                            {onFreeTrialGenerate && (
+                                <div className="mt-8 p-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04]">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-500/30">🎁 TESTE GRÁTIS</span>
+                                        <span className="text-white/30 text-[10px]">Sem cadastro, sem cartão</span>
+                                    </div>
+                                    <StudioTrialUpload
+                                        onTrialGenerate={onFreeTrialGenerate}
+                                        isGenerating={isTrialGenerating}
+                                        error={trialError}
+                                        accentColor="from-amber-500 to-yellow-400"
+                                        ctaLabel="Gerar 3 Ensaios Grátis"
+                                        descriptionLabel="Envie uma selfie e veja 3 estilos: Executivo, Família e Aniversário"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Right: Before/After Showcase */}
@@ -266,6 +291,25 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
                                         <ArrowRight size={12} className="text-black" />
                                     </div>
                                 </div>
+                                {/* Pair 5: Restauração — spans full row width */}
+                                <div className="col-span-2 relative rounded-2xl overflow-hidden border border-rose-500/30 shadow-[0_8px_30px_rgba(244,63,94,0.15)] group">
+                                    <div className="flex">
+                                        <div className="w-1/2 relative">
+                                            <img src="/ensaios/restauracao-antes.png" alt="Foto Antiga" className="w-full h-48 object-cover filter grayscale sepia" />
+                                            <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm text-[9px] font-black text-white/70 uppercase tracking-wider rounded">Foto Antiga</span>
+                                        </div>
+                                        <div className="w-1/2 relative">
+                                            <img src="/ensaios/restauracao-depois.png" alt="Restaurada IA" className="w-full h-48 object-cover" />
+                                            <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-rose-500/90 text-[9px] font-black text-white uppercase tracking-wider rounded">Restaurada IA 🪄</span>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-rose-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                                        <ArrowRight size={12} className="text-white" />
+                                    </div>
+                                    <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-rose-500/20 to-transparent px-3 py-1.5">
+                                        <span className="text-[8px] font-black text-rose-300 uppercase tracking-widest">🔥 Mais vendido: Restauração de fotos</span>
+                                    </div>
+                                </div>
                             </div>
                             {/* Floating badge */}
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/80 backdrop-blur-xl border border-amber-500/30 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
@@ -283,6 +327,7 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
                                     { before: '/ensaios/selfie-birthday.png', after: '/ensaios/niche-birthday.png', label: 'Aniversário' },
                                     { before: '/ensaios/selfie-corporate.png', after: '/ensaios/niche-corporate.png', label: 'Corporativo' },
                                     { before: '/ensaios/selfie-couple.png', after: '/ensaios/niche-couple.png', label: 'Casal' },
+                                    { before: '/ensaios/restauracao-antes.png', after: '/ensaios/restauracao-depois.png', label: '🔥 Restauração', labelBefore: 'Foto Antiga', labelAfter: 'Restaurada 🪄', accent: 'rose' },
                                 ].map((pair, i) => (
                                     <div key={i} className="flex-shrink-0 w-64 rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-white/[0.02]">
                                         <div className="flex relative">
@@ -1231,6 +1276,25 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
 
             {/* ===== FAQ ===== */}
             <FAQSection extraFaqs={ensaioFaqs} accentColor="amber" />
+
+            {/* ===== MP CREDIBILITY BAR ===== */}
+            <div className="border-t border-white/5 bg-[#050505] py-5 px-6">
+                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+                    <div className="flex items-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="opacity-50"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#00B1EA" stroke="none" /></svg>
+                        <span className="text-white/40 text-[11px] font-bold">Mercado Pago</span>
+                        <span className="text-white/20 text-[10px]">— Pagamento 100% Seguro</span>
+                    </div>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">🔒 Criptografia SSL</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">🛡️ Garantia 7 dias</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">⚡ Acesso imediato</span>
+                    <span className="text-white/10 hidden sm:block">|</span>
+                    <span className="text-white/25 text-[10px] flex items-center gap-1">💳 Cartão, Pix ou Boleto</span>
+                </div>
+            </div>
 
             {/* ===== FOOTER ===== */}
             <footer className="border-t border-white/5 bg-[#030303] py-8">

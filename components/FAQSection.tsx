@@ -97,7 +97,7 @@ export const varejoFaqs: FAQItem[] = [
 export const deliveryFaqs: FAQItem[] = [
     {
         q: 'Funciona com fotos de celular?',
-        a: 'Sim! Suba a foto do prato tirada com o celular e a IA transforma em food photography profissional — com iluminação, composição e cores que dão água na boca.',
+        a: 'Sim! Suba a foto do prato tirada com o celular e a LumiPhotoIA transforma em foto profissional de cardápio — com iluminação, composição e cores que dão água na boca.',
     },
     {
         q: 'Posso usar para cardápio digital e iFood?',

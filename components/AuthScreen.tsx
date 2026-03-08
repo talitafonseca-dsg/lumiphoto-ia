@@ -5,9 +5,11 @@ import { supabase } from '../services/supabaseClient';
 interface AuthScreenProps {
     onLogin: () => void;
     onBack?: () => void;
+    segmentLabel?: string;   // e.g. "🍕 Delivery", "✨ Beleza"
+    segmentColor?: string;   // tailwind color class e.g. "text-emerald-400"
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onBack }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onBack, segmentLabel, segmentColor = 'text-amber-400' }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -117,6 +119,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onBack }) => {
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-600">LUMIPHOTO</span>
                         <span className="text-white">IA</span>
                     </h1>
+                    {segmentLabel && (
+                        <div className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest ${segmentColor}`}>
+                            {segmentLabel}
+                        </div>
+                    )}
                     <p className="text-white/40 text-sm mt-2">
                         Estúdio de Fotografia Profissional com IA
                     </p>

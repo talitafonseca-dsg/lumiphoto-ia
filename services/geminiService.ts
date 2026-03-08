@@ -1,5 +1,171 @@
 // Gemini API calls are now proxied through the generate-image Edge Function
-import { GenerationConfig, CreationType, VisualStyle, StudioStyle, MascotStyle, MockupStyle, AspectRatio, GeneratedImage, SocialClass, UGCEnvironment, UGCModel } from "../types";
+import { GenerationConfig, CreationType, VisualStyle, StudioStyle, MascotStyle, MockupStyle, AspectRatio, GeneratedImage, SocialClass, UGCEnvironment, UGCModel, DeliveryStyle, DeliveryStyleMetaMap } from "../types";
+
+// ======================================================
+// DELIVERY CREATIVE GENERATION (Isolated from main flow)
+// ======================================================
+export const generateDeliveryCreative = async (
+  style: DeliveryStyle,
+  productImage: string,           // required — the food photo
+  aspectRatio: AspectRatio,
+  designCount: number = 3,
+  avatarImage?: string | null,    // optional person photo (for Com Pessoa group)
+  authToken?: string,
+  logoImage?: string | null,      // optional brand logo (for Marca & Logo group)
+  customPrompt?: string           // optional free-text user instruction (Caixa Mágica)
+): Promise<GeneratedImage[]> => {
+  const styleMeta = DeliveryStyleMetaMap[style];
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const extractBase64 = (dataUrl: string) => {
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) return null;
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    return { data: parts[1], mimeType: mime };
+  };
+
+  const generationPromises = Array.from({ length: designCount }).map(async (_, index): Promise<GeneratedImage | null> => {
+    const v = index + 1;
+    const variationId = Math.random().toString(36).substr(2, 9);
+
+    try {
+      const parts: any[] = [];
+
+      // 1. Product image — always the anchor
+      const prod = extractBase64(productImage);
+      if (prod) {
+        parts.push({
+          text: `[FOOD PRODUCT IMAGE — CRITICALLY IMPORTANT]
+>>> STEP 1: CAREFULLY IDENTIFY what food/dish is in this image. Note: type of food, presentation style, portion, colors, garnishes.
+>>> STEP 2: Use this EXACT food as the HERO of the output image.
+>>> NEVER replace the food with a different dish.
+>>> PRESERVE: The type of food, portion size, main presentation characteristics.
+>>> This is what the customer ordered — they need to be able to recognize it.`
+        });
+        parts.push({ inlineData: prod });
+      }
+
+      // 2. Avatar/person image — ALWAYS used in delivery when uploaded
+      // Rule: model MUST interact with the food product in every style
+      if (avatarImage) {
+        const avatar = extractBase64(avatarImage);
+        if (avatar) {
+          parts.push({
+            text: `[PERSON IMAGE — MANDATORY IDENTITY + INTERACTION LOCK]
+>>> CRITICAL: USE THIS EXACT PERSON in the output image. No exceptions.
+>>> PRESERVE 100%: face, facial features, skin tone, hair color/style, body type, age, gender.
+>>> The person must be instantly recognizable to themselves when they see the result.
+>>>
+>>> ⚠️  INTERACTION REQUIREMENT (MANDATORY — cannot be skipped):
+>>> The person MUST be actively interacting with the food product from the product image.
+>>> Examples of REQUIRED interactions:
+>>>  • Holding the food item / packaging in their hands
+>>>  • Taking a bite, tasting, or eating the food
+>>>  • Pointing at or presenting the food to camera
+>>>  • Reacting to the food with visible positive emotion
+>>>  • Receiving the delivery / unboxing the product
+>>> The food product and the person MUST appear together in the same scene.
+>>> NEVER generate the person alone without the food. NEVER generate the food alone without the person.`
+          });
+          parts.push({ inlineData: avatar });
+        }
+      }
+
+      // 2b. Logo image — ALWAYS used in delivery when uploaded
+      // Rule: logo MUST appear visibly in the scene regardless of style
+      if (logoImage) {
+        const logo = extractBase64(logoImage);
+        if (logo) {
+          parts.push({
+            text: `[BRAND LOGO IMAGE — MANDATORY BRAND APPLICATION]
+>>> CRITICAL: This is the client's brand logo. It MUST appear in the output image. No exceptions.
+>>>
+>>> HOW TO APPLY THE LOGO (choose the most natural placement for the current scene):
+>>>  • On packaging: delivery bag, box, wrapper, cup, container
+>>>  • On clothing: t-shirt, cap, apron, uniform of any person in the scene
+>>>  • On signage: storefront sign, menu board, banner, wall art
+>>>  • On props: sticker on a bag, stamp on packaging, label on a cup
+>>>
+>>> LOGO RULES:
+>>>  • The logo MUST be clearly legible and recognizable — not blurred, warped, or generic
+>>>  • PRESERVE the logo's original design exactly as shown in the image
+>>>  • Extract the brand's COLOR PALETTE from the logo and use as accent colors in the scene
+>>>  • Position the logo where it would naturally appear in real life
+>>>  • Size it to be clearly visible but not overwhelming the composition
+>>>
+>>> If the scene has no natural surface for the logo, create one (e.g., add a branded paper bag, a branded sticker on the box, or a branded cap on a person).`
+          });
+          parts.push({ inlineData: logo });
+        }
+      }
+
+      const variationModifiers = [
+        `Variation 1: Standard composition. Follow all style guidelines precisely.`,
+        `Variation 2: Slightly different angle (shift 15° from the primary described angle). Different prop placement if applicable. Same food, fresh perspective.`,
+        `Variation 3: More dramatic lighting variation. Tighter or wider crop than variation 1. Same food, different energy.`,
+      ];
+
+      // 4. Final prompt
+      const basePrompt = `${styleMeta.prompt}
+
+${variationModifiers[index] || variationModifiers[0]}
+
+UNIVERSAL FOOD PHOTOGRAPHY RULES (Always Apply):
+- The food must be the hero of every composition
+- Colors must be vibrant, saturated, and appetizing
+- NEVER show rotten, unappetizing or stale-looking food
+- Steam, sauce drips, melted cheese, and fresh garnishes add appetite appeal — use them when appropriate
+- The overall image should make a viewer immediately want to eat the food
+- Brazilian market context: food must feel familiar and desirable to Brazilian consumers
+- OUTPUT FORMAT: Photorealistic photograph. NOT cartoon, NOT illustration, NOT painting.`;
+
+      const finalPrompt = customPrompt?.trim()
+        ? `${basePrompt}
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ USER CUSTOMIZATION (HIGHEST PRIORITY OVERRIDE)
+┃ Apply the following specific instructions on top of everything above.
+┃ These override any default style decisions:
+┃ ${customPrompt.trim()}
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+        : basePrompt;
+
+      parts.push({ text: finalPrompt });
+
+      // 5. API call
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ parts, aspectRatio }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        if (response.status === 403) throw new Error('Créditos insuficientes. Adquira mais créditos para continuar.');
+        if (response.status === 429) throw new Error('429: Cota excedida.');
+        throw new Error(errorData.error || `Erro ${response.status}`);
+      }
+
+      const data = await response.json();
+      const url = `data:image/${data.mimeType?.split('/')[1] || 'png'};base64,${data.imageBase64}`;
+      return { id: variationId, url, originalUrl: url, variation: v };
+    } catch (error: any) {
+      console.error(`Delivery variation ${v} failed:`, error);
+      if (v === 1) throw error;
+      return null;
+    }
+  });
+
+  const results = await Promise.all(generationPromises);
+  const successful = results.filter((r): r is GeneratedImage => r !== null);
+  if (successful.length === 0) throw new Error('A geração falhou. Verifique a foto do produto e tente novamente.');
+  return successful;
+};
+
+
 
 export const generateStudioCreative = async (
   config: GenerationConfig,

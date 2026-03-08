@@ -33,6 +33,19 @@ const CREDITS_MAP: Record<string, number> = {
     premium: 100,
 };
 
+// Maps landing page URL path to a segment key
+function sourcePageToSegment(sourcePage: string): string {
+    if (!sourcePage || sourcePage === '/' || sourcePage === '' || sourcePage === '/delivery') return 'delivery';
+    const path = sourcePage.toLowerCase().replace(/^\//, '');
+    if (path === 'ensaio-beleza' || path.startsWith('beauty')) return 'beleza';
+    if (path === 'ensaio-advogadas' || path.startsWith('advogadas')) return 'advogadas';
+    if (path === 'ensaio-aniversario') return 'aniversario';
+    if (path === 'ensaio-estetica') return 'estetica';
+    if (path === 'ensaios') return 'ensaios';
+    if (path === 'varejo') return 'varejo';
+    return 'delivery'; // default
+}
+
 Deno.serve(async (req: Request) => {
     // Mercado Pago envia notificações via POST
     if (req.method !== "POST") {
@@ -108,8 +121,9 @@ Deno.serve(async (req: Request) => {
         let utmSource = "";
         let utmMedium = "";
         let utmCampaign = "";
+        let refData: any = {};
         try {
-            const refData = JSON.parse(payment.external_reference);
+            refData = JSON.parse(payment.external_reference);
             planType = refData.plan || "starter";
             refEmail = refData.email || "";
             referralCode = refData.referral_code || "";
@@ -121,6 +135,16 @@ Deno.serve(async (req: Request) => {
             utmCampaign = refData.utm_campaign || "";
         } catch {
             console.log("Could not parse external_reference");
+        }
+
+        // ── TRIAL PAYMENT HANDLER ──────────────────────────────────────────
+        if (refData.type === "trial" && payment.status === "approved") {
+            console.log("🎯 Trial payment detected:", refData);
+            // ALWAYS prefer refData.email (set by us in external_reference) over payer.email from MP
+            // MP can return payer.email in invalid/masked formats that Resend rejects
+            const trialEmail = refData.email || payment.payer?.email;
+            await handleTrialPayment(refData, trialEmail, paymentId.toString(), payment.transaction_amount);
+            return new Response("OK", { status: 200 });
         }
 
         // Só processamos pagamentos aprovados
@@ -171,6 +195,8 @@ Deno.serve(async (req: Request) => {
         console.log("Creating user for:", payerEmail);
         console.log(`Adding ${creditsToAdd} credits for plan ${planType}`);
 
+        const userSegment = sourcePageToSegment(sourcePage);
+
         const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
             email: payerEmail,
             password: DEFAULT_PASSWORD,
@@ -180,6 +206,7 @@ Deno.serve(async (req: Request) => {
                 payment_id: paymentId,
                 purchase_date: new Date().toISOString(),
                 credits: creditsToAdd,
+                segment: userSegment,
                 ...(whatsapp ? { whatsapp } : {}),
             },
         });
@@ -204,6 +231,8 @@ Deno.serve(async (req: Request) => {
                             payment_id: paymentId,
                             last_payment_date: new Date().toISOString(),
                             credits: newTotal,
+                            // Only set segment if not already set (don't overwrite existing segment)
+                            ...(existingUser.user_metadata?.segment ? {} : { segment: userSegment }),
                             ...(whatsapp ? { whatsapp } : {}),
                         },
                     });
@@ -260,6 +289,251 @@ Deno.serve(async (req: Request) => {
         return new Response("OK", { status: 200 });
     }
 });
+
+// ============================================================
+// TRIAL PAYMENT HANDLER
+// ============================================================
+async function handleTrialPayment(
+    refData: any,
+    payerEmail: string,
+    paymentId: string,
+    amount: number
+) {
+    const generationId = refData.generation_id;
+    const productType = refData.product_type; // 'single' | 'pack'
+    const selectedImageIndex = refData.selected_image_index;
+
+    // Robust email sanitization
+    // 1. If "Name <email@example.com>" format, extract the email inside <>
+    const angleBracketMatch = payerEmail?.match(/<([^>]+)>/);
+    let cleanEmail = angleBracketMatch ? angleBracketMatch[1] : payerEmail;
+    // 2. Trim whitespace, newlines, control chars, and non-printable/non-ASCII
+    cleanEmail = cleanEmail?.trim()
+        .replace(/[\r\n\t]/g, '')          // remove line breaks and tabs
+        .replace(/[^\x20-\x7E]/g, '')     // remove non-printable and non-ASCII chars
+        .trim();
+    // 3. Extract raw email using simple regex if still contains garbage
+    const emailRegexMatch = cleanEmail?.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+    if (emailRegexMatch) {
+        cleanEmail = emailRegexMatch[0];
+    }
+
+    if (!generationId || !cleanEmail || !cleanEmail.includes("@")) {
+        console.error("Trial payment missing generation_id or valid email. Raw email:", payerEmail, "| Sanitized:", cleanEmail);
+        return;
+    }
+    // Use the sanitized clean email for all subsequent operations
+    console.log(`📧 Email sanitized: "${payerEmail}" -> "${cleanEmail}"`);
+    payerEmail = cleanEmail;
+
+    console.log(`✅ Trial payment approved: ${payerEmail} | type: ${productType} | gen: ${generationId}`);
+
+    // 1. Check for duplicate processing
+    const { data: existing } = await supabaseAdmin
+        .from("trial_generations")
+        .select("id, status")
+        .eq("id", generationId)
+        .single();
+
+    if (!existing) {
+        console.error("Trial generation not found:", generationId);
+        return;
+    }
+
+    if (existing.status !== "preview") {
+        console.log("Trial already processed:", existing.status);
+        return;
+    }
+
+    // 2. Update trial status to paid — including product_type and selected_image_index from refData
+    const newStatus = productType === "single" ? "paid_single" : "paid_pack";
+    await supabaseAdmin
+        .from("trial_generations")
+        .update({
+            status: newStatus,
+            mp_payment_id: paymentId,
+            payer_email: payerEmail,
+            product_type: productType,
+            selected_image_index: refData.selected_image_index ?? null,
+            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days after payment
+        })
+        .eq("id", generationId);
+
+    // 3. For PACK: create user account with 7 credits (+ the 3 HD images)
+    let userCreated = false;
+    if (productType === "pack") {
+        const PACK_CREDITS = 7; // 3 already unlocked HD + 7 more
+        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
+            email: payerEmail,
+            password: "lumi123456",
+            email_confirm: true,
+            user_metadata: {
+                plan_type: "trial_pack",
+                payment_id: paymentId,
+                purchase_date: new Date().toISOString(),
+                credits: PACK_CREDITS,
+                segment: "delivery",
+                trial_generation_id: generationId,
+            },
+        });
+
+        if (userError) {
+            if (userError.message.includes("already been registered")) {
+                // User exists — add 7 credits
+                const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+                const existingUser = existingUsers?.users?.find((u: any) => u.email === payerEmail);
+                if (existingUser) {
+                    const currentCredits = (existingUser.user_metadata?.credits as number) || 0;
+                    await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+                        user_metadata: { ...existingUser.user_metadata, credits: currentCredits + PACK_CREDITS },
+                    });
+                    await supabaseAdmin.from("trial_generations").update({ created_user_id: existingUser.id }).eq("id", generationId);
+                }
+            } else {
+                console.error("Error creating user for trial pack:", userError);
+            }
+        } else if (userData?.user) {
+            await supabaseAdmin.from("trial_generations").update({ created_user_id: userData.user.id }).eq("id", generationId);
+            userCreated = true;
+        }
+    }
+
+    // 4. Generate signed URLs for HD images (90-day expiry for admin panel access)
+    const { data: trialRecord } = await supabaseAdmin
+        .from("trial_generations")
+        .select("hd_storage_paths")
+        .eq("id", generationId)
+        .single();
+
+    const hdPaths: { path: string; variation: number; index: number }[] = trialRecord?.hd_storage_paths || [];
+    const selectedIndex = refData.selected_image_index;
+
+    const relevantPaths = productType === "single" && selectedIndex !== null && selectedIndex !== undefined
+        ? hdPaths.filter(p => p.index === selectedIndex)
+        : hdPaths;
+
+    const signedUrlExpirySeconds = 90 * 24 * 3600; // 90 days
+    const signedUrls: string[] = [];
+    const purchasedPhotoUrls: { url: string; label: string; expires_at: string; index: number }[] = [];
+
+    for (const { path, index } of relevantPaths) {
+        const { data: signed } = await supabaseAdmin.storage
+            .from("trial-generations")
+            .createSignedUrl(path, signedUrlExpirySeconds);
+        if (signed?.signedUrl) {
+            signedUrls.push(signed.signedUrl);
+            purchasedPhotoUrls.push({
+                url: signed.signedUrl,
+                label: `Foto ${index + 1}`,
+                index,
+                expires_at: new Date(Date.now() + signedUrlExpirySeconds * 1000).toISOString(),
+            });
+        }
+    }
+
+    // Save purchased photo URLs to DB for admin resend capability
+    await supabaseAdmin
+        .from("trial_generations")
+        .update({ purchased_photo_urls: purchasedPhotoUrls })
+        .eq("id", generationId);
+
+    console.log(`📦 Saved ${purchasedPhotoUrls.length} signed URLs to DB for generation ${generationId}`);
+
+    // 5. Send delivery email
+    const emailError = await sendTrialDeliveryEmail(payerEmail, productType, signedUrls, userCreated);
+
+    // Track email status
+    if (emailError) {
+        await supabaseAdmin.from("trial_generations").update({
+            last_email_error: emailError,
+            email_sent_count: 0,
+        }).eq("id", generationId);
+        console.error(`❌ Email failed for ${payerEmail}: ${emailError}`);
+    } else {
+        await supabaseAdmin.from("trial_generations").update({
+            email_sent_at: new Date().toISOString(),
+            email_sent_count: 1,
+            last_email_error: null,
+        }).eq("id", generationId);
+    }
+
+    // 6. Track purchase
+    await trackServerPurchase(payerEmail, `trial_${productType}`, amount, paymentId);
+
+    console.log(`🎉 Trial unlocked: ${signedUrls.length} HD photos for ${payerEmail}`);
+}
+
+async function sendTrialDeliveryEmail(email: string, productType: string, signedUrls: string[], userCreated: boolean): Promise<string | null> {
+    if (!RESEND_API_KEY) return "RESEND_API_KEY not configured";
+    if (signedUrls.length === 0) return "No signed URLs to send";
+
+    const photoLinksHtml = signedUrls.map((url, i) =>
+        `<a href="${url}" style="display:inline-block;margin:6px 4px;padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:bold;font-size:13px;border-radius:8px;text-decoration:none;">📥 Baixar Foto ${i + 1}</a>`
+    ).join("");
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:560px;margin:0 auto;padding:40px 20px;">
+  <h1 style="color:#f59e0b;font-size:24px;margin:0 0 4px 0;">LUMIPHOTO<span style="color:#fff;">IA</span></h1>
+  <p style="color:#666;font-size:13px;margin:0 0 32px 0;">Estúdio de Fotografia com IA — Delivery</p>
+
+  <div style="background:#1a1a2e;border-radius:16px;padding:28px;border:1px solid rgba(245,158,11,0.2);">
+    <h2 style="color:#fff;font-size:20px;margin:0 0 8px 0;">🎉 Suas fotos profissionais estão prontas!</h2>
+    <p style="color:#a0a0a0;font-size:14px;margin:0 0 20px 0;">
+      ${productType === "single"
+            ? "Sua foto em HD foi gerada e está disponível para download abaixo."
+            : "Suas 3 fotos em HD estão prontas! Além disso, criamos sua conta com 7 créditos para mais fotos."}
+    </p>
+
+    <div style="text-align:center;margin:24px 0;">${photoLinksHtml}</div>
+
+    <p style="color:#666;font-size:11px;text-align:center;margin:16px 0 0 0;">Os links expiram em 7 dias. Baixe e salve suas fotos!</p>
+
+    ${productType === "pack" && userCreated ? `
+    <div style="margin-top:24px;padding:16px;background:rgba(245,158,11,0.08);border-radius:10px;border:1px solid rgba(245,158,11,0.15);">
+      <p style="color:#f59e0b;font-size:12px;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:1px;">🔐 Sua Conta LumiPhotoIA</p>
+      <p style="color:#fff;font-size:14px;margin:0 0 4px 0;">Email: <strong>${email}</strong></p>
+      <p style="color:#fff;font-size:14px;margin:0 0 4px 0;">Senha: <strong>lumi123456</strong></p>
+      <p style="color:#a0a0a0;font-size:12px;margin:8px 0 0 0;">+ 7 créditos para gerar mais fotos. Mude sua senha após o primeiro acesso.</p>
+    </div>` : ""}
+
+    <div style="text-align:center;margin-top:24px;">
+      <a href="${SITE_URL}/delivery" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:bold;font-size:14px;border-radius:10px;text-decoration:none;">Gerar Mais Fotos →</a>
+    </div>
+  </div>
+
+  <p style="color:#444;font-size:11px;text-align:center;margin-top:24px;">© ${new Date().getFullYear()} LumiPhotoIA. Dúvidas? Responda este email.</p>
+</div>
+</body></html>`;
+
+    try {
+        const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+            body: JSON.stringify({
+                from: "LumiPhotoIA <team@lumiphotoia.online>",
+                to: [email],
+                subject: "📸 Suas fotos profissionais estão prontas para download!",
+                html,
+            }),
+        });
+        const resendBody = await resendRes.json().catch(() => ({}));
+        if (!resendRes.ok) {
+            const errMsg = `Resend HTTP ${resendRes.status}: ${JSON.stringify(resendBody)}`;
+            console.error("Failed to send trial email:", errMsg);
+            return errMsg;
+        }
+        console.log(`📧 Trial delivery email sent to ${email}`, resendBody);
+        return null; // success
+    } catch (err) {
+        const errMsg = String(err);
+        console.error("Failed to send trial email:", errMsg);
+        return errMsg;
+    }
+}
+
+
 
 function getPlanFromReference(ref: string): string {
     try { const data = JSON.parse(ref); return data.plan || "starter"; } catch { return "starter"; }

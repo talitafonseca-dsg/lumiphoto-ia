@@ -48,7 +48,7 @@ export const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [adminTab, setAdminTab] = useState<'dashboard' | 'affiliates' | 'campaigns'>('dashboard');
+    const [adminTab, setAdminTab] = useState<'dashboard' | 'affiliates' | 'campaigns' | 'trials'>('dashboard');
     const [affiliates, setAffiliates] = useState<any[]>([]);
     const [affLoading, setAffLoading] = useState(false);
     const [showAddAffiliate, setShowAddAffiliate] = useState(false);
@@ -69,6 +69,12 @@ export const AdminDashboard: React.FC = () => {
     const [campaignResult, setCampaignResult] = useState<any>(null);
     const [campaignUsers, setCampaignUsers] = useState<any>(null);
     const [campaignUsersLoading, setCampaignUsersLoading] = useState(false);
+
+    // Trial purchases state
+    const [trialPurchases, setTrialPurchases] = useState<any[]>([]);
+    const [trialsLoading, setTrialsLoading] = useState(false);
+    const [resendingId, setResendingId] = useState<string | null>(null);
+    const [resendResults, setResendResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
 
     // Fix body overflow for admin page scrolling
     useEffect(() => {
@@ -238,6 +244,40 @@ export const AdminDashboard: React.FC = () => {
             if (data.error) setError(data.error);
         } catch { setError('Erro ao enviar campanha'); }
         setCampaignSending(false);
+    };
+
+    const fetchTrialPurchases = async () => {
+        setTrialsLoading(true);
+        try {
+            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}`, 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+                body: JSON.stringify({ action: 'list_trial_purchases' }),
+            });
+            const data = await res.json();
+            if (data.error) console.error('fetchTrialPurchases error:', data.error);
+            else setTrialPurchases(data.purchases || []);
+        } catch (e) { console.error(e); }
+        setTrialsLoading(false);
+    };
+
+    const resendTrialEmail = async (gen: any) => {
+        setResendingId(gen.id);
+        try {
+            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}`, 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+                body: JSON.stringify({ action: 'resend_trial_email', generation_id: gen.id }),
+            });
+            const data = await res.json();
+            setResendResults(prev => ({ ...prev, [gen.id]: { ok: !data.error, msg: data.error || `Email reenviado para ${gen.payer_email}!` } }));
+            if (!data.error) await fetchTrialPurchases();
+        } catch (e: any) {
+            setResendResults(prev => ({ ...prev, [gen.id]: { ok: false, msg: String(e) } }));
+        }
+        setResendingId(null);
     };
 
     const CAMPAIGN_TEMPLATES = [
@@ -450,6 +490,9 @@ export const AdminDashboard: React.FC = () => {
                 <button onClick={() => { setAdminTab('campaigns'); fetchCampaignUsers(); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'campaigns' ? 'bg-purple-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
                     📧 Campanhas
                 </button>
+                <button onClick={() => { setAdminTab('trials'); fetchTrialPurchases(); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'trials' ? 'bg-amber-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
+                    📸 Compras Trial
+                </button>
 
                 {/* Time Period Filter */}
                 {adminTab === 'dashboard' && (
@@ -474,7 +517,104 @@ export const AdminDashboard: React.FC = () => {
             <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
                 {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">{error}</div>}
 
-                {adminTab === 'campaigns' ? (
+                {adminTab === 'trials' ? (
+                    /* ==================== TRIAL PURCHASES TAB ==================== */
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2"><Camera size={20} className="text-amber-400" /> Compras Trial — Entrega de Fotos HD</h2>
+                            <button onClick={fetchTrialPurchases} className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors" title="Atualizar">
+                                <RefreshCw size={16} className={`text-white/60 ${trialsLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+
+                        {trialsLoading ? (
+                            <div className="flex items-center justify-center py-16"><Loader2 size={32} className="animate-spin text-amber-500" /></div>
+                        ) : trialPurchases.length === 0 ? (
+                            <div className="text-center py-16 text-white/40">
+                                <Camera size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">Nenhuma compra trial ainda</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {trialPurchases.map((gen: any) => {
+                                    const photos: any[] = gen.purchased_photo_urls || [];
+                                    const hdPaths: any[] = gen.hd_storage_paths || [];
+                                    const result = resendResults[gen.id];
+                                    const emailOk = !!gen.email_sent_at && !gen.last_email_error;
+                                    return (
+                                        <div key={gen.id} className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5 space-y-3">
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between flex-wrap gap-3">
+                                                <div>
+                                                    <p className="font-bold text-white text-sm">{gen.payer_email}</p>
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${gen.status === 'paid_single' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                            {gen.status === 'paid_single' ? '1 Foto HD' : 'Pack 3 Fotos'}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${emailOk ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                            {emailOk ? `✅ Email enviado ${gen.email_sent_count}x` : gen.last_email_error ? '❌ Erro no email' : '⏳ Email pendente'}
+                                                        </span>
+                                                        <span className="text-[10px] text-white/30">{fmtDate(gen.created_at)}</span>
+                                                    </div>
+                                                    {gen.last_email_error && (
+                                                        <p className="text-red-400 text-[10px] mt-1 font-mono bg-red-500/5 rounded px-2 py-1">{gen.last_email_error}</p>
+                                                    )}
+                                                </div>
+                                                {/* Resend Email Button */}
+                                                <button
+                                                    onClick={() => resendTrialEmail(gen)}
+                                                    disabled={resendingId === gen.id}
+                                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-500/30 transition-all disabled:opacity-50"
+                                                >
+                                                    {resendingId === gen.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                                                    Reenviar Email
+                                                </button>
+                                            </div>
+
+                                            {/* Resend result */}
+                                            {result && (
+                                                <div className={`text-xs px-3 py-2 rounded-xl ${result.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                    {result.msg}
+                                                </div>
+                                            )}
+
+                                            {/* Photo Links */}
+                                            {photos.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Fotos disponíveis ({photos.length} links — expiram em 90 dias)</p>
+                                                    {photos.map((photo: any, i: number) => (
+                                                        <div key={i} className="flex items-center justify-between gap-2 p-2 bg-white/5 rounded-lg">
+                                                            <span className="text-xs text-white/60">{photo.label || `Foto ${i + 1}`}</span>
+                                                            <div className="flex gap-2">
+                                                                <a
+                                                                    href={photo.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="px-3 py-1 bg-amber-500 text-black rounded-lg text-xs font-bold hover:bg-amber-400 transition-colors"
+                                                                >
+                                                                    Baixar HD
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : hdPaths.length > 0 ? (
+                                                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                                                    <p className="text-orange-400 text-xs font-bold">⚠️ Signed URLs não foram gerados ainda</p>
+                                                    <p className="text-white/40 text-[10px] mt-1">{hdPaths.length} fotos HD existem no Storage. Clique em "Reenviar Email" para gerar URLs e reenviar.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                                    <p className="text-red-400 text-xs">⚠️ Sem fotos HD no Storage para esta geração</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ) : adminTab === 'campaigns' ? (
                     /* ==================== CAMPAIGNS TAB ==================== */
                     <div className="space-y-6">
                         <h2 className="text-lg font-bold flex items-center gap-2"><Mail size={20} className="text-purple-400" /> Email Marketing</h2>

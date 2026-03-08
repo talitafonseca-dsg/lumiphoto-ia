@@ -59,8 +59,8 @@ import {
   Home,
   Gift
 } from 'lucide-react';
-import { CreationType, VisualStyle, StudioStyle, StudioStyleMeta, MascotStyle, MascotStyleMeta, MockupStyle, MockupStyleMeta, AspectRatio, SocialClass, GenerationConfig, GeneratedImage, ColorPalette, UGCEnvironment, UGCModel } from './types';
-import { generateStudioCreative, editGeneratedImage, animateGeneratedImage } from './services/geminiService';
+import { CreationType, VisualStyle, StudioStyle, StudioStyleMeta, MascotStyle, MascotStyleMeta, MockupStyle, MockupStyleMeta, AspectRatio, SocialClass, GenerationConfig, GeneratedImage, ColorPalette, UGCEnvironment, UGCModel, DeliveryStyle, DeliveryStyleMetaMap } from './types';
+import { generateStudioCreative, editGeneratedImage, animateGeneratedImage, generateDeliveryCreative } from './services/geminiService';
 import { submitVideoGeneration, waitForVideo } from './services/videoService';
 import { generatePPTX } from './services/pptService';
 import { translations, Language } from './translations';
@@ -80,6 +80,9 @@ import { EsteticaLandingPage } from './components/EsteticaLandingPage';
 import { BeautyLandingPage } from './components/BeautyLandingPage';
 import { VarejoLandingPage } from './components/VarejoLandingPage';
 import { DeliveryLandingPage } from './components/DeliveryLandingPage';
+import { TrialResultModal, type TrialPreviewImage } from './components/TrialResultModal';
+import { TrialSuccessPage } from './components/TrialSuccessPage';
+import UrgencyBanner from './components/UrgencyBanner';
 import { jsPDF } from 'jspdf';
 import { saveProject, canCreateProject, getRemainingSlots, getLastPurchaseDate, Project } from './services/projectService';
 import { supabase } from './services/supabaseClient';
@@ -117,6 +120,16 @@ const App: React.FC = () => {
   const [stickerImage, setStickerImage] = useState<string | null>(null);
   const [isEditableMode, setIsEditableMode] = useState<boolean>(false);
 
+  // DELIVERY STUDIO STATE
+  const [deliveryStyle, setDeliveryStyle] = useState<DeliveryStyle>(DeliveryStyle.FOOD_STUDIO_DARK);
+  const [deliveryAvatarImage, setDeliveryAvatarImage] = useState<string | null>(null);
+  const [deliveryLogoImage, setDeliveryLogoImage] = useState<string | null>(null);
+  const [deliveryCustomPrompt, setDeliveryCustomPrompt] = useState<string>('');
+  // Mobile wizard step: 'produto' | 'estilo' | 'extras' | 'gerar'
+  const [deliveryMobileStep, setDeliveryMobileStep] = useState<'produto' | 'estilo' | 'extras' | 'gerar'>('produto');
+  const [deliveryStyleGroup, setDeliveryStyleGroup] = useState<string>('Foco no Produto');
+
+
   // Text Editor State
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 }); // Percentage
   const [textColor, setTextColor] = useState('#ffffff');
@@ -138,7 +151,9 @@ const App: React.FC = () => {
 
   const [activePulseStep, setActivePulseStep] = useState<number | null>(null);
   const [showRatioSelector, setShowRatioSelector] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Profissional');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    return sessionStorage.getItem('lumi_studio_category') || 'Profissional';
+  });
   const [isStep01Collapsed, setIsStep01Collapsed] = useState(false);
 
   // Avatar IA toggle - when true, generate AI avatar instead of using uploaded photo
@@ -206,6 +221,70 @@ const App: React.FC = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
 
+  // ── TRIAL (FREE PREVIEW) STATE ──────────────────────────────────────────
+  const [trialSessionId] = useState<string>(() => {
+    let id = localStorage.getItem('lumi_trial_session');
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem('lumi_trial_session', id); }
+    return id;
+  });
+  const [trialImages, setTrialImages] = useState<TrialPreviewImage[]>([]);
+  const [trialGenerationId, setTrialGenerationId] = useState<string>('');
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string>('');
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [isTrialGenerating, setIsTrialGenerating] = useState(false);
+  const [trialError, setTrialError] = useState<string>('');
+
+  const handleTrialGenerate = async (parts: any[], aspectRatio: string, deliveryStyle: string) => {
+    setIsTrialGenerating(true);
+    setTrialError('');
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // Fetch session at call-time (not from stale React state)
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || null;
+      const currentUserEmail = session?.user?.email || null;
+      const isAdminUser = currentUserEmail === 'talitafpublicitaria@gmail.com';
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+      };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      // Admin users get a fresh UUID each call so they bypass rate limiting entirely
+      const effectiveSessionId = isAdminUser ? crypto.randomUUID() : trialSessionId;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-trial`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ session_id: effectiveSessionId, parts, aspectRatio, delivery_style: deliveryStyle }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.rate_limited && data.existing_generation_id) {
+          // Already generated — show existing (non-admin users)
+          setTrialGenerationId(data.existing_generation_id);
+          setTrialExpiresAt(new Date(Date.now() + 20 * 60 * 1000).toISOString());
+          setShowTrialModal(true);
+          return;
+        }
+        setTrialError(data.error || 'Erro ao gerar fotos. Tente novamente.');
+        return;
+      }
+      setTrialGenerationId(data.generation_id);
+      setTrialImages(data.preview_images || []);
+      setTrialExpiresAt(data.expires_at || new Date(Date.now() + 20 * 60 * 1000).toISOString());
+      setShowTrialModal(true);
+    } catch (err: any) {
+      setTrialError('Erro de conexão. Tente novamente.');
+    } finally {
+      setIsTrialGenerating(false);
+    }
+  };
+  // ── END TRIAL STATE ─────────────────────────────────────────────────────
+
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
   const [activeVideos, setActiveVideos] = useState<Record<string, boolean>>({});
@@ -213,6 +292,32 @@ const App: React.FC = () => {
   // AUTH STATE
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // SEGMENT ACCESS CONTROL
+  // segment is stored in user_metadata.segment for users created after this feature was added
+  // null segment = legacy user = full access
+  const userSegment: string | null = user?.user_metadata?.segment ?? null;
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  // Returns true if user can access the given studio segment
+  const canAccessStudio = (requiredSegment: string): boolean => {
+    if (isAdmin) return true;                  // Admin sees everything
+    if (!userSegment) return true;             // Legacy users (no segment set) — unrestricted
+    return userSegment === requiredSegment;    // Segment must match
+  };
+
+  const [segmentBlockedMsg, setSegmentBlockedMsg] = useState<string | null>(null);
+
+  const handleViewStudio = (segment: string, action: () => void) => {
+    if (!canAccessStudio(segment)) {
+      setSegmentBlockedMsg(
+        `🔒 Este estúdio é exclusivo para o plano ${segment.charAt(0).toUpperCase() + segment.slice(1)}. O seu acesso é para o estúdio **${userSegment}**. Faça login na página correta ou entre em contato com o suporte.`
+      );
+      return;
+    }
+    setSegmentBlockedMsg(null);
+    action();
+  };
 
   // PERSISTENCE STATE
   const [persistentLayers, setPersistentLayers] = useState<Record<string, any[]>>({});
@@ -243,6 +348,13 @@ const App: React.FC = () => {
       setIsStep01Collapsed(true);
     }
   }, [results]);
+
+  // Persist selected studio category so page refresh keeps the correct studio
+  useEffect(() => {
+    sessionStorage.setItem('lumi_studio_category', selectedCategory);
+  }, [selectedCategory]);
+
+
 
   useEffect(() => {
     // Check current session
@@ -523,11 +635,33 @@ const App: React.FC = () => {
         }
       }
 
-      const generated = await generateStudioCreative({
-        ...config,
-        designCount: effectiveDesignCount,
-        isEditableMode
-      }, uploadedImage, studioRefImage, productImage, stickerImage, customModelImage, environmentImage, (await getAuthToken()) || undefined);
+      // === DELIVERY STUDIO — Isolated generation path ===
+      let generated;
+      if (referrerPath.current === '/delivery') {
+        if (!productImage) {
+          setError('📸 Envie a foto do produto para gerar o ensaio!');
+          setIsGenerating(false);
+          return;
+        }
+        generated = await generateDeliveryCreative(
+          deliveryStyle,
+          productImage,
+          config.aspectRatio,
+          effectiveDesignCount,
+          deliveryAvatarImage,
+          (await getAuthToken()) || undefined,
+          deliveryLogoImage,
+          deliveryCustomPrompt || undefined
+        );
+
+
+      } else {
+        generated = await generateStudioCreative({
+          ...config,
+          designCount: effectiveDesignCount,
+          isEditableMode
+        }, uploadedImage, studioRefImage, productImage, stickerImage, customModelImage, environmentImage, (await getAuthToken()) || undefined);
+      }
 
       // Inject Layout Mode Metadata
       const resultsWithMeta = generated.map(img => ({
@@ -536,6 +670,7 @@ const App: React.FC = () => {
       }));
 
       setResults(resultsWithMeta);
+
 
       // === LOG GENERATION FOR ANALYTICS ===
       if (user) {
@@ -1114,54 +1249,296 @@ const App: React.FC = () => {
   // NICHE LANDING PAGES
   if (currentPath === '/ensaios') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="📸 Ensaios"
+        segmentColor="text-orange-400"
+        onLogin={() => { referrerPath.current = '/ensaios'; setSelectedCategory('Profissional'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <EnsaiosLandingPage onGetStarted={() => { referrerPath.current = '/ensaios'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaios'; navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <EnsaiosLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaios'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('ensaios', () => { referrerPath.current = '/ensaios'; navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   // BIRTHDAY LANDING PAGE
   if (currentPath === '/ensaio-aniversario') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="🎂 Aniversário"
+        segmentColor="text-pink-400"
+        onLogin={() => { referrerPath.current = '/ensaio-aniversario'; setSelectedCategory('Aniversário'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <AniversarioLandingPage onGetStarted={() => { referrerPath.current = '/ensaio-aniversario'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaio-aniversario'; setSelectedCategory('Aniversário'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <AniversarioLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaio-aniversario'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('aniversario', () => { referrerPath.current = '/ensaio-aniversario'; setSelectedCategory('Aniversário'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   // LAWYERS LANDING PAGE
   if (currentPath === '/ensaio-advogadas') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="⚖️ Advogadas"
+        segmentColor="text-blue-400"
+        onLogin={() => { referrerPath.current = '/ensaio-advogadas'; setSelectedCategory('Advogado ⚖️'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <AdvogadasLandingPage onGetStarted={() => { referrerPath.current = '/ensaio-advogadas'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaio-advogadas'; setSelectedCategory('Advogado ⚖️'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <AdvogadasLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaio-advogadas'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('advogadas', () => { referrerPath.current = '/ensaio-advogadas'; setSelectedCategory('Advogado ⚖️'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   // AESTHETICS LANDING PAGE
   if (currentPath === '/ensaio-estetica') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="🧖 Estética"
+        segmentColor="text-purple-400"
+        onLogin={() => { referrerPath.current = '/ensaio-estetica'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <EsteticaLandingPage onGetStarted={() => { referrerPath.current = '/ensaio-estetica'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaio-estetica'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <EsteticaLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaio-estetica'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('estetica', () => { referrerPath.current = '/ensaio-estetica'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (currentPath === '/ensaio-beleza') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="✨ Beleza"
+        segmentColor="text-rose-400"
+        onLogin={() => { referrerPath.current = '/ensaio-beleza'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <BeautyLandingPage onGetStarted={() => { referrerPath.current = '/ensaio-beleza'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/ensaio-beleza'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <BeautyLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaio-beleza'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('beleza', () => { referrerPath.current = '/ensaio-beleza'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (currentPath === '/varejo') {
     if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+      return <AuthScreen
+        segmentLabel="🛍️ Varejo"
+        segmentColor="text-amber-400"
+        onLogin={() => { referrerPath.current = '/varejo'; setSelectedCategory('Varejo 🛍️'); navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
     }
-    return <VarejoLandingPage onGetStarted={() => { referrerPath.current = '/varejo'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/varejo'; setSelectedCategory('Varejo 🛍️'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    return (
+      <>
+        <UrgencyBanner />
+        <VarejoLandingPage
+          onGetStarted={() => { referrerPath.current = '/varejo'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('varejo', () => { referrerPath.current = '/varejo'; setSelectedCategory('Varejo 🛍️'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+        />
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (currentPath === '/delivery') {
-    if (showAuth) {
-      return <AuthScreen onLogin={() => { }} onBack={() => { setShowAuth(false); }} />;
+    // Handle trial success redirect
+    if (currentPath.includes('trial-success')) {
+      return <CheckoutSuccess onGoToLogin={() => { navigateTo('/delivery'); }} />;
     }
-    return <DeliveryLandingPage onGetStarted={() => { referrerPath.current = '/delivery'; navigateTo('/checkout'); }} onViewStudio={() => { referrerPath.current = '/delivery'; setSelectedCategory('Delivery 🍕'); navigateTo('/'); setShowSalesPage(false); }} onLogin={() => setShowAuth(true)} />;
+    if (showAuth) {
+      return <AuthScreen
+        segmentLabel="🍕 Delivery"
+        segmentColor="text-emerald-400"
+        onLogin={() => { referrerPath.current = '/delivery'; navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
+    }
+    return (
+      <>
+        <DeliveryLandingPage
+          onGetStarted={() => { referrerPath.current = '/delivery'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('delivery', () => { referrerPath.current = '/delivery'; setSelectedCategory('Delivery 🍕'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-amber-500 text-black text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   // ADMIN ROUTE
@@ -1177,6 +1554,11 @@ const App: React.FC = () => {
   // CHECKOUT ROUTES (accessible without auth)
   if (currentPath === '/checkout') {
     return <CheckoutPage onBack={() => { const back = referrerPath.current || '/'; referrerPath.current = '/'; navigateTo(back); }} />;
+  }
+
+  // Trial photo purchase success — must come before generic /checkout/success
+  if (currentPath === '/checkout/trial-success') {
+    return <TrialSuccessPage onGoHome={() => navigateTo('/')} />;
   }
 
   if (currentPath === '/checkout/success' || currentPath.includes('collection_status=approved')) {
@@ -1214,7 +1596,11 @@ const App: React.FC = () => {
           <h1 className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMIPHOTO<span className="text-white">IA</span></h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { if (referrerPath.current !== '/') { const back = referrerPath.current; referrerPath.current = '/'; navigateTo(back); } else { setShowSalesPage(true); } }} className="p-2 hover:bg-white/10 rounded-lg text-white/60">
+          <button onClick={() => {
+            const back = referrerPath.current !== '/' ? referrerPath.current : (localStorage.getItem('source_page') || '/');
+            referrerPath.current = '/';
+            if (back !== '/') { navigateTo(back); } else { setShowSalesPage(true); }
+          }} className="p-2 hover:bg-white/10 rounded-lg text-white/60">
             <Home size={20} />
           </button>
           <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }} className="p-2 hover:bg-red-500/10 rounded-lg text-white/40 hover:text-red-400">
@@ -1248,7 +1634,11 @@ const App: React.FC = () => {
                 <RotateCw size={18} />
               </button>
               <button
-                onClick={() => { if (referrerPath.current !== '/') { const back = referrerPath.current; referrerPath.current = '/'; navigateTo(back); } else { setShowSalesPage(true); } }}
+                onClick={() => {
+                  const back = referrerPath.current !== '/' ? referrerPath.current : (localStorage.getItem('source_page') || '/');
+                  referrerPath.current = '/';
+                  if (back !== '/') { navigateTo(back); } else { setShowSalesPage(true); }
+                }}
                 title="Página Inicial"
                 className="p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-all"
               >
@@ -1320,53 +1710,111 @@ const App: React.FC = () => {
                 {/* UPLOAD DO USUÃRIO - APENAS SE FOR STUDIO MODE */}
                 {isStudioMode && (
                   <>
-                    {/* 1. SUBJECT PHOTO — Main upload, prominent */}
-                    <div className="relative group col-span-2">
-                      <input type="file" id="sidebar-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'subject')} />
-                      <label htmlFor="sidebar-upload" className={`flex flex-col items-center justify-center p-5 md:p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer min-h-[120px] md:min-h-[110px] relative overflow-hidden ${uploadedImage ? 'bg-amber-600/10 border-amber-500/50' : 'bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/40 hover:border-amber-500/60 hover:shadow-[0_0_25px_rgba(245,158,11,0.15)] hover:from-amber-500/15 hover:to-amber-600/10'}`}>
-                        {uploadedImage ? (
-                          <div className="relative w-full h-full flex flex-col items-center justify-center z-10">
-                            <img src={uploadedImage} className="max-h-20 md:max-h-16 rounded-lg shadow-lg object-contain" />
-                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg"><Check size={12} className="text-white" /></div>
-                            <p className="mt-2 text-[10px] md:text-[9px] font-black uppercase text-amber-400 tracking-widest">✅ Foto enviada</p>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="w-14 h-14 md:w-11 md:h-11 bg-amber-500/20 rounded-2xl md:rounded-xl flex items-center justify-center mb-2 text-amber-400 group-hover:scale-110 transition-transform"><User size={28} className="md:hidden" /><User size={22} className="hidden md:block" /></div>
-                            <p className="text-sm md:text-[11px] font-black uppercase tracking-wider text-white">{t.studio.upload_subject}</p>
-                            <p className="text-[10px] md:text-[8px] text-white/40 mt-1 text-center font-medium max-w-[200px] leading-tight">Clique para enviar sua selfie</p>
-                          </>
-                        )}
-                      </label>
-                    </div>
+                    {referrerPath.current === '/delivery' ? (
+                      // DELIVERY: Product first (prominent & required), then user photo (Foto do Modelo)
+                      <>
+                        {/* 1. PRODUCT PHOTO — Main upload for delivery, prominent */}
+                        <div className="relative group col-span-2">
+                          <input type="file" id="sidebar-product-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'product')} />
+                          <label htmlFor="sidebar-product-upload" className={`flex flex-col items-center justify-center p-5 md:p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer min-h-[120px] md:min-h-[110px] relative overflow-hidden ${productImage ? 'bg-emerald-600/10 border-emerald-500/50' : 'bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/40 hover:border-amber-500/60 hover:shadow-[0_0_25px_rgba(245,158,11,0.15)] hover:from-amber-500/15 hover:to-amber-600/10'}`}>
+                            {productImage ? (
+                              <div className="relative w-full h-full flex flex-col items-center justify-center z-10">
+                                <img src={productImage} className="max-h-20 md:max-h-16 rounded-lg shadow-lg object-contain" />
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><Check size={12} className="text-white" /></div>
+                                <button onClick={(e) => { e.preventDefault(); setProductImage(null); }} className="absolute -top-2 -left-2 w-6 h-6 bg-zinc-800 border border-white/20 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors"><X size={10} className="text-white" /></button>
+                                <p className="mt-2 text-[10px] md:text-[9px] font-black uppercase text-emerald-400 tracking-widest">✅ Produto enviado</p>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="w-14 h-14 md:w-11 md:h-11 bg-amber-500/20 rounded-2xl md:rounded-xl flex items-center justify-center mb-2 text-amber-400 group-hover:scale-110 transition-transform"><Package size={28} className="md:hidden" /><Package size={22} className="hidden md:block" /></div>
+                                <p className="text-sm md:text-[11px] font-black uppercase tracking-wider text-white">Foto do Produto</p>
+                                <p className="text-[10px] md:text-[8px] text-white/40 mt-1 text-center font-medium max-w-[200px] leading-tight">Clique para enviar a foto do prato</p>
+                              </>
+                            )}
+                          </label>
+                        </div>
 
-                    {/* 2. PRODUCT PHOTO — Hidden on advogadas/aniversário pages */}
-                    {referrerPath.current !== '/ensaio-advogadas' && referrerPath.current !== '/ensaio-aniversario' && (
-                      <div className="relative group">
-                        <input type="file" id="sidebar-product-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'product')} />
-                        <label htmlFor="sidebar-product-upload" className={`flex flex-col items-center justify-center p-3 md:p-3 rounded-xl md:rounded-xl border-2 border-dashed transition-all cursor-pointer h-32 md:h-24 ${productImage ? 'bg-emerald-600/10 border-emerald-500/50' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'}`}>
-                          {productImage ? (
-                            <div className="relative w-full h-full flex flex-col items-center justify-center">
-                              <img src={productImage} className="max-h-16 md:max-h-12 rounded-lg shadow-lg object-contain" />
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><Check size={10} className="text-white" /></div>
-                              <button onClick={(e) => { e.preventDefault(); setProductImage(null); }} className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 border border-white/20 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors"><X size={10} className="text-white" /></button>
-                              <p className="mt-1 text-[8px] font-black uppercase text-emerald-400">Produto</p>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="w-8 h-8 md:w-7 md:h-7 bg-white/5 rounded-lg flex items-center justify-center mb-1.5 text-white/30 group-hover:text-white/60 transition-all"><Package size={14} /></div>
-                              <p className="text-[9px] md:text-[8px] font-black uppercase tracking-wider text-white/70">{t.studio.upload_product}</p>
-                              <p className="text-[7px] text-white/25 mt-1 text-center font-bold bg-white/5 px-1.5 py-0.5 rounded-full">OPCIONAL</p>
-                            </>
-                          )}
-                        </label>
-                      </div>
+                        {/* 2. LOGO DA MARCA — below Product, col-span-2 */}
+                        <div className="relative group col-span-2">
+                          <input type="file" id="delivery-logo-upload" className="hidden" accept="image/*" onChange={async (e) => {
+                            const f = e.target.files?.[0]; e.target.value = '';
+                            if (f) { try { const d = await processFileToPNG(f); setDeliveryLogoImage(d); } catch { } }
+                          }} />
+                          <label htmlFor="delivery-logo-upload" className={`flex items-center justify-center gap-3 p-3 md:p-3 rounded-xl border-2 border-dashed transition-all cursor-pointer h-16 md:h-14 ${deliveryLogoImage ? 'bg-blue-600/10 border-blue-500/50' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-blue-400/30'}`}>
+                            {deliveryLogoImage ? (
+                              <>
+                                <img src={deliveryLogoImage} className="h-10 md:h-8 rounded-lg shadow object-contain" />
+                                <div className="flex-1">
+                                  <p className="text-[9px] font-black uppercase text-blue-400">✅ Logo carregada</p>
+                                  <p className="text-[8px] text-white/30">Role para ver os estilos de Marca &amp; Logo</p>
+                                </div>
+                                <button onClick={(ev) => { ev.preventDefault(); setDeliveryLogoImage(null); }} className="w-5 h-5 bg-zinc-800 border border-white/20 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors flex-shrink-0"><X size={9} className="text-white" /></button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-xl">🎨</span>
+                                <div>
+                                  <p className="text-[10px] md:text-[9px] font-black uppercase tracking-wider text-white/70">Logo da Marca</p>
+                                  <p className="text-[8px] text-white/25">Opcional • Ativa mockup de embalagem, uniforme...</p>
+                                </div>
+                              </>
+                            )}
+                          </label>
+                        </div>
+                      </>
+
+                    ) : (
+                      // DEFAULT ORDER: Subject photo first (prominent), then product
+                      <>
+                        {/* 1. SUBJECT PHOTO — Main upload, prominent */}
+                        <div className="relative group col-span-2">
+                          <input type="file" id="sidebar-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'subject')} />
+                          <label htmlFor="sidebar-upload" className={`flex flex-col items-center justify-center p-5 md:p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer min-h-[120px] md:min-h-[110px] relative overflow-hidden ${uploadedImage ? 'bg-amber-600/10 border-amber-500/50' : 'bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/40 hover:border-amber-500/60 hover:shadow-[0_0_25px_rgba(245,158,11,0.15)] hover:from-amber-500/15 hover:to-amber-600/10'}`}>
+                            {uploadedImage ? (
+                              <div className="relative w-full h-full flex flex-col items-center justify-center z-10">
+                                <img src={uploadedImage} className="max-h-20 md:max-h-16 rounded-lg shadow-lg object-contain" />
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg"><Check size={12} className="text-white" /></div>
+                                <p className="mt-2 text-[10px] md:text-[9px] font-black uppercase text-amber-400 tracking-widest">✅ Foto enviada</p>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="w-14 h-14 md:w-11 md:h-11 bg-amber-500/20 rounded-2xl md:rounded-xl flex items-center justify-center mb-2 text-amber-400 group-hover:scale-110 transition-transform"><User size={28} className="md:hidden" /><User size={22} className="hidden md:block" /></div>
+                                <p className="text-sm md:text-[11px] font-black uppercase tracking-wider text-white">{t.studio.upload_subject}</p>
+                                <p className="text-[10px] md:text-[8px] text-white/40 mt-1 text-center font-medium max-w-[200px] leading-tight">Clique para enviar sua selfie</p>
+                              </>
+                            )}
+                          </label>
+                        </div>
+
+                        {/* 2. PRODUCT PHOTO — Hidden on advogadas/aniversário pages */}
+                        {referrerPath.current !== '/ensaio-advogadas' && referrerPath.current !== '/ensaio-aniversario' && (
+                          <div className="relative group">
+                            <input type="file" id="sidebar-product-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'product')} />
+                            <label htmlFor="sidebar-product-upload" className={`flex flex-col items-center justify-center p-3 md:p-3 rounded-xl md:rounded-xl border-2 border-dashed transition-all cursor-pointer h-32 md:h-24 ${productImage ? 'bg-emerald-600/10 border-emerald-500/50' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'}`}>
+                              {productImage ? (
+                                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                                  <img src={productImage} className="max-h-16 md:max-h-12 rounded-lg shadow-lg object-contain" />
+                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><Check size={10} className="text-white" /></div>
+                                  <button onClick={(e) => { e.preventDefault(); setProductImage(null); }} className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 border border-white/20 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors"><X size={10} className="text-white" /></button>
+                                  <p className="mt-1 text-[8px] font-black uppercase text-emerald-400">Produto</p>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="w-8 h-8 md:w-7 md:h-7 bg-white/5 rounded-lg flex items-center justify-center mb-1.5 text-white/30 group-hover:text-white/60 transition-all"><Package size={14} /></div>
+                                  <p className="text-[9px] md:text-[8px] font-black uppercase tracking-wider text-white/70">{t.studio.upload_product}</p>
+                                  <p className="text-[7px] text-white/25 mt-1 text-center font-bold bg-white/5 px-1.5 py-0.5 rounded-full">OPCIONAL</p>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* ENVIRONMENT BACKGROUND REMOVED — confusing clients */}
 
-                    {/* 3. STYLE REFERENCE */}
-                    <div className="relative group">
+                    {/* 3. STYLE REFERENCE — hidden on delivery (24 food presets already define style) */}
+                    {referrerPath.current !== '/delivery' && <div className="relative group">
                       <input type="file" id="sidebar-ref-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'reference')} />
                       <label htmlFor="sidebar-ref-upload" className={`flex flex-col items-center justify-center p-3 md:p-3 rounded-xl md:rounded-xl border-2 border-dashed transition-all cursor-pointer h-32 md:h-24 ${studioRefImage ? 'bg-yellow-600/10 border-yellow-500/50' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'}`}>
                         {studioRefImage ? (
@@ -1384,7 +1832,7 @@ const App: React.FC = () => {
                           </>
                         )}
                       </label>
-                    </div>
+                    </div>}
 
                     {/* ASPECT RATIO SELECTOR */}
                     <div className="col-span-2 p-3 md:p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2 md:space-y-3">
@@ -1408,27 +1856,29 @@ const App: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* SHOT TYPE SELECTOR */}
-                    <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2 md:space-y-3">
-                      <p className="text-[10px] md:text-[9px] font-black uppercase tracking-wider text-white/60">📷 Plano da Foto <span className="text-white/25">(opcional)</span></p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[
-                          { value: undefined, label: 'Auto', emoji: '✨' },
-                          { value: 'closeup', label: 'Close', emoji: '🔍' },
-                          { value: 'american', label: 'Meio', emoji: '👤' },
-                          { value: 'fullbody', label: 'Inteiro', emoji: '🧍' },
-                        ].map((shot) => (
-                          <button
-                            key={shot.label}
-                            onClick={() => setConfig(prev => ({ ...prev, shotType: shot.value as any }))}
-                            className={`py-2.5 md:py-2 rounded-lg text-[10px] font-bold transition-all flex flex-col items-center gap-1 ${config.shotType === shot.value ? 'bg-amber-500 text-black shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10 active:scale-95'}`}
-                          >
-                            <span className="text-sm md:text-base">{shot.emoji}</span>
-                            {shot.label}
-                          </button>
-                        ))}
+                    {/* SHOT TYPE SELECTOR — hidden only on delivery studio */}
+                    {referrerPath.current !== '/delivery' && (
+                      <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2 md:space-y-3">
+                        <p className="text-[10px] md:text-[9px] font-black uppercase tracking-wider text-white/60">📷 Plano da Foto <span className="text-white/25">(opcional)</span></p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { value: undefined, label: 'Auto', emoji: '✨' },
+                            { value: 'closeup', label: 'Close', emoji: '🔍' },
+                            { value: 'american', label: 'Meio', emoji: '👤' },
+                            { value: 'fullbody', label: 'Inteiro', emoji: '🧍' },
+                          ].map((shot) => (
+                            <button
+                              key={shot.label}
+                              onClick={() => setConfig(prev => ({ ...prev, shotType: shot.value as any }))}
+                              className={`py-2.5 md:py-2 rounded-lg text-[10px] font-bold transition-all flex flex-col items-center gap-1 ${config.shotType === shot.value ? 'bg-amber-500 text-black shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10 active:scale-95'}`}
+                            >
+                              <span className="text-sm md:text-base">{shot.emoji}</span>
+                              {shot.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* RESULT COUNT SELECTOR */}
                     <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2 md:space-y-3">
@@ -1462,6 +1912,356 @@ const App: React.FC = () => {
                     {t.studio.creative_mode_desc}
                   </p>
                 </div>
+              ) : isStudioMode && referrerPath.current === '/delivery' ? (
+                // ====================================
+                // DELIVERY STUDIO — Mobile Wizard UX
+                // ====================================
+                <div className="col-span-2 flex flex-col gap-4">
+
+                  {/* ===== MOBILE 4-STEP WIZARD ===== */}
+                  <div className="md:hidden flex flex-col">
+                    {/* Step Tab Bar */}
+                    <div className="grid grid-cols-4 gap-1 bg-white/[0.03] rounded-2xl p-1 mb-4">
+                      {([
+                        { key: 'produto', icon: '📸', label: 'Produto', done: !!productImage },
+                        { key: 'estilo', icon: '🎨', label: 'Estilo', done: true },
+                        { key: 'extras', icon: '✨', label: 'Extras', done: !!(deliveryAvatarImage || deliveryLogoImage || deliveryCustomPrompt) },
+                        { key: 'gerar', icon: '⚡', label: 'Gerar', done: false },
+                      ] as const).map(({ key, icon, label, done }) => {
+                        const isActive = deliveryMobileStep === key;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setDeliveryMobileStep(key)}
+                            className={`relative flex flex-col items-center gap-0.5 py-2.5 rounded-xl text-center transition-all duration-300 ${isActive ? 'bg-amber-500 shadow-[0_4px_20px_rgba(245,158,11,0.4)]' : 'hover:bg-white/5'}`}
+                          >
+                            <span className="text-base leading-none">{icon}</span>
+                            <span className={`text-[8px] font-black uppercase tracking-wider leading-none ${isActive ? 'text-black' : 'text-white/40'}`}>{label}</span>
+                            {done && !isActive && <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* ── STEP: PRODUTO ── */}
+                    {deliveryMobileStep === 'produto' && (
+                      <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="text-center mb-2">
+                          <p className="text-white/70 text-sm font-black">Foto do produto</p>
+                          <p className="text-white/30 text-xs mt-1">Envie a foto do seu prato ou produto</p>
+                        </div>
+                        {/* Product upload - big tap target */}
+                        <input type="file" id="delivery-product-mobile" className="hidden" accept="image/*"
+                          onChange={async (e) => {
+                            const f = e.target.files?.[0]; e.target.value = '';
+                            if (f) { try { const d = await processFileToPNG(f); setProductImage(d); setTimeout(() => setDeliveryMobileStep('estilo'), 500); } catch { } }
+                          }} />
+                        <label htmlFor="delivery-product-mobile"
+                          className={`flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed cursor-pointer transition-all active:scale-[0.97] ${productImage ? 'border-amber-500/60 bg-amber-500/8 py-4' : 'border-white/15 bg-white/[0.03] py-12 hover:border-amber-500/40'}`}>
+                          {productImage ? (
+                            <>
+                              <img src={productImage} className="w-24 h-24 rounded-2xl object-cover shadow-xl" />
+                              <div className="text-center">
+                                <p className="text-xs font-black text-amber-400">✅ Foto carregada!</p>
+                                <p className="text-[10px] text-white/30 mt-0.5">Toque para trocar</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center">
+                                <span className="text-4xl">📷</span>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-black text-white/70">Enviar foto do produto</p>
+                                <p className="text-xs text-white/30 mt-1">JPG, PNG, HEIC até 20MB</p>
+                              </div>
+                            </>
+                          )}
+                        </label>
+                        {productImage && (
+                          <button
+                            onClick={() => setDeliveryMobileStep('estilo')}
+                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 font-black text-black text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(245,158,11,0.3)] active:scale-[0.97] transition-all"
+                          >
+                            Escolher Estilo →
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── STEP: ESTILO ── */}
+                    {deliveryMobileStep === 'estilo' && (
+                      <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+                        {/* Group tabs horizontal scroll */}
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                          {(['Foco no Produto', 'Ambientes', 'Com Pessoa', 'Redes Sociais', 'UGC & Viral', 'Marca & Logo'] as const).map(group => {
+                            const groupIcon = group === 'Foco no Produto' ? '📸' : group === 'Ambientes' ? '🏡' : group === 'Com Pessoa' ? '👤' : group === 'Redes Sociais' ? '📱' : group === 'UGC & Viral' ? '🤳' : '🎨';
+                            const isActive = deliveryStyleGroup === group;
+                            return (
+                              <button key={group} onClick={() => setDeliveryStyleGroup(group)}
+                                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${isActive ? 'bg-amber-500 text-black shadow-[0_4px_15px_rgba(245,158,11,0.3)]' : 'bg-white/5 text-white/40 border border-white/10'}`}>
+                                <span>{groupIcon}</span>
+                                <span>{group.replace(' & ', ' ')}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Brand logo hint */}
+                        {deliveryStyleGroup === 'Marca & Logo' && !deliveryLogoImage && (
+                          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2">
+                            <span className="text-base">💡</span>
+                            <p className="text-[9px] font-bold text-blue-300 flex-1">Vá em <strong>Extras</strong> e envie a logo para mockups com sua marca!</p>
+                            <button onClick={() => setDeliveryMobileStep('extras')} className="text-[9px] font-black text-blue-400 underline">ir →</button>
+                          </div>
+                        )}
+                        {deliveryStyleGroup === 'Marca & Logo' && deliveryLogoImage && (
+                          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2">
+                            <img src={deliveryLogoImage} className="h-6 rounded object-contain" />
+                            <p className="text-[9px] font-bold text-blue-300">Logo ativa ✅ Escolha o estilo do mockup</p>
+                          </div>
+                        )}
+
+                        {/* Style grid for selected group */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.values(DeliveryStyle).filter(s => DeliveryStyleMetaMap[s].category === deliveryStyleGroup).map(s => {
+                            const meta = DeliveryStyleMetaMap[s];
+                            const isSelected = deliveryStyle === s;
+                            return (
+                              <button key={s} onClick={() => { setDeliveryStyle(s); }}
+                                className={`relative flex flex-col items-start gap-1 p-3 rounded-xl border-2 text-left transition-all active:scale-[0.97] ${isSelected ? 'bg-amber-500/15 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.25)]' : 'bg-white/[0.03] border-white/10'}`}>
+                                <div className="flex items-center gap-1.5 w-full">
+                                  <span className="text-base">{meta.icon}</span>
+                                  <span className={`text-[10px] font-black leading-tight ${isSelected ? 'text-amber-400' : 'text-white/80'}`}>{meta.label}</span>
+                                  {isSelected && <div className="ml-auto w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />}
+                                </div>
+                                <p className="text-[8px] text-white/30 leading-tight pl-6">{meta.description}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Next step button */}
+                        <button onClick={() => setDeliveryMobileStep('extras')}
+                          className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 font-black text-black text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(245,158,11,0.3)] active:scale-[0.97] transition-all mt-2">
+                          Escolher Extras →
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── STEP: EXTRAS ── */}
+                    {deliveryMobileStep === 'extras' && (
+                      <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <p className="text-white/30 text-xs text-center">Todos os extras são opcionais. Eles enriquecem o resultado.</p>
+
+                        {/* Person upload */}
+                        <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                            <span className="text-base">👤</span>
+                            <p className="text-[11px] font-black text-white/70 uppercase tracking-wider">Foto da Pessoa</p>
+                            <span className="ml-1 text-[8px] bg-white/10 text-white/40 px-1.5 py-0.5 rounded-full font-bold uppercase">opcional</span>
+                            {deliveryAvatarImage && <button onClick={() => setDeliveryAvatarImage(null)} className="ml-auto text-[9px] text-red-400 font-bold">remover</button>}
+                          </div>
+                          <div className="p-3">
+                            <input type="file" id="delivery-avatar-mobile" className="hidden" accept="image/*"
+                              onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { try { const d = await processFileToPNG(f); setDeliveryAvatarImage(d); } catch { } } }} />
+                            <label htmlFor="delivery-avatar-mobile"
+                              className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-all active:scale-[0.97] ${deliveryAvatarImage ? 'border-amber-500/50 bg-amber-500/8' : 'border-white/10 bg-white/[0.02]'}`}>
+                              {deliveryAvatarImage
+                                ? <><img src={deliveryAvatarImage} className="w-12 h-12 rounded-xl object-cover" /><div><p className="text-[10px] font-black text-amber-400">✅ Foto da pessoa carregada</p><p className="text-[9px] text-white/30">A IA vai colocar ela interagindo com o produto</p></div></>
+                                : <><div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center"><User size={18} className="text-white/30" /></div><div><p className="text-[10px] font-black text-white/60">Adicionar pessoa</p><p className="text-[9px] text-white/30">Selfie, foto do rosto ou corpo</p></div></>
+                              }
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Logo upload */}
+                        <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                            <span className="text-base">🎨</span>
+                            <p className="text-[11px] font-black text-white/70 uppercase tracking-wider">Logo da Marca</p>
+                            <span className="ml-1 text-[8px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full font-bold uppercase">mockup</span>
+                            {deliveryLogoImage && <button onClick={() => setDeliveryLogoImage(null)} className="ml-auto text-[9px] text-red-400 font-bold">remover</button>}
+                          </div>
+                          <div className="p-3">
+                            <input type="file" id="delivery-logo-mobile" className="hidden" accept="image/*"
+                              onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { try { const d = await processFileToPNG(f); setDeliveryLogoImage(d); } catch { } } }} />
+                            <label htmlFor="delivery-logo-mobile"
+                              className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-all active:scale-[0.97] ${deliveryLogoImage ? 'border-blue-500/50 bg-blue-500/8' : 'border-white/10 bg-white/[0.02]'}`}>
+                              {deliveryLogoImage
+                                ? <><img src={deliveryLogoImage} className="h-10 rounded-lg object-contain" /><div><p className="text-[10px] font-black text-blue-400">✅ Logo carregada</p><p className="text-[9px] text-white/30">Vá em Estilo → Marca & Logo para mockups</p></div></>
+                                : <><div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center"><span className="text-lg">🖼️</span></div><div><p className="text-[10px] font-black text-white/60">Enviar logo da marca</p><p className="text-[9px] text-white/30">PNG com fundo transparente ideal</p></div></>
+                              }
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Magic prompt */}
+                        <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                            <span className="text-base">✨</span>
+                            <p className="text-[11px] font-black text-white/70 uppercase tracking-wider">Caixa Mágica</p>
+                            <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full font-bold uppercase">IA</span>
+                            {deliveryCustomPrompt && <button onClick={() => setDeliveryCustomPrompt('')} className="ml-auto text-[9px] text-red-400 font-bold">limpar</button>}
+                          </div>
+                          <div className="p-3">
+                            <textarea
+                              value={deliveryCustomPrompt}
+                              onChange={e => setDeliveryCustomPrompt(e.target.value)}
+                              placeholder={"Peça detalhes à IA...\nex: \"fundo roxo\", \"adicione vapor\", \"mesa de mármore\""}
+                              rows={3}
+                              className="w-full bg-transparent text-[11px] text-white/75 placeholder-white/20 resize-none outline-none leading-relaxed px-1"
+                            />
+                          </div>
+                        </div>
+
+                        <button onClick={() => setDeliveryMobileStep('gerar')}
+                          className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 font-black text-black text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(245,158,11,0.3)] active:scale-[0.97] transition-all">
+                          Revisar e Gerar →
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── STEP: GERAR ── */}
+                    {deliveryMobileStep === 'gerar' && (
+                      <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="text-center mb-2">
+                          <p className="text-white/70 text-sm font-black">Tudo pronto! 🚀</p>
+                          <p className="text-white/30 text-xs mt-1">Revise e gere suas fotos</p>
+                        </div>
+
+                        {/* Summary card */}
+                        <div className="rounded-2xl bg-white/[0.03] border border-white/10 divide-y divide-white/5">
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            {productImage
+                              ? <img src={productImage} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                              : <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-white/30"><span className="text-xl">📷</span></div>
+                            }
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Produto</p>
+                              <p className="text-[11px] font-black text-white/80 truncate">{productImage ? '✅ Foto carregada' : '⚠️ Nenhuma foto'}</p>
+                            </div>
+                            <button onClick={() => setDeliveryMobileStep('produto')} className="text-[9px] text-amber-400 font-bold flex-shrink-0">editar</button>
+                          </div>
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                              {DeliveryStyleMetaMap[deliveryStyle]?.icon || '🍕'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Estilo</p>
+                              <p className="text-[11px] font-black text-amber-400 truncate">{DeliveryStyleMetaMap[deliveryStyle]?.label || deliveryStyle}</p>
+                            </div>
+                            <button onClick={() => setDeliveryMobileStep('estilo')} className="text-[9px] text-amber-400 font-bold flex-shrink-0">editar</button>
+                          </div>
+                          {(deliveryAvatarImage || deliveryLogoImage || deliveryCustomPrompt) && (
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">✨</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Extras</p>
+                                <p className="text-[11px] font-black text-white/60 truncate">
+                                  {[deliveryAvatarImage && 'Pessoa', deliveryLogoImage && 'Logo', deliveryCustomPrompt && 'Caixa Mágica'].filter(Boolean).join(' · ')}
+                                </p>
+                              </div>
+                              <button onClick={() => setDeliveryMobileStep('extras')} className="text-[9px] text-amber-400 font-bold flex-shrink-0">editar</button>
+                            </div>
+                          )}
+                        </div>
+
+                        {!productImage && (
+                          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5">
+                            <span>⚠️</span>
+                            <p className="text-[10px] text-red-300 font-bold">Envie a foto do produto primeiro!</p>
+                            <button onClick={() => setDeliveryMobileStep('produto')} className="ml-auto text-[10px] font-black text-red-400 underline">ir →</button>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => { setShowMobileSidebar(false); handleGenerate(); }}
+                          disabled={isGenerating || !productImage}
+                          className={`w-full py-5 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all active:scale-[0.97] ${isGenerating ? 'bg-white/10 text-white/50' : productImage ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-black shadow-[0_15px_40px_rgba(245,158,11,0.4)] animate-pulse-glow' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                        >
+                          {isGenerating ? <><Loader2 className="animate-spin" size={20} /> Gerando...</> : <><Zap size={20} fill="currentColor" /> ⚡ GERAR FOTOS</>}
+                        </button>
+                        {productImage && <p className="text-center text-white/20 text-[10px]">Usa {config.designCount || 3} crédito{(config.designCount || 3) > 1 ? 's' : ''}</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ===== DESKTOP: Original vertical layout (unchanged) ===== */}
+                  <div className="hidden md:flex flex-col gap-4">
+                    {/* STEP 2 HEADER */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
+                        <span className="text-black text-xs font-black">2</span>
+                      </div>
+                      <div>
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-400">Estilo do Ensaio</h2>
+                        <p className="text-[8px] text-white/25 font-medium uppercase tracking-wider">A IA identifica o produto automaticamente</p>
+                      </div>
+                    </div>
+
+                    {(['Foco no Produto', 'Ambientes', 'Com Pessoa', 'Redes Sociais', 'UGC & Viral', 'Marca & Logo'] as const).map(group => {
+                      const groupStyles = Object.values(DeliveryStyle).filter(s => DeliveryStyleMetaMap[s].category === group);
+                      const isBrandGroup = group === 'Marca & Logo';
+                      const brandHighlight = isBrandGroup && !!deliveryLogoImage;
+                      return (
+                        <div key={group} className={`space-y-2 rounded-xl p-2 -mx-2 transition-all duration-300 ${brandHighlight ? 'bg-blue-500/5 ring-1 ring-blue-500/30' : ''}`}>
+                          {brandHighlight && (
+                            <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 rounded-lg px-2.5 py-1.5">
+                              <span className="text-xs">🎨</span>
+                              <p className="text-[9px] font-black text-blue-300">Logo ativa! Escolha um mockup abaixo.</p>
+                            </div>
+                          )}
+                          <p className="text-[9px] font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+                            <span>{group === 'Foco no Produto' ? '📸' : group === 'Ambientes' ? '🏡' : group === 'Com Pessoa' ? '👤' : group === 'Redes Sociais' ? '📱' : group === 'UGC & Viral' ? '🤳' : '🎨'}</span>
+                            {group}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {groupStyles.map(s => {
+                              const meta = DeliveryStyleMetaMap[s];
+                              const isSelected = deliveryStyle === s;
+                              return (
+                                <button key={s} onClick={() => setDeliveryStyle(s)}
+                                  className={`relative flex flex-col items-start gap-1 p-2.5 rounded-xl border-2 text-left transition-all ${isSelected ? 'bg-amber-500/15 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.2)]' : 'bg-white/[0.03] border-white/10 hover:border-amber-500/40 hover:bg-white/[0.06]'}`}>
+                                  <div className="flex items-center gap-1.5 w-full">
+                                    <span className="text-sm">{meta.icon}</span>
+                                    <span className={`text-[9px] font-black leading-tight ${isSelected ? 'text-amber-400' : 'text-white/80'}`}>{meta.label}</span>
+                                    {isSelected && <div className="ml-auto w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+                                  </div>
+                                  <p className="text-[7px] text-white/30 leading-tight pl-5">{meta.description}</p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Pessoa upload */}
+                    <div className="p-3.5 rounded-xl bg-amber-500/5 border border-white/10 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">👤</span>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Foto da Pessoa</p>
+                        <span className="ml-1 text-[8px] bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded-full font-bold uppercase">opcional</span>
+                        {deliveryAvatarImage && <button onClick={() => setDeliveryAvatarImage(null)} className="ml-auto text-[8px] text-white/25 hover:text-red-400 transition-colors font-bold uppercase">remover</button>}
+                      </div>
+                      <p className="text-[8px] text-white/25 leading-relaxed">Envie a foto de uma pessoa para a IA colocar ela interagindo com o produto em todos os estilos.</p>
+                      <div className="relative group">
+                        <input type="file" id="delivery-avatar-upload" className="hidden" accept="image/*" onChange={async (e) => {
+                          const f = e.target.files?.[0]; e.target.value = '';
+                          if (f) { try { const d = await processFileToPNG(f); setDeliveryAvatarImage(d); } catch { } }
+                        }} />
+                        <label htmlFor="delivery-avatar-upload" className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-all ${deliveryAvatarImage ? 'bg-amber-500/10 border-amber-500/50' : 'bg-white/[0.03] border-white/10 hover:border-amber-500/30 hover:bg-white/[0.05]'}`}>
+                          {deliveryAvatarImage
+                            ? <><img src={deliveryAvatarImage} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" /><div className="flex-1"><p className="text-[9px] font-black text-amber-400">✅ Foto carregada</p><p className="text-[8px] text-white/30">A IA vai interagir com o produto</p></div></>
+                            : <><div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white/30 group-hover:text-amber-400 transition-all flex-shrink-0"><User size={16} /></div><div><p className="text-[9px] font-black text-white/60">Adicionar pessoa</p><p className="text-[8px] text-white/25">Selfie, foto do rosto ou corpo</p></div></>
+                          }
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
               ) : isStudioMode ? (
                 <div className="col-span-2 flex flex-col gap-4">
 
@@ -1475,6 +2275,7 @@ const App: React.FC = () => {
                       <p className="text-[10px] md:text-[8px] text-white/25 font-medium uppercase tracking-wider">Selecione o tema do seu ensaio</p>
                     </div>
                   </div>
+
 
                   {/* Category Tabs - Multiline */}
                   <div className="flex flex-wrap gap-2 pb-2">
@@ -1644,6 +2445,31 @@ const App: React.FC = () => {
               {credits} crédito{credits !== 1 ? 's' : ''} disponíve{credits !== 1 ? 'is' : 'l'}
             </p>
           )}
+
+          {/* ✨ MAGIC BOX — Delivery only */}
+          {referrerPath.current === '/delivery' && (
+            <div className="relative group mb-3">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-amber-500/40 via-purple-500/30 to-amber-500/40 opacity-60 group-focus-within:opacity-100 transition-opacity" />
+              <div className="relative bg-zinc-900 rounded-2xl p-3.5 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">✨</span>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Caixa Mágica</p>
+                  <span className="ml-1 text-[8px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full font-bold uppercase">IA</span>
+                  {deliveryCustomPrompt && (
+                    <button onClick={() => setDeliveryCustomPrompt('')} className="ml-auto text-[8px] text-white/25 hover:text-red-400 transition-colors font-bold uppercase tracking-wide">limpar</button>
+                  )}
+                </div>
+                <textarea
+                  value={deliveryCustomPrompt}
+                  onChange={e => setDeliveryCustomPrompt(e.target.value)}
+                  placeholder={"Peça detalhes à IA...\nex: \"fundo roxo\", \"adicione vapor\", \"mesa de mármore\", \"lua cheia ao fundo\""}
+                  rows={3}
+                  className="w-full bg-transparent text-[11px] md:text-[10px] text-white/75 placeholder-white/20 resize-none outline-none leading-relaxed"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => { setShowMobileSidebar(false); handleGenerate(); }}
             disabled={isGenerating || !isReady}
