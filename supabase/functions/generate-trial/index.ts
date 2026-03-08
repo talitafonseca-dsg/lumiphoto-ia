@@ -196,8 +196,9 @@ Deno.serve(async (req: Request) => {
         // ── Generate 3 images in parallel — each with a DIFFERENT high-impact style ──
         const generationId = crypto.randomUUID();
 
-        // Determine if this is a studio portrait trial or a food delivery trial
+        // Determine trial type
         const isStudioTrial = delivery_style === 'studio';
+        const isAniversarioTrial = delivery_style === 'aniversario';
 
         // ── STUDIO PORTRAIT PROMPTS: Executivo Pro, Família Studio Clean, Aniversário Balão Dourado ──
         const STUDIO_STYLE_PROMPTS = [
@@ -278,9 +279,54 @@ OUTPUT: Photorealistic with cinematic blue-hour/golden-hour urban color grading.
             "Rooftop Urbano",
         ];
 
+        // ── BIRTHDAY / ANIVERSÁRIO PROMPTS: Estúdio Clean, Garden Party, Balão Dourado ──
+        const ANIVERSARIO_STYLE_PROMPTS = [
+            // Style 1: Estúdio Clean com Balão Metálico Dourado
+            `Professional birthday photoshoot portrait. PRESERVE THE PERSON'S EXACT FACE AND LIKENESS from the provided photo.
+SCENE: Clean white or soft off-white studio background. Elegant, minimalist birthday photoshoot setting.
+PROPS: One large metallic gold balloon (number or round) held or floating nearby. Subtle gold confetti or light bokeh sparkles in the background.
+FRAMING: American-plan (plano americano) shot — from waist up. Centered, celebratory pose.
+LIGHTING: Soft, even studio lighting — large softbox creating flattering, luminous skin tones. Warm champagne/golden color temperature.
+ATTIRE: Elegant party outfit — gold sequin top, white dress, or champagne-colored blazer for women; dark blazer or dress shirt for men.
+EXPRESSION: Joyful, celebrating smile. Radiant energy. Birthday celebration mood.
+STYLE: Clean, elegant birthday photoshoot. Magazine-quality. Luxury celebration aesthetic. Suitable for social media announcements and personal branding.
+CRITICAL: EXACT facial likeness must be preserved. Do NOT alter the person's face. Only change clothing, background, props, and lighting.
+OUTPUT: Photorealistic portrait. 3:4 aspect ratio. Clean, bright studio backdrop — absolutely NO red backgrounds.`,
+
+            // Style 2: Garden Party / Jardim Encantado
+            `Outdoor garden birthday party portrait. PRESERVE THE PERSON'S EXACT FACE AND LIKENESS from the provided photo.
+SCENE: Beautiful garden setting with lush greenery, blooming flowers (roses, peonies), and soft natural light filtering through leaves.
+PROPS: Rose gold or silver metallic balloon cluster in the background, flowers in hair or held. Soft bokeh garden background.
+FRAMING: American-plan shot from waist up. Natural, relaxed celebrating pose.
+LIGHTING: Golden hour natural light — warm, glowing, creating beautiful skin luminosity. Soft dappled sunlight through foliage.
+ATTIRE: Floral summer dress or elegant garden party outfit. Light, warm, celebratory colors — mint, coral, blush, or white.
+EXPRESSION: Genuine joy, carefree smile, celebrating birthday in nature.
+STYLE: Romantic garden birthday celebration. "Ensaio no jardim" aesthetic. Dreamy, feminine yet sophisticated. Works for all genders with appropriate outfit variation.
+CRITICAL: EXACT facial likeness must be preserved. Do NOT alter the person's face. Only change clothing, setting, and lighting.
+OUTPUT: Photorealistic portrait. 3:4 aspect ratio. Beautiful natural outdoor setting — NO red backgrounds, only soft greens, pinks, and warm naturals.`,
+
+            // Style 3: Luxo Balão Dourado — elegant dark luxury backdrop
+            `Luxury birthday photoshoot with golden balloons. PRESERVE THE PERSON'S EXACT FACE AND LIKENESS from the provided photo.
+SCENE: Elegant dark charcoal or deep navy backdrop (NOT red — dark grey or navy blue). Large metallic gold number balloons or gold letter balloons ("ANIVERSÁRIO" or "HAPPY BIRTHDAY") arranged decoratively behind the person.
+PROPS: Oversized gold foil balloons, gold confetti floating in air, champagne glass held elegantly.
+FRAMING: American-plan (plano americano) — from waist up. Confident, glamorous birthday pose.
+LIGHTING: Dramatic studio lighting with golden rim light creating a halo effect on hair. Warm amber key light from the front.
+ATTIRE: Glamorous birthday outfit — sparkling gold sequin dress for women; elegant black suit with gold pocket square for men.
+EXPRESSION: Confident, glowing, "it's my birthday" energy. Powerful and celebratory.
+STYLE: Luxury birthday editorial. Gold metallic aesthetic. Rich and premium. Champagne celebration vibes.
+CRITICAL: EXACT facial likeness must be preserved. Do NOT alter the person's face. Background must be dark charcoal or navy — absolutely NO red backgrounds.
+OUTPUT: Photorealistic portrait. 3:4 aspect ratio. Dark background with warm golden lighting — rich, luxury birthday celebration feel.`,
+        ];
+
+        const ANIVERSARIO_STYLE_LABELS = [
+            "Estúdio Clean",
+            "Garden Party",
+            "Balão Dourado",
+        ];
+
         // Select prompts and labels based on trial type
-        const TRIAL_STYLE_PROMPTS = isStudioTrial ? STUDIO_STYLE_PROMPTS : DELIVERY_STYLE_PROMPTS;
-        const TRIAL_STYLE_LABELS = isStudioTrial ? STUDIO_STYLE_LABELS : DELIVERY_STYLE_LABELS;
+        const TRIAL_STYLE_PROMPTS = isAniversarioTrial ? ANIVERSARIO_STYLE_PROMPTS : isStudioTrial ? STUDIO_STYLE_PROMPTS : DELIVERY_STYLE_PROMPTS;
+        const TRIAL_STYLE_LABELS = isAniversarioTrial ? ANIVERSARIO_STYLE_LABELS : isStudioTrial ? STUDIO_STYLE_LABELS : DELIVERY_STYLE_LABELS;
 
         // Extract only the image part from incoming `parts` (ignore frontend text prompt)
         const imageParts = parts.filter((p: any) => p.inlineData);

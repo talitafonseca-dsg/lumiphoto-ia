@@ -13,8 +13,8 @@ interface StudioTrialUploadProps {
 
 const STYLE_LABELS: Record<string, string[]> = {
     studio: ['🏢 Executivo Pro', '👨‍👩‍👧 Família Clean', '✨ Inspiracional'],
-    aniversario: ['🔴 Ensaio Vermelho', '🏠 Casual em Casa', '✨ Inspiracional Dourado'],
-    delivery: ['🧑‍💻 Avatar', '🎬 Estúdio Pro', '🔴 Inspiracional'],
+    aniversario: ['🥂 Estúdio Clean', '🎀 Garden Party', '✨ Balão Dourado'],
+    delivery: ['🎬 Estúdio Premium', '🔍 Close-up HD', '🏙️ Rooftop Urbano'],
 };
 
 // Compress image to max 1280px to avoid mobile upload timeouts
