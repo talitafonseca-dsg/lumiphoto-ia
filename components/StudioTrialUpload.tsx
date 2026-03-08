@@ -13,7 +13,7 @@ interface StudioTrialUploadProps {
 
 const STYLE_LABELS: Record<string, string[]> = {
     studio: ['🏢 Executivo Pro', '👨‍👩‍👧 Família Clean', '✨ Inspiracional'],
-    aniversario: ['🥂 Estúdio Clean', '🎀 Garden Party', '✨ Balão Dourado'],
+    aniversario: ['🥂 Estúdio Clean', '🏠 Casual em Casa', '✨ Luxo Dourado'],
     delivery: ['🏠 Recebendo em Casa', '🎬 Estúdio Premium', '🤤 Interagindo com o Produto'],
 };
 
