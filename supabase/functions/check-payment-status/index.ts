@@ -39,11 +39,13 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        // Buscar todos os pagamentos que precisam de processamento
+        // ONLY check PENDING payments — approved ones are handled by the webhook.
+        // Previously this also checked "approved" which caused a RACE CONDITION:
+        // webhook + check-payment-status both processed the same payment = DOUBLE CREDITS
         const { data: pendingPayments } = await supabaseAdmin
             .from("payments")
             .select("*")
-            .in("status", ["pending", "approved"])
+            .eq("status", "pending")
             .or("user_created.eq.false,user_created.is.null");
 
         if (!pendingPayments || pendingPayments.length === 0) {
@@ -81,8 +83,20 @@ Deno.serve(async (req: Request) => {
                 }).eq("mercadopago_payment_id", paymentId);
             }
 
-            // Se aprovado e usuário não criado, processar
-            if (mpPayment.status === "approved" && !payment.user_created) {
+            // Se aprovado, atomically claim this payment to avoid race conditions
+            if (mpPayment.status === "approved") {
+                // ATOMIC guard: only the first invocation to flip user_created→true proceeds
+                const { data: claimedRows } = await supabaseAdmin
+                    .from("payments")
+                    .update({ user_created: true, status: "approved" })
+                    .eq("mercadopago_payment_id", paymentId)
+                    .or("user_created.eq.false,user_created.is.null")
+                    .select("mercadopago_payment_id");
+
+                if (!claimedRows || claimedRows.length === 0) {
+                    console.log(`⚡ Payment ${paymentId} already processed, skipping`);
+                    continue;
+                }
                 // PIX payments may not have payer.email, extract from external_reference
                 let refEmail = "";
                 let planType = "starter";
@@ -140,12 +154,10 @@ Deno.serve(async (req: Request) => {
                     }
                 }
 
-                // Atualizar pagamento
+                // Update payment with user_id (user_created already set by atomic claim above)
                 await supabaseAdmin.from("payments").update({
-                    status: "approved",
                     payer_email: payerEmail,
                     user_id: userData?.user?.id || null,
-                    user_created: true,
                 }).eq("mercadopago_payment_id", paymentId);
 
                 // Enviar email

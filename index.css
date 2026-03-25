@@ -17,3 +17,227 @@
 .animate-pulse-slow {
     animation: pulse-slow 3s ease-in-out infinite;
 }
+
+/* === Category Ribbon — Premium Horizontal Scroll === */
+.category-ribbon {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 2px 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.category-ribbon::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade edge masks */
+.ribbon-container {
+    position: relative;
+}
+
+.ribbon-container::before,
+.ribbon-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.ribbon-container::before {
+    left: 0;
+    background: linear-gradient(to right, #0a0a0a, transparent);
+}
+
+.ribbon-container::after {
+    right: 0;
+    background: linear-gradient(to left, #0a0a0a, transparent);
+}
+
+.ribbon-container.at-start::before {
+    opacity: 0;
+}
+
+.ribbon-container.at-end::after {
+    opacity: 0;
+}
+
+/* Category pill icon container */
+.cat-pill {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    min-width: 64px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.cat-pill:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.cat-pill.active {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), inset 0 0 12px rgba(245, 158, 11, 0.05);
+}
+
+.cat-pill .cat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.25s;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cat-pill.active .cat-icon {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    transform: scale(1.1);
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
+}
+
+.cat-pill .cat-label {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    max-width: 64px;
+    line-height: 1.2;
+    transition: color 0.25s;
+}
+
+.cat-pill.active .cat-label {
+    color: #f59e0b;
+}
+
+.cat-pill:hover .cat-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Scroll hint animation */
+@keyframes scroll-hint {
+
+    0%,
+    100% {
+        transform: translateX(0);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translateX(4px);
+        opacity: 1;
+    }
+}
+
+.scroll-hint-arrow {
+    animation: scroll-hint 2s ease-in-out infinite;
+}
+
+@media (min-width: 768px) {
+
+    /* Desktop: Use wrapping grid instead of horizontal scroll */
+    .category-ribbon {
+        display: flex;
+        flex-wrap: wrap;
+        overflow-x: visible;
+        overflow-y: visible;
+        scroll-snap-type: none;
+        gap: 6px;
+        padding: 4px 0 8px;
+    }
+
+    .cat-pill {
+        min-width: 76px;
+        padding: 10px 6px;
+    }
+
+    .cat-pill .cat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .cat-pill:hover .cat-icon {
+        background: rgba(245, 158, 11, 0.1);
+        border-color: rgba(245, 158, 11, 0.3);
+        transform: scale(1.08);
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+    }
+
+    .cat-pill.active .cat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+        border-radius: 14px;
+    }
+
+    .cat-pill .cat-label {
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.55);
+        max-width: 76px;
+    }
+
+    .cat-pill:hover .cat-label {
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .cat-pill.active .cat-label {
+        color: #f59e0b;
+        font-size: 10px;
+    }
+
+    /* Hide fade edges on desktop since we wrap */
+    .ribbon-container::before,
+    .ribbon-container::after {
+        display: none;
+    }
+}
+
+/* Scroll-down bounce arrow */
+@keyframes bounce-down {
+
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: translateY(6px);
+        opacity: 1;
+    }
+}
+
+.scroll-down-hint {
+    animation: bounce-down 1.8s ease-in-out infinite;
+}

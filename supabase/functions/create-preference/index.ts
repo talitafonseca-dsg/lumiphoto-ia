@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const { plan, payer_email, referral_code, affiliate_code, whatsapp, source_page, utm_source, utm_medium, utm_campaign } = await req.json();
+        const { plan, payer_email, referral_code, affiliate_code, whatsapp, source_page, utm_source, utm_medium, utm_campaign, fbp, fbc } = await req.json();
 
         if (!plan || !PLANS[plan]) {
             return new Response(
@@ -108,6 +108,12 @@ Deno.serve(async (req: Request) => {
         }
         if (utm_campaign) {
             externalRef.utm_campaign = utm_campaign;
+        }
+        if (fbp) {
+            externalRef.fbp = fbp;
+        }
+        if (fbc) {
+            externalRef.fbc = fbc;
         }
 
         const preferenceData = {

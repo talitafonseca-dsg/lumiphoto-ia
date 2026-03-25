@@ -386,6 +386,377 @@ Deno.serve(async (req: Request) => {
             }), { headers: corsHeaders });
         }
 
+        // ==================== TRIAL PURCHASE MANAGEMENT ====================
+
+        // LIST TRIAL PURCHASES (paid trials for admin visibility)
+        if (action === "list_trial_purchases") {
+            const admin = await verifyAdmin(req);
+            if (!admin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+
+            const { data: purchases, error: fetchErr } = await supabaseAdmin
+                .from("trial_generations")
+                .select("id, session_id, status, product_type, selected_image_index, payer_email, mp_payment_id, hd_storage_paths, purchased_photo_urls, email_sent_at, email_sent_count, last_email_error, created_at, expires_at, delivery_style")
+                .in("status", ["paid_single", "paid_pack"])
+                .order("created_at", { ascending: false })
+                .limit(100);
+
+            if (fetchErr) {
+                return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500, headers: corsHeaders });
+            }
+
+            return new Response(JSON.stringify({ purchases: purchases || [] }), { headers: corsHeaders });
+        }
+
+        // RESEND TRIAL EMAIL (regenerate signed URLs + resend delivery email)
+        if (action === "resend_trial_email") {
+            const admin = await verifyAdmin(req);
+            if (!admin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+
+            const { generation_id } = params;
+            if (!generation_id) {
+                return new Response(JSON.stringify({ error: "generation_id is required" }), { status: 400, headers: corsHeaders });
+            }
+
+            // Fetch the trial generation record
+            const { data: gen, error: genErr } = await supabaseAdmin
+                .from("trial_generations")
+                .select("*")
+                .eq("id", generation_id)
+                .single();
+
+            if (genErr || !gen) {
+                return new Response(JSON.stringify({ error: "Trial generation not found" }), { status: 404, headers: corsHeaders });
+            }
+
+            if (!gen.payer_email || !gen.payer_email.includes("@")) {
+                return new Response(JSON.stringify({ error: "No valid email for this purchase. Update payer_email first." }), { status: 400, headers: corsHeaders });
+            }
+
+            // Regenerate 90-day signed URLs from hd_storage_paths
+            const hdPaths: { path: string; variation: number; index: number }[] = gen.hd_storage_paths || [];
+            const selectedIndex = gen.selected_image_index;
+
+            const relevantPaths = gen.product_type === "single" && selectedIndex !== null && selectedIndex !== undefined
+                ? hdPaths.filter((p: any) => p.index === selectedIndex)
+                : hdPaths;
+
+            const signedUrlExpirySeconds = 90 * 24 * 3600; // 90 days
+            const signedUrls: string[] = [];
+            const purchasedPhotoUrls: { url: string; label: string; expires_at: string; index: number }[] = [];
+
+            for (const { path, index } of relevantPaths) {
+                const { data: signed } = await supabaseAdmin.storage
+                    .from("trial-generations")
+                    .createSignedUrl(path, signedUrlExpirySeconds);
+                if (signed?.signedUrl) {
+                    signedUrls.push(signed.signedUrl);
+                    purchasedPhotoUrls.push({
+                        url: signed.signedUrl,
+                        label: `Foto ${index + 1}`,
+                        index,
+                        expires_at: new Date(Date.now() + signedUrlExpirySeconds * 1000).toISOString(),
+                    });
+                }
+            }
+
+            if (signedUrls.length === 0) {
+                return new Response(JSON.stringify({ error: "No HD photos found for this generation. hd_storage_paths may be empty." }), { status: 400, headers: corsHeaders });
+            }
+
+            // Update purchased_photo_urls in DB
+            await supabaseAdmin
+                .from("trial_generations")
+                .update({ purchased_photo_urls: purchasedPhotoUrls })
+                .eq("id", generation_id);
+
+            // Build and send delivery email via Resend
+            if (!RESEND_API_KEY) {
+                return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured" }), { status: 500, headers: corsHeaders });
+            }
+
+            const SITE_URL = "https://www.lumiphotoia.online";
+            const photoLinksHtml = signedUrls.map((url: string, i: number) =>
+                `<a href="${url}" style="display:inline-block;margin:6px 4px;padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:bold;font-size:13px;border-radius:8px;text-decoration:none;">📥 Baixar Foto ${i + 1}</a>`
+            ).join("");
+
+            const emailHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+                + '<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
+                + '<div style="max-width:560px;margin:0 auto;padding:40px 20px;">'
+                + '<h1 style="color:#f59e0b;font-size:24px;margin:0 0 4px 0;">LUMIPHOTO<span style="color:#fff;">IA</span></h1>'
+                + '<p style="color:#666;font-size:13px;margin:0 0 32px 0;">Estúdio de Fotografia com IA</p>'
+                + '<div style="background:#1a1a2e;border-radius:16px;padding:28px;border:1px solid rgba(245,158,11,0.2);">'
+                + '<h2 style="color:#fff;font-size:20px;margin:0 0 8px 0;">🎉 Suas fotos profissionais estão prontas!</h2>'
+                + '<p style="color:#a0a0a0;font-size:14px;margin:0 0 20px 0;">'
+                + (gen.product_type === "single"
+                    ? 'Sua foto em HD foi gerada e está disponível para download abaixo.'
+                    : 'Suas 3 fotos em HD estão prontas!')
+                + '</p>'
+                + '<div style="text-align:center;margin:24px 0;">' + photoLinksHtml + '</div>'
+                + '<p style="color:#666;font-size:11px;text-align:center;margin:16px 0 0 0;">Os links expiram em 90 dias. Baixe e salve suas fotos!</p>'
+                + '</div>'
+                + '<div style="text-align:center;margin-top:24px;">'
+                + '<a href="' + SITE_URL + '/delivery" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:bold;font-size:14px;border-radius:10px;text-decoration:none;">Gerar Mais Fotos →</a>'
+                + '</div>'
+                + '<p style="color:#444;font-size:11px;text-align:center;margin-top:24px;">© ' + new Date().getFullYear() + ' LumiPhotoIA. Dúvidas? Responda este email.</p>'
+                + '</div></body></html>';
+
+            try {
+                const resendRes = await fetch("https://api.resend.com/emails", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+                    body: JSON.stringify({
+                        from: "LumiPhotoIA <team@lumiphotoia.online>",
+                        to: [gen.payer_email],
+                        subject: "📸 Suas fotos profissionais estão prontas para download!",
+                        html: emailHtml,
+                    }),
+                });
+                const resendBody = await resendRes.json().catch(() => ({}));
+                if (!resendRes.ok) {
+                    const errMsg = `Resend HTTP ${resendRes.status}: ${JSON.stringify(resendBody)}`;
+                    await supabaseAdmin.from("trial_generations").update({
+                        last_email_error: errMsg,
+                    }).eq("id", generation_id);
+                    return new Response(JSON.stringify({ error: errMsg }), { status: 500, headers: corsHeaders });
+                }
+
+                // Success: update tracking
+                const currentCount = gen.email_sent_count || 0;
+                await supabaseAdmin.from("trial_generations").update({
+                    email_sent_at: new Date().toISOString(),
+                    email_sent_count: currentCount + 1,
+                    last_email_error: null,
+                }).eq("id", generation_id);
+
+                return new Response(JSON.stringify({ success: true, email: gen.payer_email, photos: signedUrls.length }), { headers: corsHeaders });
+            } catch (err: any) {
+                const errMsg = String(err);
+                await supabaseAdmin.from("trial_generations").update({
+                    last_email_error: errMsg,
+                }).eq("id", generation_id);
+                return new Response(JSON.stringify({ error: errMsg }), { status: 500, headers: corsHeaders });
+            }
+        }
+
+        // ==================== PIX RECOVERY ====================
+
+        // LIST PENDING PIX (1h to 48h old)
+        if (action === "list_pending_pix") {
+            const admin = await verifyAdmin(req);
+            if (!admin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+
+            const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
+            const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+            const { data: pendingPayments, error: fetchErr } = await supabaseAdmin
+                .from("payments")
+                .select("*")
+                .eq("status", "pending")
+                .lte("created_at", oneHourAgo)
+                .gte("created_at", fortyEightHoursAgo)
+                .order("created_at", { ascending: false });
+
+            if (fetchErr) {
+                return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500, headers: corsHeaders });
+            }
+
+            // Enrich with whatsapp from metadata.external_reference
+            const enriched = (pendingPayments || []).map((p: any) => {
+                let whatsapp = "";
+                let planLabel = p.plan_type || "—";
+                try {
+                    if (p.metadata?.external_reference) {
+                        const ref = typeof p.metadata.external_reference === "string"
+                            ? JSON.parse(p.metadata.external_reference)
+                            : p.metadata.external_reference;
+                        whatsapp = ref.whatsapp || "";
+                        if (ref.plan) planLabel = ref.plan;
+                    }
+                } catch { /* ignore parse errors */ }
+
+                const createdAt = new Date(p.created_at);
+                const minutesAgo = Math.floor((Date.now() - createdAt.getTime()) / 60000);
+                const hoursAgo = Math.floor(minutesAgo / 60);
+                const timeLabel = hoursAgo > 0 ? `${hoursAgo}h ${minutesAgo % 60}min` : `${minutesAgo}min`;
+
+                return {
+                    id: p.id,
+                    mercadopago_payment_id: p.mercadopago_payment_id,
+                    payer_email: p.payer_email,
+                    plan_type: planLabel,
+                    amount: p.amount,
+                    whatsapp,
+                    created_at: p.created_at,
+                    time_ago: timeLabel,
+                    minutes_ago: minutesAgo,
+                    recovery_email_sent_at: p.recovery_email_sent_at,
+                    recovery_email_count: p.recovery_email_count || 0,
+                };
+            });
+
+            const totalValue = enriched.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+            const withWhatsapp = enriched.filter((p: any) => p.whatsapp).length;
+            const alreadySent = enriched.filter((p: any) => p.recovery_email_count > 0).length;
+
+            return new Response(JSON.stringify({
+                pending: enriched,
+                summary: {
+                    total: enriched.length,
+                    totalValue,
+                    withWhatsapp,
+                    alreadySent,
+                },
+            }), { headers: corsHeaders });
+        }
+
+        // SEND PIX RECOVERY EMAIL(S)
+        if (action === "send_pix_recovery") {
+            const admin = await verifyAdmin(req);
+            if (!admin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+
+            if (!RESEND_API_KEY) {
+                return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured" }), { status: 500, headers: corsHeaders });
+            }
+
+            const { payment_ids, send_all } = params;
+
+            // Determine which payments to send recovery to
+            let targetPayments: any[] = [];
+
+            if (send_all) {
+                const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
+                const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+                const { data } = await supabaseAdmin
+                    .from("payments")
+                    .select("*")
+                    .eq("status", "pending")
+                    .lte("created_at", oneHourAgo)
+                    .gte("created_at", fortyEightHoursAgo);
+                targetPayments = data || [];
+            } else if (payment_ids && payment_ids.length > 0) {
+                const { data } = await supabaseAdmin
+                    .from("payments")
+                    .select("*")
+                    .in("id", payment_ids)
+                    .eq("status", "pending");
+                targetPayments = data || [];
+            } else {
+                return new Response(JSON.stringify({ error: "Provide payment_ids or send_all" }), { status: 400, headers: corsHeaders });
+            }
+
+            // Filter out recently sent (anti-spam: 6h cooldown)
+            const SIX_HOURS = 6 * 60 * 60 * 1000;
+            const eligible = targetPayments.filter((p: any) => {
+                if (!p.recovery_email_sent_at) return true;
+                return (Date.now() - new Date(p.recovery_email_sent_at).getTime()) > SIX_HOURS;
+            });
+
+            if (eligible.length === 0) {
+                return new Response(JSON.stringify({
+                    success: true,
+                    sent: 0,
+                    skipped: targetPayments.length,
+                    message: "Todos os lembretes já foram enviados recentemente (cooldown 6h)",
+                }), { headers: corsHeaders });
+            }
+
+            const SITE_URL = "https://www.lumiphotoia.online";
+            const PLAN_LABELS: Record<string, string> = {
+                starter: "Starter (10 Fotos)", essencial: "Essencial (30 Fotos)",
+                pro: "Pro (80 Fotos)", premium: "Premium (100 Fotos)",
+            };
+
+            let sent = 0;
+            let failed = 0;
+            const errors: string[] = [];
+
+            for (const payment of eligible) {
+                const email = payment.payer_email;
+                if (!email || !email.includes("@")) { failed++; continue; }
+
+                let planName = PLAN_LABELS[payment.plan_type] || payment.plan_type || "LumiPhotoIA";
+                const amount = Number(payment.amount || 0);
+                const amountStr = amount > 0 ? `R$${amount.toFixed(2).replace(".", ",")}` : "";
+
+                const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="color:#f59e0b;font-size:28px;margin:0;letter-spacing:1px;">LUMIPHOTO<span style="color:#ffffff;">IA</span></h1>
+    <p style="color:#666;font-size:14px;margin-top:8px;">Estúdio de Fotografia com IA</p>
+  </div>
+
+  <div style="background:linear-gradient(145deg,#1a1a2e,#16213e);border-radius:16px;padding:32px;border:1px solid rgba(245,158,11,0.2);">
+    <h2 style="color:#ffffff;font-size:22px;margin:0 0 8px 0;">⏰ Seu pagamento está pendente!</h2>
+    <p style="color:#a0a0a0;font-size:15px;margin:0 0 24px 0;">
+      Notamos que você iniciou a compra do seu pacote de fotos profissionais com IA, mas o pagamento via PIX ainda não foi confirmado.
+    </p>
+
+    <div style="background:rgba(245,158,11,0.1);border-radius:12px;padding:16px;margin-bottom:24px;border:1px solid rgba(245,158,11,0.15);">
+      <p style="color:#f59e0b;font-size:13px;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:1px;">Seu Pacote</p>
+      <p style="color:#ffffff;font-size:20px;font-weight:bold;margin:0;">${planName}</p>
+      ${amountStr ? `<p style="color:#a0a0a0;font-size:14px;margin:4px 0 0 0;">Valor: ${amountStr}</p>` : ""}
+    </div>
+
+    <div style="background:rgba(239,68,68,0.08);border-radius:12px;padding:16px;margin-bottom:24px;border:1px solid rgba(239,68,68,0.15);">
+      <p style="color:#ef4444;font-size:14px;margin:0;font-weight:600;">⚠️ O código PIX tem prazo de validade! Finalize o pagamento para garantir seu acesso.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <a href="${SITE_URL}" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:bold;font-size:16px;padding:14px 40px;border-radius:12px;text-decoration:none;letter-spacing:0.5px;">Finalizar Pagamento →</a>
+    </div>
+
+    <p style="color:#666;font-size:12px;text-align:center;margin-top:20px;">Se você já fez o pagamento, desconsidere este email. Seu acesso será liberado automaticamente.</p>
+  </div>
+
+  <div style="text-align:center;margin-top:32px;">
+    <p style="color:#555;font-size:12px;">© ${new Date().getFullYear()} LumiphotoIA. Todos os direitos reservados.</p>
+    <p style="color:#444;font-size:11px;">Dúvidas? Responda este email.</p>
+  </div>
+</div>
+</body></html>`;
+
+                try {
+                    const res = await fetch("https://api.resend.com/emails", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+                        body: JSON.stringify({
+                            from: "LumiphotoIA <team@lumiphotoia.online>",
+                            to: [email],
+                            subject: "⏰ Seu PIX do LumiphotoIA está pendente — finalize agora!",
+                            html,
+                        }),
+                    });
+
+                    if (res.ok) {
+                        sent++;
+                        const currentCount = payment.recovery_email_count || 0;
+                        await supabaseAdmin.from("payments").update({
+                            recovery_email_sent_at: new Date().toISOString(),
+                            recovery_email_count: currentCount + 1,
+                        }).eq("id", payment.id);
+                    } else {
+                        failed++;
+                        const errText = await res.text();
+                        errors.push(`${email}: ${errText}`);
+                    }
+                } catch (e: any) {
+                    failed++;
+                    errors.push(`${email}: ${e.message}`);
+                }
+            }
+
+            return new Response(JSON.stringify({
+                success: true,
+                sent,
+                failed,
+                skipped: targetPayments.length - eligible.length,
+                errors: errors.slice(0, 5),
+            }), { headers: corsHeaders });
+        }
+
         return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: corsHeaders });
     } catch (error: any) {
         console.error("Admin action error:", error);

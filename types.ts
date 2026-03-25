@@ -143,6 +143,26 @@ export enum StudioStyle {
   DELIVERY_SAUDAVEL = 'Saudável & Fit',
   DELIVERY_PADARIA = 'Padaria & Pães',
 
+  // PET 🐾
+  PET_ESTUDIO_CLASSICO = 'Pet: Estúdio Clássico',
+  PET_JARDIM_TROPICAL = 'Pet: Jardim Tropical',
+  PET_PRAIA_SUNSET = 'Pet: Pôr do Sol na Praia',
+  PET_NATAL_FESTIVO = 'Pet: Ensaio de Natal',
+  PET_RENASCENCA = 'Pet: Retrato Renascentista',
+  PET_TUTOR_ESTUDIO = 'Pet: Tutor + Pet Estúdio',
+  PET_TUTOR_NATUREZA = 'Pet: Tutor + Pet Natureza',
+  PET_FILHOTE_FOFURA = 'Pet: Filhote Fofura',
+  PET_ELEGANTE = 'Pet: Elegante',
+  PET_AVENTURA_OUTDOOR = 'Pet: Aventura Outdoor',
+  PET_FASHION = 'Pet: Fashion',
+  PET_ANJO_ASAS = 'Pet: Anjo com Asas',
+  PET_FAZENDINHA = 'Pet: Fazendinha',
+  PET_PASCOA = 'Pet: Páscoa',
+  PET_HALLOWEEN = 'Pet: Halloween',
+  PET_SUPER_HEROI = 'Pet: Super-Herói',
+  PET_AQUARELA = 'Pet: Aquarela Artística',
+  PET_CHEF = 'Pet: Chef Cozinheiro',
+
   // CRIATIVO & ARTÍSTICO
   CYBERPUNK_NEON = 'Cyberpunk Neon',
   FUTURISTA_LAB = 'Futurista Lab',
@@ -162,10 +182,15 @@ export enum StudioStyle {
   POLITICO_COMICIO = 'Político: Comício',
   POLITICO_GABINETE = 'Político: Gabinete',
   POLITICO_CAMPANHA_RURAL = 'Político: Campanha Rural',
+  POLITICO_PUNHO = 'Político: Punho Cerrado',
+  POLITICO_CORACAO = 'Político: Coração',
+  POLITICO_APONTANDO = 'Político: Apontando',
+  POLITICO_CAMISA_BRANCA = 'Político: Camisa Branca',
+  POLITICO_BANDEIRA_ESTADO = 'Político: Bandeira Estado',
+  POLITICO_CASUAL = 'Político: Casual Moderno',
 
   // RESTAURAÇÃO DE FOTOS
-  RESTAURACAO_RETRATO = 'Restauração: Retrato',
-  RESTAURACAO_FAMILIA = 'Restauração: Família',
+  RESTAURACAO_FIEL = 'Restauração: Fiel',
   RESTAURACAO_COLORIZAR = 'Restauração: Colorizar',
 
   // PALCO & ORATÓRIA
@@ -222,6 +247,20 @@ export enum StudioStyle {
   ADV_EXECUTIVO_DARK = 'Executivo Dark',
   ADV_EDITORIAL = 'Advocacia Editorial',
   ADV_CORPORATIVO = 'Corporativo Premium',
+
+  // FORMATURA 🎓
+  FORM_BECA_CLASSICA = 'Formatura: Beca Clássica',
+  FORM_CHAPEU_JOGADO = 'Formatura: Chapéu Jogado',
+  FORM_DIPLOMA_ELEGANTE = 'Formatura: Diploma Elegante',
+  FORM_UNIFORME_PROFISSAO = 'Formatura: Uniforme da Profissão',
+  FORM_ESTUDIO_CLEAN = 'Formatura: Estúdio Clean',
+  FORM_JARDIM_BOTANICO = 'Formatura: Jardim Botânico',
+  FORM_BIBLIOTECA = 'Formatura: Biblioteca',
+  FORM_PRETO_DOURADO = 'Formatura: Preto & Dourado',
+  FORM_CAMPUS = 'Formatura: No Campus',
+  FORM_CANUDO_CELEBRACAO = 'Formatura: Canudo & Celebração',
+  FORM_FAMILIA_ORGULHO = 'Formatura: Família & Orgulho',
+  FORM_COLACAO_PALCO = 'Formatura: Colação no Palco',
 }
 
 // =============================================
@@ -1259,73 +1298,73 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
   [StudioStyle.FITNESS_PRO]: {
     description: 'Performance & Suor',
     color: 'from-red-600/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/fitness_pro.png'
   },
   [StudioStyle.NATURE_FRESH]: {
     description: 'Orgânico & Ao Ar Livre',
     color: 'from-emerald-600/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/nature_fresh.png'
   },
   [StudioStyle.COASTAL_LUXE]: {
     description: 'Verão e Sofisticação',
     color: 'from-sky-500/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/coastal_luxe.png'
   },
   [StudioStyle.URBAN_STREET]: {
     description: 'Streetwear Moderno',
     color: 'from-zinc-600/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/urban_street.png'
   },
   [StudioStyle.PERSONAL_TRAINER]: {
     description: 'Coach & Motivação',
     color: 'from-lime-600/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/personal_trainer.png'
   },
   [StudioStyle.NUTRICIONISTA]: {
     description: 'Saudável & Colorido',
     color: 'from-green-500/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/nutricionista.png'
   },
   [StudioStyle.YOGA_WELLNESS]: {
     description: 'Zen & Equilíbrio',
     color: 'from-teal-300/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/yoga_wellness.png'
   },
   [StudioStyle.TRAVEL_BLOGGER]: {
     description: 'Aventura & Mundo',
     color: 'from-sky-400/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/travel_blogger.png'
   },
   [StudioStyle.COFFEE_LOVER]: {
     description: 'Café & Aconchego',
     color: 'from-amber-900/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/coffee_lover.png'
   },
   [StudioStyle.GAMER_STREAMER]: {
     description: 'Setup & Energia',
     color: 'from-purple-600/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/gamer_streamer.png'
   },
   [StudioStyle.MUSICIAN_VIBE]: {
     description: 'Música & Alma',
     color: 'from-indigo-700/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/musician_vibe.png'
   },
   [StudioStyle.DIY_CRAFTS]: {
     description: 'Artesanato & Mãos',
     color: 'from-orange-300/20',
-    category: 'Casual',
+    category: 'Lifestyle',
     imageUrl: '/studio-styles/diy_crafts.png'
   },
 
@@ -1670,6 +1709,116 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     imageUrl: '/studio-styles/bakery_artisan.png'
   },
 
+  // PET 🐾 — IA identifica automaticamente o tipo de pet pela foto
+  [StudioStyle.PET_ESTUDIO_CLASSICO]: {
+    description: 'Fundo escuro profissional • IA identifica seu pet',
+    color: 'from-amber-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/caramelo-depois.png'
+  },
+  [StudioStyle.PET_JARDIM_TROPICAL]: {
+    description: 'Natureza & flores tropicais',
+    color: 'from-green-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-jardim.png'
+  },
+  [StudioStyle.PET_PRAIA_SUNSET]: {
+    description: 'Pôr do sol na praia',
+    color: 'from-orange-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-praia.png'
+  },
+  [StudioStyle.PET_NATAL_FESTIVO]: {
+    description: 'Gorro de Natal & luzes',
+    color: 'from-red-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-natalino.png'
+  },
+  [StudioStyle.PET_RENASCENCA]: {
+    description: 'Retrato real & majestoso',
+    color: 'from-purple-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-royal.png'
+  },
+  [StudioStyle.PET_TUTOR_ESTUDIO]: {
+    description: 'Você + seu pet no estúdio',
+    color: 'from-amber-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/tutor-dog.png'
+  },
+  [StudioStyle.PET_TUTOR_NATUREZA]: {
+    description: 'Você + pet ao ar livre',
+    color: 'from-emerald-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/tutor-cat.png'
+  },
+  [StudioStyle.PET_FILHOTE_FOFURA]: {
+    description: 'Ensaio fofo estilo newborn',
+    color: 'from-pink-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/filhote-depois.png'
+  },
+  [StudioStyle.PET_ELEGANTE]: {
+    description: 'Pose sofisticada & elegante',
+    color: 'from-slate-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/gato-depois.png'
+  },
+  [StudioStyle.PET_AVENTURA_OUTDOOR]: {
+    description: 'Trilha & aventura ao ar livre',
+    color: 'from-teal-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/gallery-husky.png'
+  },
+  [StudioStyle.PET_FASHION]: {
+    description: 'Look estiloso & acessórios',
+    color: 'from-fuchsia-500/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/caramelo-depois.png'
+  },
+  [StudioStyle.PET_ANJO_ASAS]: {
+    description: 'Asas angelicais & nuvens',
+    color: 'from-sky-300/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/filhote-depois.png'
+  },
+  [StudioStyle.PET_FAZENDINHA]: {
+    description: 'Cenário country & chapéu',
+    color: 'from-yellow-700/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-jardim.png'
+  },
+  [StudioStyle.PET_PASCOA]: {
+    description: 'Orelhas de coelho & ovos',
+    color: 'from-violet-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-natalino.png'
+  },
+  [StudioStyle.PET_HALLOWEEN]: {
+    description: 'Fantasia de Halloween',
+    color: 'from-orange-600/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-royal.png'
+  },
+  [StudioStyle.PET_SUPER_HEROI]: {
+    description: 'Capa de super-herói & cidade',
+    color: 'from-blue-600/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/caramelo-depois.png'
+  },
+  [StudioStyle.PET_AQUARELA]: {
+    description: 'Pintura artística aquarela',
+    color: 'from-cyan-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/gato-depois.png'
+  },
+  [StudioStyle.PET_CHEF]: {
+    description: 'Chef com chapéu & avental',
+    color: 'from-red-400/20',
+    category: 'Pet 🐾',
+    imageUrl: '/pets/viralata-praia.png'
+  },
+
   // CRIATIVO
   [StudioStyle.CYBERPUNK_NEON]: {
     description: 'Neon & Futurismo',
@@ -1769,22 +1918,52 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     category: 'Político',
     imageUrl: '/studio-styles/politico_campanha_rural.png'
   },
+  [StudioStyle.POLITICO_PUNHO]: {
+    description: 'Punho Cerrado — Vitória',
+    color: 'from-red-600/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_punho.png'
+  },
+  [StudioStyle.POLITICO_CORACAO]: {
+    description: 'Coração com as Mãos',
+    color: 'from-pink-600/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_coracao.png'
+  },
+  [StudioStyle.POLITICO_APONTANDO]: {
+    description: 'Apontando — Eu conto com você',
+    color: 'from-blue-600/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_apontando.png'
+  },
+  [StudioStyle.POLITICO_CAMISA_BRANCA]: {
+    description: 'Camisa Branca — Studio Clean',
+    color: 'from-white/10',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_camisa_branca.png'
+  },
+  [StudioStyle.POLITICO_BANDEIRA_ESTADO]: {
+    description: 'Bandeira do Estado / Município',
+    color: 'from-emerald-600/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_bandeira_estado.png'
+  },
+  [StudioStyle.POLITICO_CASUAL]: {
+    description: 'Casual Moderno — Jovem',
+    color: 'from-zinc-500/20',
+    category: 'Político',
+    imageUrl: '/studio-styles/politico_casual.png'
+  },
 
   // RESTAURAÇÃO DE FOTOS
-  [StudioStyle.RESTAURACAO_RETRATO]: {
-    description: 'Restaurar Retrato Antigo',
+  [StudioStyle.RESTAURACAO_FIEL]: {
+    description: 'Restauração 100% Fiel',
     color: 'from-stone-500/20',
     category: 'Restauração',
     imageUrl: '/studio-styles/luxury_gold.png'
   },
-  [StudioStyle.RESTAURACAO_FAMILIA]: {
-    description: 'Restaurar Foto de Família',
-    color: 'from-amber-500/20',
-    category: 'Restauração',
-    imageUrl: '/studio-styles/family_studio_clean.png'
-  },
   [StudioStyle.RESTAURACAO_COLORIZAR]: {
-    description: 'Colorizar Foto P&B',
+    description: 'Restaurar + Colorir P&B',
     color: 'from-purple-500/20',
     category: 'Restauração',
     imageUrl: '/studio-styles/restauracao_colorizar.png'
@@ -2067,6 +2246,80 @@ export const StudioStyleMeta: Record<StudioStyle, { description: string, color: 
     color: 'from-sky-500/20',
     category: 'Profissional',
     imageUrl: '/studio-styles/adv_corporativo.png'
+  },
+
+  // FORMATURA 🎓
+  [StudioStyle.FORM_BECA_CLASSICA]: {
+    description: 'Beca & Capelo Clássicos',
+    color: 'from-indigo-600/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_beca_classica.png'
+  },
+  [StudioStyle.FORM_CHAPEU_JOGADO]: {
+    description: 'Celebração Chapéu ao Ar',
+    color: 'from-amber-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_chapeu_jogado.png'
+  },
+  [StudioStyle.FORM_DIPLOMA_ELEGANTE]: {
+    description: 'Diploma & Elegância',
+    color: 'from-rose-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_diploma_elegante.png'
+  },
+  [StudioStyle.FORM_UNIFORME_PROFISSAO]: {
+    description: 'Uniforme da Profissão',
+    color: 'from-teal-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_uniforme_profissao.png'
+  },
+  [StudioStyle.FORM_ESTUDIO_CLEAN]: {
+    description: 'Estúdio Moderno & Clean',
+    color: 'from-slate-400/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_estudio_clean.png'
+  },
+  [StudioStyle.FORM_JARDIM_BOTANICO]: {
+    description: 'Golden Hour no Jardim',
+    color: 'from-emerald-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_jardim_botanico.png'
+  },
+  [StudioStyle.FORM_BIBLIOTECA]: {
+    description: 'Biblioteca & Saber',
+    color: 'from-amber-800/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_biblioteca.png'
+  },
+  [StudioStyle.FORM_PRETO_DOURADO]: {
+    description: 'Luxo Preto & Dourado',
+    color: 'from-yellow-600/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_preto_dourado.png'
+  },
+  [StudioStyle.FORM_CAMPUS]: {
+    description: 'Campus Universitário',
+    color: 'from-blue-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_campus.png'
+  },
+  [StudioStyle.FORM_CANUDO_CELEBRACAO]: {
+    description: 'Canudo & Festa',
+    color: 'from-purple-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_canudo_celebracao.png'
+  },
+  [StudioStyle.FORM_FAMILIA_ORGULHO]: {
+    description: 'Família & Orgulho',
+    color: 'from-pink-500/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_familia_orgulho.png'
+  },
+  [StudioStyle.FORM_COLACAO_PALCO]: {
+    description: 'Colação no Palco',
+    color: 'from-violet-600/20',
+    category: 'Formatura',
+    imageUrl: '/studio-styles/form_colacao_palco.png'
   }
 };
 
@@ -2141,6 +2394,7 @@ export interface GenerationConfig {
   brandColors?: string[]; // New: Store hex codes for strict branding
   customInstructions?: string; // New: User custom prompt instructions
   birthdayAge?: string; // Age for birthday photoshoot presets
+  graduationCourse?: string; // Course name for graduation photoshoot presets
 }
 
 export interface GeneratedImage {

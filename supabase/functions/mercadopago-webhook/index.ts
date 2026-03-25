@@ -25,6 +25,16 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     },
 });
 
+// SAFETY: Fix NULL string columns in auth.users that crash GoTrue's Go scanner
+// GoTrue expects empty strings, not NULL, for token/change columns
+async function fixNullAuthTokens(userId: string) {
+    try {
+        await supabaseAdmin.rpc('fix_null_auth_tokens', { target_user_id: userId });
+        console.log('Fixed NULL auth tokens for user:', userId);
+    } catch (e) {
+        console.warn('fixNullAuthTokens failed (non-critical):', e);
+    }
+}
 
 const CREDITS_MAP: Record<string, number> = {
     starter: 10,
@@ -43,6 +53,7 @@ function sourcePageToSegment(sourcePage: string): string {
     if (path === 'ensaio-estetica') return 'estetica';
     if (path === 'ensaios') return 'ensaios';
     if (path === 'varejo') return 'varejo';
+    if (path === 'moda') return 'moda';
     return 'delivery'; // default
 }
 
@@ -69,6 +80,51 @@ Deno.serve(async (req: Request) => {
 
         console.log("Webhook received - URL params:", { urlPaymentId, urlTopic });
         console.log("Webhook received - Body:", JSON.stringify(body));
+
+        // ── MERCHANT ORDER HANDLER (PIX approval safety net) ──────────────
+        // When PIX is confirmed, MP often sends merchant_order instead of payment.
+        // We extract approved payment IDs from the order and process them.
+        const isMerchantOrder = urlTopic === "merchant_order" || body.topic === "merchant_order";
+        if (isMerchantOrder) {
+            const orderId = urlPaymentId || body.data?.id || body.id;
+            if (orderId) {
+                console.log("📦 Processing merchant_order:", orderId);
+                try {
+                    const orderRes = await fetch(
+                        `https://api.mercadopago.com/merchant_orders/${orderId}`,
+                        { headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` } }
+                    );
+                    if (orderRes.ok) {
+                        const order = await orderRes.json();
+                        const approvedPayments = (order.payments || []).filter(
+                            (p: any) => p.status === "approved"
+                        );
+                        if (approvedPayments.length === 0) {
+                            console.log("Merchant order has no approved payments yet, skipping");
+                            return new Response("OK", { status: 200 });
+                        }
+                        // Re-invoke this same function for each approved payment
+                        for (const ap of approvedPayments) {
+                            console.log(`🔁 Re-processing approved payment ${ap.id} from merchant_order`);
+                            try {
+                                await fetch(req.url.split('?')[0] + `?data.id=${ap.id}&type=payment`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ type: "payment", data: { id: ap.id.toString() } }),
+                                });
+                            } catch (e) {
+                                console.error(`Failed to re-process payment ${ap.id}:`, e);
+                            }
+                        }
+                    } else {
+                        console.error("Failed to fetch merchant_order:", await orderRes.text());
+                    }
+                } catch (e) {
+                    console.error("Error processing merchant_order:", e);
+                }
+            }
+            return new Response("OK", { status: 200 });
+        }
 
         // Determine if this is a payment notification (support all formats)
         const isPaymentNotification =
@@ -138,18 +194,49 @@ Deno.serve(async (req: Request) => {
         }
 
         // ── TRIAL PAYMENT HANDLER ──────────────────────────────────────────
-        if (refData.type === "trial" && payment.status === "approved") {
-            console.log("🎯 Trial payment detected:", refData);
-            // ALWAYS prefer refData.email (set by us in external_reference) over payer.email from MP
-            // MP can return payer.email in invalid/masked formats that Resend rejects
+        // Catch ALL trial-type payments here so they never fall through
+        // to the regular plan handler (which would store them incorrectly).
+        if (refData.type === "trial") {
             const trialEmail = refData.email || payment.payer?.email;
-            await handleTrialPayment(refData, trialEmail, paymentId.toString(), payment.transaction_amount);
+
+            if (payment.status === "approved") {
+                console.log("🎯 Trial payment APPROVED:", refData);
+                await handleTrialPayment(refData, trialEmail, paymentId.toString(), payment.transaction_amount);
+                return new Response("OK", { status: 200 });
+            }
+
+            // PIX pending or other non-approved status: store clean tracking record and exit.
+            // Do NOT fall through to the regular purchase handler.
+            console.log(`⏳ Trial payment ${payment.status}, storing for tracking:`, refData);
+            await supabaseAdmin.from("payments").upsert({
+                mercadopago_payment_id: paymentId.toString(),
+                mercadopago_preference_id: payment.preference_id,
+                payer_email: trialEmail || "unknown",
+                plan_type: `trial_${refData.product_type || "single"}`,
+                amount: payment.transaction_amount,
+                status: payment.status,
+                metadata: payment,
+            }, { onConflict: "mercadopago_payment_id" });
             return new Response("OK", { status: 200 });
         }
 
         // Só processamos pagamentos aprovados
         if (payment.status !== "approved") {
             console.log("Payment not approved, status:", payment.status);
+
+            // BUGFIX: Never overwrite an already-approved payment status.
+            // When MP sends status change notifications (e.g. approved -> in_mediation),
+            // we must NOT downgrade the status if the user was already provisioned.
+            const { data: existingPayment } = await supabaseAdmin
+                .from("payments")
+                .select("status")
+                .eq("mercadopago_payment_id", paymentId.toString())
+                .maybeSingle();
+
+            if (existingPayment && existingPayment.status === "approved") {
+                console.log("⚠️ Payment already approved, ignoring status change to:", payment.status);
+                return new Response("OK", { status: 200 });
+            }
 
             await supabaseAdmin.from("payments").upsert({
                 mercadopago_payment_id: paymentId.toString(),
@@ -179,17 +266,41 @@ Deno.serve(async (req: Request) => {
             return new Response("OK", { status: 200 });
         }
 
-        // Verificar se já criamos usuário para este pagamento
-        const { data: existingPayment } = await supabaseAdmin
-            .from("payments")
-            .select("user_created")
-            .eq("mercadopago_payment_id", paymentId.toString())
-            .single();
+        // ── ATOMIC IDEMPOTENCY GUARD ──────────────────────────────────────
+        // Step 1: Ensure the payment record exists.
+        // IMPORTANT: Do NOT include user_created in the upsert payload.
+        // New rows get the column default (false). Existing rows keep their value.
+        // This prevents the race condition where a second webhook overwrites
+        // user_created=true back to false before the first webhook finishes.
+        await supabaseAdmin.from("payments").upsert({
+            mercadopago_payment_id: paymentId.toString(),
+            mercadopago_preference_id: payment.preference_id,
+            payer_email: payerEmail,
+            plan_type: planType,
+            amount: payment.transaction_amount,
+            status: "approved",
+            metadata: payment,
+            ...(sourcePage ? { source_page: sourcePage } : {}),
+            ...(utmSource ? { utm_source: utmSource } : {}),
+            ...(utmMedium ? { utm_medium: utmMedium } : {}),
+            ...(utmCampaign ? { utm_campaign: utmCampaign } : {}),
+        }, { onConflict: "mercadopago_payment_id" });
 
-        if (existingPayment?.user_created) {
-            console.log("User already created for this payment");
+        // Step 2: Atomically claim this payment — only the first webhook to flip
+        // user_created from false→true proceeds. The second one gets 0 rows back.
+        const { data: claimedRows } = await supabaseAdmin
+            .from("payments")
+            .update({ user_created: true })
+            .eq("mercadopago_payment_id", paymentId.toString())
+            .or("user_created.eq.false,user_created.is.null")
+            .select("mercadopago_payment_id");
+
+        if (!claimedRows || claimedRows.length === 0) {
+            console.log("⚡ Payment already processed by another webhook instance, skipping duplicate");
             return new Response("OK", { status: 200 });
         }
+
+        console.log(`🔒 Atomically claimed payment ${paymentId} for processing`);
 
         // Criar usuário no Supabase Auth
         console.log("Creating user for:", payerEmail);
@@ -201,6 +312,10 @@ Deno.serve(async (req: Request) => {
             email: payerEmail,
             password: DEFAULT_PASSWORD,
             email_confirm: true, // Auto-confirma o email
+            app_metadata: {
+                provider: "email",
+                providers: ["email"],
+            },
             user_metadata: {
                 plan_type: planType,
                 payment_id: paymentId,
@@ -211,31 +326,48 @@ Deno.serve(async (req: Request) => {
             },
         });
 
+        // SAFETY: Fix NULL token columns to prevent GoTrue scan errors
+        if (userData?.user?.id) {
+            await fixNullAuthTokens(userData.user.id);
+        }
+
+        let resolvedUserId = userData?.user?.id || null;
+
         if (userError) {
             // Se usuário já existe, apenas atualiza os metadados
             if (userError.message.includes("already been registered")) {
                 console.log("User already exists, updating metadata and adding credits");
 
-                // Buscar usuário existente
-                const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-                const existingUser = existingUsers?.users?.find(u => u.email === payerEmail);
+                // Buscar usuário existente via RPC (confiável, sem paginação)
+                const { data: existingRows, error: rpcError } = await supabaseAdmin
+                    .rpc('get_user_by_email', { target_email: payerEmail });
+
+                if (rpcError) {
+                    console.error("RPC get_user_by_email error:", rpcError);
+                }
+
+                const existingUser = existingRows?.[0];
 
                 if (existingUser) {
-                    const currentCredits = (existingUser.user_metadata?.credits as number) || 0;
+                    resolvedUserId = existingUser.user_id;
+                    const currentCredits = (existingUser.user_meta?.credits as number) || 0;
                     const newTotal = currentCredits + creditsToAdd;
 
-                    await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+                    await supabaseAdmin.auth.admin.updateUserById(existingUser.user_id, {
                         user_metadata: {
-                            ...existingUser.user_metadata,
+                            ...(existingUser.user_meta || {}),
                             plan_type: planType,
                             payment_id: paymentId,
                             last_payment_date: new Date().toISOString(),
                             credits: newTotal,
                             // Only set segment if not already set (don't overwrite existing segment)
-                            ...(existingUser.user_metadata?.segment ? {} : { segment: userSegment }),
+                            ...(existingUser.user_meta?.segment ? {} : { segment: userSegment }),
                             ...(whatsapp ? { whatsapp } : {}),
                         },
                     });
+                    console.log(`✅ Updated existing user ${existingUser.user_id}: credits ${currentCredits} → ${newTotal}`);
+                } else {
+                    console.error("❌ Could not find existing user by email:", payerEmail);
                 }
             } else {
                 console.error("Error creating user:", userError);
@@ -243,34 +375,53 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        // Registrar pagamento no banco
-        const userId = userData?.user?.id || null;
-
-        await supabaseAdmin.from("payments").upsert({
-            mercadopago_payment_id: paymentId.toString(),
-            mercadopago_preference_id: payment.preference_id,
+        // Update payment record with user_id (record already exists from atomic claim above)
+        await supabaseAdmin.from("payments").update({
             payer_email: payerEmail,
-            plan_type: planType,
-            amount: payment.transaction_amount,
+            user_id: resolvedUserId,
             status: "approved",
-            user_id: userId,
-            user_created: true,
-            metadata: payment,
-            ...(sourcePage ? { source_page: sourcePage } : {}),
-            ...(utmSource ? { utm_source: utmSource } : {}),
-            ...(utmMedium ? { utm_medium: utmMedium } : {}),
-            ...(utmCampaign ? { utm_campaign: utmCampaign } : {}),
-        }, { onConflict: "mercadopago_payment_id" });
+        }).eq("mercadopago_payment_id", paymentId.toString());
 
         // Enviar email de boas-vindas
         const isNewUser = !userError;
-        await sendWelcomeEmail(payerEmail, planType, creditsToAdd, isNewUser);
+        const emailError = await sendWelcomeEmail(payerEmail, planType, creditsToAdd, isNewUser);
+
+        // Track email delivery status in the payments table
+        await supabaseAdmin.from("payments").update({
+            email_sent: !emailError,
+            email_error: emailError || null,
+        }).eq("mercadopago_payment_id", paymentId.toString());
+
+        if (emailError) {
+            console.error(`❌ Welcome email FAILED for ${payerEmail}: ${emailError}`);
+        } else {
+            console.log(`📧 Welcome email confirmed sent to ${payerEmail}`);
+        }
 
         console.log(`✅ User ${isNewUser ? 'created' : 'updated'} successfully: ${payerEmail}`);
         console.log(`📋 Plan: ${planType} | Credits: ${creditsToAdd}`);
 
         // ========== SERVER-SIDE PURCHASE TRACKING (Meta CAPI) ==========
-        await trackServerPurchase(payerEmail, planType, payment.transaction_amount, paymentId.toString());
+        // Atomic guard: only the first webhook to set purchase_tracked=true fires the event.
+        // This prevents duplicate Purchase events when MP sends IPN + v2 simultaneously.
+        const { data: trackGuard } = await supabaseAdmin
+            .from("payments")
+            .update({ purchase_tracked: true })
+            .eq("mercadopago_payment_id", paymentId.toString())
+            .eq("purchase_tracked", false)
+            .select("mercadopago_payment_id");
+
+        if (trackGuard && trackGuard.length > 0) {
+            await trackServerPurchase(payerEmail, planType, payment.transaction_amount, paymentId.toString(), {
+                phone: whatsapp || null,
+                firstName: payment.payer?.first_name || null,
+                lastName: payment.payer?.last_name || null,
+                fbp: refData.fbp || null,
+                fbc: refData.fbc || null,
+            });
+        } else {
+            console.log("⚡ Purchase tracking already sent for this payment, skipping duplicate");
+        }
 
         // ========== REFERRAL REWARD ==========
         if (referralCode) {
@@ -328,26 +479,10 @@ async function handleTrialPayment(
 
     console.log(`✅ Trial payment approved: ${payerEmail} | type: ${productType} | gen: ${generationId}`);
 
-    // 1. Check for duplicate processing
-    const { data: existing } = await supabaseAdmin
-        .from("trial_generations")
-        .select("id, status")
-        .eq("id", generationId)
-        .single();
-
-    if (!existing) {
-        console.error("Trial generation not found:", generationId);
-        return;
-    }
-
-    if (existing.status !== "preview") {
-        console.log("Trial already processed:", existing.status);
-        return;
-    }
-
-    // 2. Update trial status to paid — including product_type and selected_image_index from refData
+    // 1. ATOMIC idempotency guard — only update if status is still 'preview' AND no payment already recorded.
+    // This prevents duplicate processing when MP sends multiple webhook notifications (IPN + v2) simultaneously.
     const newStatus = productType === "single" ? "paid_single" : "paid_pack";
-    await supabaseAdmin
+    const { data: updatedRows, error: updateErr } = await supabaseAdmin
         .from("trial_generations")
         .update({
             status: newStatus,
@@ -355,9 +490,25 @@ async function handleTrialPayment(
             payer_email: payerEmail,
             product_type: productType,
             selected_image_index: refData.selected_image_index ?? null,
-            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days after payment
+            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
         })
-        .eq("id", generationId);
+        .eq("id", generationId)
+        .eq("status", "preview")           // only if still preview
+        .is("mp_payment_id", null)          // only if not already paid
+        .select("id");
+
+    if (updateErr) {
+        console.error("Error updating trial status:", updateErr);
+        return;
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+        // Another webhook call already processed this payment — safe to skip
+        console.log(`⚡ Duplicate webhook ignored for generation ${generationId} / payment ${paymentId}`);
+        return;
+    }
+
+    console.log(`✅ Atomically claimed generation ${generationId} for payment ${paymentId}`);
 
     // 3. For PACK: create user account with 7 credits (+ the 3 HD images)
     let userCreated = false;
@@ -367,6 +518,10 @@ async function handleTrialPayment(
             email: payerEmail,
             password: "lumi123456",
             email_confirm: true,
+            app_metadata: {
+                provider: "email",
+                providers: ["email"],
+            },
             user_metadata: {
                 plan_type: "trial_pack",
                 payment_id: paymentId,
@@ -377,17 +532,31 @@ async function handleTrialPayment(
             },
         });
 
+        // Fix NULL token columns to prevent GoTrue scan errors
+        if (userData?.user?.id) {
+            await fixNullAuthTokens(userData.user.id);
+        }
+
         if (userError) {
             if (userError.message.includes("already been registered")) {
-                // User exists — add 7 credits
-                const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-                const existingUser = existingUsers?.users?.find((u: any) => u.email === payerEmail);
+                // User exists — add 7 credits (use RPC for reliable lookup)
+                const { data: existingRows, error: rpcError } = await supabaseAdmin
+                    .rpc('get_user_by_email', { target_email: payerEmail });
+
+                if (rpcError) {
+                    console.error("RPC get_user_by_email error (trial):", rpcError);
+                }
+
+                const existingUser = existingRows?.[0];
                 if (existingUser) {
-                    const currentCredits = (existingUser.user_metadata?.credits as number) || 0;
-                    await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-                        user_metadata: { ...existingUser.user_metadata, credits: currentCredits + PACK_CREDITS },
+                    const currentCredits = (existingUser.user_meta?.credits as number) || 0;
+                    await supabaseAdmin.auth.admin.updateUserById(existingUser.user_id, {
+                        user_metadata: { ...(existingUser.user_meta || {}), credits: currentCredits + PACK_CREDITS },
                     });
-                    await supabaseAdmin.from("trial_generations").update({ created_user_id: existingUser.id }).eq("id", generationId);
+                    await supabaseAdmin.from("trial_generations").update({ created_user_id: existingUser.user_id }).eq("id", generationId);
+                    console.log(`✅ Trial pack: updated existing user ${existingUser.user_id} credits ${currentCredits} → ${currentCredits + PACK_CREDITS}`);
+                } else {
+                    console.error("❌ Could not find existing user for trial pack:", payerEmail);
                 }
             } else {
                 console.error("Error creating user for trial pack:", userError);
@@ -458,7 +627,13 @@ async function handleTrialPayment(
     }
 
     // 6. Track purchase
-    await trackServerPurchase(payerEmail, `trial_${productType}`, amount, paymentId);
+    await trackServerPurchase(payerEmail, `trial_${productType}`, amount, paymentId, {
+        phone: null,
+        firstName: null,
+        lastName: null,
+        fbp: refData.fbp || null,
+        fbc: refData.fbc || null,
+    });
 
     console.log(`🎉 Trial unlocked: ${signedUrls.length} HD photos for ${payerEmail}`);
 }
@@ -488,7 +663,7 @@ async function sendTrialDeliveryEmail(email: string, productType: string, signed
 
     <div style="text-align:center;margin:24px 0;">${photoLinksHtml}</div>
 
-    <p style="color:#666;font-size:11px;text-align:center;margin:16px 0 0 0;">Os links expiram em 7 dias. Baixe e salve suas fotos!</p>
+    <p style="color:#666;font-size:11px;text-align:center;margin:16px 0 0 0;">Os links expiram em 90 dias. Baixe e salve suas fotos!</p>
 
     ${productType === "pack" && userCreated ? `
     <div style="margin-top:24px;padding:16px;background:rgba(245,158,11,0.08);border-radius:10px;border:1px solid rgba(245,158,11,0.15);">
@@ -540,10 +715,29 @@ function getPlanFromReference(ref: string): string {
 }
 
 // Server-side Purchase event via TrackPro (Meta CAPI)
-async function trackServerPurchase(email: string, plan: string, amount: number, paymentId: string) {
+interface TrackExtraData {
+    phone?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    fbp?: string | null;
+    fbc?: string | null;
+}
+
+async function trackServerPurchase(email: string, plan: string, amount: number, paymentId: string, extra?: TrackExtraData) {
     try {
         const eventId = `purchase_${paymentId}`;
         const purchaseValue = PLAN_PRICES[plan] || amount || 37;
+
+        // Normalize phone: digits only, add BR prefix if needed
+        let normPhone: string | null = null;
+        if (extra?.phone) {
+            const digits = extra.phone.replace(/\D/g, '');
+            if (digits.length === 10 || digits.length === 11) {
+                normPhone = '55' + digits;
+            } else if (digits.length >= 12) {
+                normPhone = digits;
+            }
+        }
 
         const payload = {
             event_name: "Purchase",
@@ -551,9 +745,15 @@ async function trackServerPurchase(email: string, plan: string, amount: number, 
             event_time: Math.floor(Date.now() / 1000),
             source_url: `${SITE_URL}/checkout/success`,
             user_id: TRACKPRO_USER_ID,
+            ...(extra?.fbp ? { fbp: extra.fbp } : {}),
+            ...(extra?.fbc ? { fbc: extra.fbc } : {}),
             user_data: {
-                email: email || null,
+                email: email?.toLowerCase().trim() || null,
+                phone: normPhone,
+                first_name: extra?.firstName?.toLowerCase().trim() || null,
+                last_name: extra?.lastName?.toLowerCase().trim() || null,
                 external_id: `server_${paymentId}`,
+                country: 'br',
             },
             custom_data: {
                 value: purchaseValue,
@@ -575,7 +775,7 @@ async function trackServerPurchase(email: string, plan: string, amount: number, 
         });
 
         if (res.ok) {
-            console.log(`📊 Server-side Purchase tracked via CAPI: ${email} | ${plan} | R$${purchaseValue} | eventId: ${eventId}`);
+            console.log(`📊 Server-side Purchase tracked via CAPI: ${email} | ${plan} | R$${purchaseValue} | phone: ${normPhone || 'N/A'} | eventId: ${eventId}`);
         } else {
             console.error("TrackPro CAPI error:", await res.text());
         }
@@ -591,10 +791,10 @@ const PLAN_NAMES: Record<string, string> = {
     premium: "Premium (100 Fotos)",
 };
 
-async function sendWelcomeEmail(email: string, plan: string, credits: number, isNewUser: boolean) {
+async function sendWelcomeEmail(email: string, plan: string, credits: number, isNewUser: boolean): Promise<string | null> {
     if (!RESEND_API_KEY) {
         console.warn("RESEND_API_KEY not configured, skipping welcome email");
-        return;
+        return "RESEND_API_KEY not configured";
     }
 
     const planName = PLAN_NAMES[plan] || plan;
@@ -685,11 +885,15 @@ async function sendWelcomeEmail(email: string, plan: string, credits: number, is
         if (!res.ok) {
             const errorData = await res.text();
             console.error('Resend email error:', errorData);
+            return `Resend HTTP ${res.status}: ${errorData}`;
         } else {
             console.log(`📧 Welcome email sent to ${email}`);
+            return null; // success
         }
     } catch (error) {
-        console.error('Failed to send welcome email:', error);
+        const errMsg = String(error);
+        console.error('Failed to send welcome email:', errMsg);
+        return errMsg;
     }
 }
 
@@ -718,11 +922,17 @@ async function processReferralReward(referralCode: string, buyerEmail: string) {
             return;
         }
 
-        // Find the referrer user in Supabase Auth
-        const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers();
-        const referrerUser = allUsers?.users?.find(
-            (u) => u.email?.toLowerCase() === referral.referrer_email.toLowerCase()
-        );
+        // Find the referrer user in Supabase Auth (using reliable RPC)
+        const { data: referrerRows } = await supabaseAdmin
+            .rpc('get_user_by_email', { target_email: referral.referrer_email.toLowerCase() });
+        const referrerRow = referrerRows?.[0];
+
+        // Build a compatible object for the rest of the logic
+        const referrerUser = referrerRow ? {
+            id: referrerRow.user_id,
+            email: referrerRow.user_email,
+            user_metadata: referrerRow.user_meta || {},
+        } : null;
 
         if (referrerUser) {
             // Add 3 credits to referrer

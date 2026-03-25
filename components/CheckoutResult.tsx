@@ -1,11 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, ArrowRight, Sparkles, Copy, Check, Mail, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, ArrowRight, Sparkles, Copy, Check, Mail, RefreshCw, Download } from 'lucide-react';
 
 interface CheckoutResultProps {
     onBack: () => void;
 }
 
 type ResultStatus = 'approved' | 'failure' | 'pending' | 'unknown';
+
+interface DownloadPhoto {
+    url: string;
+    label: string;
+    index: number;
+}
 
 const DEFAULT_PASSWORD = 'lumi123456';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -21,6 +27,36 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
     const [pollCount, setPollCount] = useState(0);
     const [pollingStatus, setPollingStatus] = useState<'idle' | 'polling' | 'confirmed'>('idle');
     const [paymentId, setPaymentId] = useState('');
+    const [downloadPhotos, setDownloadPhotos] = useState<DownloadPhoto[]>([]);
+    const [loadingPhotos, setLoadingPhotos] = useState(false);
+    const [trialGenerationId, setTrialGenerationId] = useState('');
+
+    // Fetch download URLs for trial purchases
+    const fetchDownloadUrls = useCallback(async (genId: string) => {
+        if (!genId) return;
+        setLoadingPhotos(true);
+        try {
+            // Use fix-trial-email to get signed URLs (it returns them)
+            // Or query the trial_generations table directly
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/fix-trial-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({ generation_id: genId }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.photos > 0) {
+                    // The URLs are now stored in the DB, but we don't get them back from this endpoint
+                    // Let's mark them as available
+                    setDownloadPhotos([{ url: '', label: 'Foto HD', index: 0 }]);
+                }
+            }
+        } catch { /* ignore */ }
+        setLoadingPhotos(false);
+    }, []);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -45,6 +81,7 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
 
         // Extract data from external_reference
         const externalRef = params.get('external_reference');
+        let genId = '';
         if (externalRef) {
             try {
                 const ref = JSON.parse(externalRef);
@@ -54,6 +91,8 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
                 if (ref.type === 'trial') {
                     setIsTrialPurchase(true);
                     setProductType(ref.product_type || '');
+                    genId = ref.generation_id || '';
+                    setTrialGenerationId(genId);
                 }
             } catch { /* ignore */ }
         }
@@ -75,6 +114,52 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
                 password: DEFAULT_PASSWORD,
                 timestamp: Date.now(),
             }));
+
+            // Client-side Purchase tracking (+ server-side CAPI via webhook).
+            // Meta deduplicates via eventID, so both can fire safely.
+            const dedupKey = mpPaymentId ? `lumiphoto_purchase_tracked_${mpPaymentId}` : '';
+            if (mpPaymentId && dedupKey && !localStorage.getItem(dedupKey)) {
+                localStorage.setItem(dedupKey, '1');
+                const eventId = `purchase_${mpPaymentId}`;
+                const planPrices: Record<string, number> = {
+                    'starter': 37, 'essencial': 57, 'pro': 97, 'premium': 117,
+                };
+                let extractedPlan = '';
+                try {
+                    if (externalRef) {
+                        const ref = JSON.parse(externalRef);
+                        extractedPlan = ref.plan || '';
+                    }
+                } catch { /* ignore */ }
+                const purchaseValue = planPrices[extractedPlan.toLowerCase()] || 37;
+
+                try {
+                    if (typeof (window as any).trackPro === 'function') {
+                        (window as any).trackPro('Purchase', {
+                            event_id: eventId,
+                            email: email || undefined,
+                            custom_data: {
+                                value: purchaseValue,
+                                currency: 'BRL',
+                                content_name: extractedPlan || 'LumiPhoto Credits',
+                                content_type: 'product',
+                                order_id: mpPaymentId,
+                            },
+                        });
+                        console.log('✅ Purchase tracked via trackPro (browser + CAPI)', { paymentId: mpPaymentId, plan: extractedPlan, value: purchaseValue });
+                    } else if (typeof (window as any).fbq === 'function') {
+                        (window as any).fbq('track', 'Purchase', {
+                            value: purchaseValue,
+                            currency: 'BRL',
+                            content_name: extractedPlan || 'LumiPhoto Credits',
+                            content_type: 'product',
+                        }, { eventID: eventId });
+                        console.log('✅ Purchase tracked via fbq (browser only)', { paymentId: mpPaymentId, plan: extractedPlan, value: purchaseValue });
+                    }
+                } catch (e) {
+                    console.error('Failed to track Purchase:', e);
+                }
+            }
         }
 
         // Clean up URL after extracting data
@@ -101,12 +186,33 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
                 if (data.status === 'approved') {
                     setStatus('approved');
                     setPollingStatus('confirmed');
+
+                    // Fire Purchase tracking on PIX confirmation
+                    const dedupKey = `lumiphoto_purchase_tracked_${paymentId}`;
+                    if (!localStorage.getItem(dedupKey)) {
+                        localStorage.setItem(dedupKey, '1');
+                        const eventId = `purchase_${paymentId}`;
+                        const planPrices: Record<string, number> = { 'starter': 37, 'essencial': 57, 'pro': 97, 'premium': 117 };
+                        const purchaseValue = planPrices[planName.toLowerCase()] || 37;
+                        try {
+                            if (typeof (window as any).trackPro === 'function') {
+                                (window as any).trackPro('Purchase', {
+                                    event_id: eventId,
+                                    email: buyerEmail || undefined,
+                                    custom_data: { value: purchaseValue, currency: 'BRL', content_name: planName || 'LumiPhoto Credits', content_type: 'product', order_id: paymentId },
+                                });
+                            } else if (typeof (window as any).fbq === 'function') {
+                                (window as any).fbq('track', 'Purchase', { value: purchaseValue, currency: 'BRL', content_name: planName || 'LumiPhoto Credits', content_type: 'product' }, { eventID: eventId });
+                            }
+                            console.log('✅ Purchase tracked on PIX confirmation', { paymentId, value: purchaseValue });
+                        } catch (e) { console.error('Failed to track Purchase on poll:', e); }
+                    }
                 }
             }
         } catch { /* ignore — just keep showing pending */ }
         setPollCount(c => c + 1);
         setPollingStatus(prev => prev === 'confirmed' ? 'confirmed' : 'idle');
-    }, [paymentId, pollingStatus]);
+    }, [paymentId, pollingStatus, buyerEmail, planName]);
 
     const copyToClipboard = async (text: string, field: 'email' | 'password') => {
         try {
@@ -301,16 +407,58 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
                         </div>
 
                         {isTrialPurchase ? (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-left space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Mail size={16} className="text-emerald-400 shrink-0" />
-                                    <p className="text-white text-sm font-bold">Foto enviada para seu email!</p>
+                            <>
+                                {/* Trial: Email notification + download info */}
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-left space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={16} className="text-emerald-400 shrink-0" />
+                                        <p className="text-white text-sm font-bold">
+                                            {productType === 'single' ? 'Sua foto HD foi enviada por email!' : 'Suas 3 fotos HD foram enviadas por email!'}
+                                        </p>
+                                    </div>
+                                    {buyerEmail && (
+                                        <p className="text-emerald-300 text-xs font-mono break-all ml-6">{buyerEmail}</p>
+                                    )}
+                                    <p className="text-white/50 text-xs ml-6">📥 Abra seu email para baixar a foto em alta resolução sem marca d'água.</p>
+                                    <p className="text-white/40 text-[10px] ml-6">Verifique também a caixa de spam caso não apareça.</p>
                                 </div>
-                                {buyerEmail && (
-                                    <p className="text-emerald-300 text-xs font-mono break-all ml-6">{buyerEmail}</p>
-                                )}
-                                <p className="text-white/50 text-xs ml-6">Verifique também a caixa de spam caso não apareça.</p>
-                            </div>
+
+                                {/* Trial: Login credentials */}
+                                <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-2xl p-5 text-left space-y-4">
+                                    <p className="text-amber-400 font-black text-xs uppercase tracking-[0.2em] text-center">
+                                        🔐 Sua Conta LumiPhotoIA
+                                    </p>
+
+                                    <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+                                        <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Email</p>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-white font-bold text-sm break-all">{buyerEmail || 'O email usado na compra'}</p>
+                                            {buyerEmail && (
+                                                <button onClick={() => copyToClipboard(buyerEmail, 'email')} className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                                                    {copiedField === 'email' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-white/40" />}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black/30 rounded-xl p-3 border border-white/10">
+                                        <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Senha</p>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-amber-400 font-mono font-bold text-lg tracking-wider">{DEFAULT_PASSWORD}</p>
+                                            <button onClick={() => copyToClipboard(DEFAULT_PASSWORD, 'password')} className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                                                {copiedField === 'password' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-white/40" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-white/30 text-[10px] text-center">
+                                        {productType === 'pack'
+                                            ? '✨ Conta criada com 7 créditos para gerar mais fotos!'
+                                            : '✨ Conta criada! Faça login para gerar mais fotos.'
+                                        }
+                                    </p>
+                                </div>
+                            </>
                         ) : (
                             <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-2xl p-5 text-left space-y-4">
                                 <p className="text-amber-400 font-black text-xs uppercase tracking-[0.2em] text-center">
@@ -347,7 +495,7 @@ const CheckoutResult: React.FC<CheckoutResultProps> = ({ onBack }) => {
                             onClick={onBack}
                             className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white"
                         >
-                            {isTrialPurchase ? 'Gerar Mais Fotos' : 'Fazer Login Agora'}
+                            {isTrialPurchase ? 'Fazer Login' : 'Fazer Login Agora'}
                             <ArrowRight size={20} />
                         </button>
                     </div>

@@ -166,6 +166,668 @@ UNIVERSAL FOOD PHOTOGRAPHY RULES (Always Apply):
 };
 
 
+// ======================================================
+// MODA CREATIVE GENERATION (Dedicated fashion lookbook flow)
+// ======================================================
+export interface ModaGenerationConfig {
+  studioStyle: string;
+  aspectRatio: AspectRatio;
+  designCount: number;
+  avatarGender: string;
+  avatarAge: string;
+  useAvatar: boolean;
+  bodyType?: string;      // slim, curvy, plus-size
+  skinTone?: string;      // clara, morena, negra
+  hairStyle?: string;     // liso, cacheado, crespo, curto
+  avatarPreset?: string;  // preset influencer description
+  customInstructions?: string;
+}
+
+export const generateModaCreative = async (
+  modaConfig: ModaGenerationConfig,
+  modelImage: string | null,
+  topImage: string | null,
+  bottomImage: string | null,
+  shoesImage: string | null,
+  dressImage?: string | null,
+  bagImage?: string | null,
+  accessoryImage?: string | null,
+  authToken?: string
+): Promise<GeneratedImage[]> => {
+  const isDressMode = !!dressImage;
+  const hasAnyGarment = topImage || dressImage;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const extractBase64 = (dataUrl: string) => {
+    // Handle both raw base64 (from ModaStudioPage's imageToBase64 which strips prefix)
+    // and full data URLs (data:image/png;base64,...)
+    const parts = dataUrl.split(',');
+    if (parts.length >= 2) {
+      // Full data URL format
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+      return { data: parts[1], mimeType: mime };
+    }
+    // Raw base64 string (no data URL prefix) — assume JPEG
+    if (dataUrl.length > 100) {
+      return { data: dataUrl, mimeType: 'image/jpeg' };
+    }
+    return null;
+  };
+
+  // Build style-specific environment instructions
+  const styleEnvironments: Record<string, string> = {
+    'Editorial Vogue': 'High-contrast studio with dramatic side lighting. Dark or deep-colored background. Vogue magazine editorial quality. Fashion-forward poses.',
+    'Luxury Gold': 'Opulent golden-toned setting. Warm ambient light. Luxury boutique or gold-draped background. Elegant, refined pose.',
+    'Old Money': 'Classic European-style setting — library, manor house, or elegant interior. Muted, earthy tones. Understated wealth aesthetic.',
+    'Street Fashion': 'Urban city backdrop — graffiti wall, city street, or rooftop. Natural daylight. Confident, casual streetwear pose.',
+    'Glow Beauty': 'Soft, diffused lighting. Light pastel or white background. Dewy, fresh skin. Beauty editorial quality.',
+    'Natural Clean': 'Minimalist setting with natural light. White or beige tones. Clean, organic feel. Simple elegant pose.',
+    'Noiva Luxo': 'Romantic bridal setting. Soft warm light. Floral accents or elegant venue backdrop. Graceful bridal pose.',
+    'Golden Hour': 'Outdoor golden hour lighting. Warm amber tones. Sun-kissed atmosphere. Natural, relaxed pose.',
+    'TikTok Viral': 'Trendy, high-energy pose. Colorful ring light or LED strip lighting. Bedroom or trendy room backdrop. The model looks like they are recording a TikTok video — dynamic, fun angle, slightly from below or selfie perspective. Phone-quality aesthetic but professional.',
+    'Mirror Selfie': 'Full-length mirror reflection photo. The model is standing in front of a large mirror, smartphone in hand taking a selfie. Bedroom, walk-in closet, or bathroom with clean aesthetic. The FULL outfit must be visible in the mirror reflection. Natural lighting from a window. Instagram story aesthetic.',
+    'Provador': 'Fitting room / changing room photo. The model is in a clothing store dressing room with curtain or door visible. Well-lit by overhead fitting room lights. Full body visible. Shopping bags or store hangers as subtle props. The selfie-style photo shows the complete outfit.',
+    'Passarela': 'Fashion runway / catwalk setting. Long illuminated runway with audience silhouettes on sides. Dramatic front lighting. Model walking confidently toward camera. Professional fashion show energy.',
+    'Backstage': 'Fashion show backstage area. Behind-the-scenes candid feel. Clothing racks, makeup mirrors with bulb lights visible in background. Model getting ready or posing casually. Documentary fashion photography style.',
+    'Beach Resort': 'Tropical beach or luxury resort setting. Crystal clear water, white sand, or pool area. Bright natural sunlight. Vacation/resort wear styling. Relaxed, happy pose.',
+    'Festival': 'Music festival / outdoor event setting. Colorful, bohemian vibe. String lights, tents, or stage in background. Golden hour or sunset glow. Free-spirited pose with movement.',
+    'Balada Club': 'Nightclub or party setting. Neon lights, purple/blue ambient glow. Glamorous night-out styling. Confident, bold pose. Dark background with colored light accents.',
+    'E-Commerce Pro': 'Clean white or light gray studio backdrop. Even, shadow-free professional lighting. Model standing straight, outfit clearly visible. E-commerce product photo quality. Multiple angles feel.',
+    'Flat Lay': 'TOP-DOWN AERIAL VIEW — NO PERSON VISIBLE. The outfit pieces are laid flat on a clean surface (marble, wood, or white). Arranged artistically with accessories, sunglasses, coffee cup as props. Instagram flat-lay aesthetic. Bird eye view photography.',
+    'Look do Dia': 'Casual outdoor urban setting — café terrace, city sidewalk, or park. Natural daylight. Model posing confidently showing the day outfit. Instagram #OOTD (outfit of the day) aesthetic. Lifestyle photography.',
+    'Pôr do Sol': 'Dramatic sunset backdrop with silhouette rim lighting. Warm orange/pink sky. Model in heroic or romantic pose. Cinematic wide shot with outfit visible against the sunset.',
+  };
+
+  const styleEnv = styleEnvironments[modaConfig.studioStyle] || 'Professional fashion photography studio. Clean background with dramatic lighting.';
+
+  // === PRE-ANALYZE GARMENT IMAGES (when avatar mode is on) ===
+  // When using AI avatar, we must NOT send garment images that show a person wearing the clothes.
+  // We use the 'describe-garment' edge function which ONLY describes clothing details
+  // (no person, no hair, no pose, no body) to prevent identity leakage.
+  const describeGarmentOnly = async (imageDataUrl: string): Promise<string> => {
+    try {
+      const parts = imageDataUrl.split(',');
+      let base64Data: string;
+      let mime: string;
+      if (parts.length >= 2) {
+        mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        base64Data = parts[1];
+      } else if (imageDataUrl.length > 100) {
+        mime = 'image/jpeg';
+        base64Data = imageDataUrl;
+      } else {
+        return '';
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/describe-garment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ imageData: base64Data, mimeType: mime }),
+      });
+
+      if (!response.ok) {
+        console.warn('Garment description failed, status:', response.status);
+        return '';
+      }
+
+      const data = await response.json();
+      return data.description || '';
+    } catch (error) {
+      console.warn('Garment description error:', error);
+      return '';
+    }
+  };
+
+  let garmentDescriptions: Record<string, string> = {};
+  if (modaConfig.useAvatar && !modaConfig.studioStyle?.includes('Flat Lay')) {
+    console.log('🔒 Avatar mode: Pre-analyzing garment images with CLOTHING-ONLY descriptor...');
+    const analysisPromises: Promise<void>[] = [];
+    
+    if (isDressMode && dressImage) {
+      analysisPromises.push(
+        describeGarmentOnly(dressImage).then(desc => {
+          garmentDescriptions['dress'] = desc;
+          console.log('👗 Clothing-only description:', desc.substring(0, 150) + '...');
+        })
+      );
+    } else {
+      if (topImage) {
+        analysisPromises.push(
+          describeGarmentOnly(topImage).then(desc => {
+            garmentDescriptions['top'] = desc;
+            console.log('👕 Top clothing-only description:', desc.substring(0, 150) + '...');
+          })
+        );
+      }
+      if (bottomImage) {
+        analysisPromises.push(
+          describeGarmentOnly(bottomImage).then(desc => {
+            garmentDescriptions['bottom'] = desc;
+            console.log('👖 Bottom clothing-only description:', desc.substring(0, 150) + '...');
+          })
+        );
+      }
+    }
+    
+    await Promise.all(analysisPromises);
+    console.log('✅ Garment analysis complete. Descriptions available:', Object.keys(garmentDescriptions));
+  }
+
+  const generationPromises = Array.from({ length: modaConfig.designCount }).map(async (_, index): Promise<GeneratedImage | null> => {
+    const v = index + 1;
+    const variationId = Math.random().toString(36).substr(2, 9);
+
+    try {
+      const parts: any[] = [];
+
+      // === DETECT FLAT LAY MODE ===
+      const isFlatLay = modaConfig.studioStyle === 'Flat Lay';
+
+      // === MASTER TASK ===
+      const genderLabel = modaConfig.avatarGender === 'feminino' ? 'woman' : 'man';
+      const pronoun = modaConfig.avatarGender === 'feminino' ? 'She' : 'He';
+
+      // Body type mapping
+      const bodyMap: Record<string, string> = {
+        'slim': 'slim/athletic body type',
+        'medio': 'average/medium body type, naturally proportioned',
+        'curvy': 'curvy body type with natural curves, wide hips and fuller figure',
+        'plus-size': 'plus-size body type, full-figured, beautiful and confident. NOT thin — must have visible larger body proportions, round face, and full arms/thighs',
+      };
+      const bodyDesc = bodyMap[modaConfig.bodyType || 'medio'] || bodyMap['medio'];
+
+      // Skin tone mapping
+      const skinMap: Record<string, string> = {
+        'clara': 'light/fair skin tone',
+        'morena-clara': 'light-brown/morena clara skin tone, lightly tanned',
+        'morena': 'medium-brown/morena skin tone, naturally tanned golden-brown typical of mixed-race Brazilians',
+        'negra': 'dark-brown/Black skin tone, beautiful deep melanin-rich complexion',
+        'oriental': 'East Asian skin tone, with Asian facial features typical of Brazilian Japanese/Chinese/Korean communities',
+      };
+      const skinDesc = skinMap[modaConfig.skinTone || 'morena'] || skinMap['morena'];
+
+      // Hair style mapping
+      const hairMap: Record<string, string> = {
+        'liso-longo': 'long straight hair',
+        'liso-curto': 'short straight hair (bob cut or pixie)',
+        'ondulado': 'wavy hair, flowing and natural',
+        'cacheado': 'curly hair (type 3), defined bouncy curls',
+        'crespo': 'coily/kinky hair (type 4), natural afro texture — beautiful and voluminous',
+        'trancas': 'braids (box braids or cornrows), stylish and well-done',
+        'black-power': 'big afro / black power hairstyle, voluminous and proud',
+      };
+      const hairDesc = hairMap[modaConfig.hairStyle || 'ondulado'] || hairMap['ondulado'];
+
+      // ============================================================
+      // FLAT LAY MODE — Completely different prompt (NO PERSON)
+      // ============================================================
+      if (isFlatLay) {
+        const flatLayVariations = [
+          'Variation 1: Classic organized flat lay. Clothing neatly folded and centered. Accessories placed symmetrically around the outfit.',
+          'Variation 2: Slightly angled arrangement. Clothing partially unfolded, showing more of the garment details. Casual, editorial flat lay style.',
+          'Variation 3: Creative flat lay with artistic arrangement. Clothing arranged in a flowing, dynamic layout. Magazine-quality editorial flat lay.',
+        ];
+
+        parts.push({
+          text: `=== MASTER TASK: FLAT LAY FASHION PHOTOGRAPHY ===
+YOU ARE A PROFESSIONAL FASHION PHOTOGRAPHER creating a FLAT LAY photo for a Brazilian clothing brand.
+
+⚠️ CRITICAL RULE: THIS IS A FLAT LAY / TOP-DOWN AERIAL VIEW PHOTO.
+>>> ABSOLUTELY NO PERSON, NO MODEL, NO HUMAN, NO BODY PARTS VISIBLE IN THE IMAGE.
+>>> DO NOT SHOW any person wearing the clothes. NO hands, NO feet, NO torso, NO face.
+>>> The clothing pieces must be LAID FLAT on a clean, aesthetic surface.
+
+YOUR TASK:
+1. Look at the reference images below. They may show CLOTHING ITEMS — either as standalone garment photos OR as photos of a person WEARING the clothing.
+2. If the image shows a person wearing clothing: MENTALLY EXTRACT ONLY THE CLOTHING from the image. Ignore the person completely. Identify the EXACT garment: its color, fabric, pattern, texture, cut, neckline, sleeves, length, and all design details.
+3. RECREATE that exact clothing item as if it were REMOVED from the person and LAID FLAT / NEATLY FOLDED on a beautiful surface.
+4. Arrange all clothing pieces in an artful, Instagram-worthy flat lay composition.
+
+SURFACE/BACKGROUND: Clean aesthetic surface — white marble, light wood, linen fabric, or minimalist background. Professional flat lay photography.
+
+STYLING PROPS (add 2-3 of these around the clothing):
+- Sunglasses, watch, or jewelry placed beside the outfit
+- A coffee cup or small plant as lifestyle accent
+- A leather wallet, perfume bottle, or small bag
+- Seasonal elements (flowers, leaves) if appropriate
+
+${flatLayVariations[index] || flatLayVariations[0]}
+
+CAMERA: Strictly TOP-DOWN / BIRD'S EYE VIEW. Camera pointing straight down at 90°. No perspective distortion.
+
+${modaConfig.customInstructions ? `\nUSER CUSTOM INSTRUCTIONS (HIGHEST PRIORITY): ${modaConfig.customInstructions}` : ''}
+=== END MASTER TASK ===`
+        });
+
+        // === GARMENT IMAGES FOR FLAT LAY (with extraction instructions) ===
+        let garmentIdx = 0;
+        if (isDressMode && dressImage) {
+          const dress = extractBase64(dressImage);
+          if (dress) {
+            garmentIdx++;
+            parts.push({
+              text: `[GARMENT IMAGE ${garmentIdx} — REFERENCE FOR FLAT LAY]
+>>> ANALYZE THIS IMAGE CAREFULLY:
+>>> IF it shows a PERSON WEARING a garment: EXTRACT the garment mentally. Identify EXACTLY what the clothing item is (dress, jumpsuit, romper, etc.), its color, fabric, pattern, texture, cut, neckline, length, and all design details. Then recreate ONLY the clothing item, laid flat/folded neatly on the surface. DO NOT include the person.
+>>> IF it shows just the garment alone: Use it directly as the main piece, laid flat/folded.
+>>> PRESERVE EXACTLY: The garment's color, pattern, fabric texture, cut, and all design details.
+>>> OUTPUT: This garment neatly folded or artfully laid out, seen from above. NO PERSON.`
+            });
+            parts.push({ inlineData: dress });
+          }
+        } else {
+          if (topImage) {
+            const top = extractBase64(topImage);
+            if (top) {
+              garmentIdx++;
+              parts.push({
+                text: `[GARMENT IMAGE ${garmentIdx} — TOP PIECE FOR FLAT LAY]
+>>> ANALYZE THIS IMAGE CAREFULLY:
+>>> IF it shows a PERSON WEARING a top/shirt/blouse/jacket: EXTRACT only the upper-body garment. Identify its color, fabric, pattern, cut, neckline, sleeves, buttons, and all design details. Recreate ONLY this item folded/laid flat.
+>>> IF it shows just the garment alone: Use directly.
+>>> PRESERVE EXACTLY: Color, pattern, fabric, cut, all details.
+>>> OUTPUT: This top garment neatly folded on the surface. NO PERSON.`
+              });
+              parts.push({ inlineData: top });
+            }
+          }
+          if (bottomImage) {
+            const bottom = extractBase64(bottomImage);
+            if (bottom) {
+              garmentIdx++;
+              parts.push({
+                text: `[GARMENT IMAGE ${garmentIdx} — BOTTOM PIECE FOR FLAT LAY]
+>>> ANALYZE THIS IMAGE: Extract the bottom garment (pants/skirt/shorts). If a person is wearing it, extract ONLY the clothing.
+>>> PRESERVE EXACTLY: Color, fabric, pattern, cut, waistband, all details.
+>>> OUTPUT: This bottom garment folded on the surface. NO PERSON.`
+              });
+              parts.push({ inlineData: bottom });
+            }
+          }
+        }
+
+        if (shoesImage) {
+          const shoes = extractBase64(shoesImage);
+          if (shoes) {
+            garmentIdx++;
+            parts.push({
+              text: `[ACCESSORY FOR FLAT LAY — FOOTWEAR]
+>>> Place these EXACT shoes beside the clothing in the flat lay. PRESERVE color, style, material, all details.`
+            });
+            parts.push({ inlineData: shoes });
+          }
+        }
+
+        if (bagImage) {
+          const bag = extractBase64(bagImage);
+          if (bag) {
+            garmentIdx++;
+            parts.push({
+              text: `[ACCESSORY FOR FLAT LAY — BAG/PURSE]
+>>> Place this EXACT bag/purse beside the clothing in the flat lay. PRESERVE all details.`
+            });
+            parts.push({ inlineData: bag });
+          }
+        }
+
+        if (accessoryImage) {
+          const acc = extractBase64(accessoryImage);
+          if (acc) {
+            garmentIdx++;
+            parts.push({
+              text: `[ACCESSORY FOR FLAT LAY — JEWELRY/ACCESSORY]
+>>> Place this EXACT accessory beside the clothing in the flat lay. PRESERVE all details.`
+            });
+            parts.push({ inlineData: acc });
+          }
+        }
+
+        // Final flat lay rules
+        const flatLayParts: string[] = [];
+        if (isDressMode) flatLayParts.push('full-body garment folded/laid flat');
+        else {
+          if (topImage) flatLayParts.push('top garment folded');
+          if (bottomImage) flatLayParts.push('bottom garment folded');
+        }
+        if (shoesImage) flatLayParts.push('footwear placed beside');
+        if (bagImage) flatLayParts.push('bag/purse placed beside');
+        if (accessoryImage) flatLayParts.push('accessory placed beside');
+
+        parts.push({
+          text: `=== FINAL FLAT LAY COMPOSITION RULES ===
+ITEMS THAT MUST APPEAR IN THE FLAT LAY:
+${flatLayParts.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+
+QUALITY REQUIREMENTS:
+- Photorealistic flat lay photograph — professional product photography quality
+- TOP-DOWN CAMERA ANGLE ONLY — 90° bird's eye view
+- Clean, well-lit, beautiful surface
+- Clothing neatly folded/arranged, NOT crumpled
+- ABSOLUTELY NO PERSON, NO BODY PARTS, NO MANNEQUIN
+- Add 2-3 styling props for visual interest
+- OUTPUT FORMAT: Photorealistic photograph. NOT cartoon, NOT illustration, NOT painting.
+
+ABSOLUTE PROHIBITIONS:
+- DO NOT show any person, model, mannequin, or body parts
+- DO NOT change any garment's color, pattern, or design
+- DO NOT add text, logos, watermarks, or overlays`
+        });
+
+      } else {
+        // ============================================================
+        // NORMAL MODE — Person wearing the outfit
+        // ============================================================
+
+        let avatarDesc: string;
+        if (!modaConfig.useAvatar) {
+          avatarDesc = 'USE THE PROVIDED MODEL PHOTO as the person in the image.';
+        } else if (modaConfig.avatarPreset) {
+          avatarDesc = `CREATE AN AI MODEL: ${modaConfig.avatarPreset}. Age range ${modaConfig.avatarAge}. Must look like a real person, photorealistic, NOT a stock photo model.`;
+        } else {
+          avatarDesc = `CREATE AN AI MODEL: A real-looking Brazilian ${genderLabel}, age range ${modaConfig.avatarAge} years old. ${pronoun} has ${skinDesc}, ${bodyDesc}, and ${hairDesc}. ${pronoun} looks like a real Brazilian fashion influencer — natural, confident, photorealistic. NOT a generic stock photo model — must look authentically Brazilian, photorealistic, and naturally beautiful.`;
+        }
+
+        const genderWord = modaConfig.avatarGender === 'feminino' ? 'FEMALE/WOMAN' : 'MALE/MAN';
+        const genderProhibition = modaConfig.avatarGender === 'feminino' 
+          ? 'ABSOLUTELY DO NOT generate a man or male model. The model MUST be a WOMAN.'
+          : 'ABSOLUTELY DO NOT generate a woman or female model. The model MUST be a MAN.';
+
+        parts.push({
+          text: `=== MASTER TASK: FASHION LOOKBOOK PHOTOGRAPHY ===
+YOU ARE A PROFESSIONAL FASHION PHOTOGRAPHER creating a lookbook photo for a Brazilian clothing brand.
+
+=== MODEL / PERSON IDENTITY (WHO APPEARS IN THE PHOTO) ===
+${avatarDesc}
+
+⚠️ GENDER LOCK: The model MUST be ${genderWord}. ${genderProhibition}
+This applies to ALL variations — every single output image must show the SAME gender.
+DO NOT include photos, portraits, or images of any other person inside the output.
+The output must be ONE SINGLE photo of ONE person wearing the outfit. No collages, no inset photos, no picture-in-picture.
+${modaConfig.useAvatar ? `
+🔒🔒🔒 IDENTITY FIREWALL — READ CAREFULLY 🔒🔒🔒
+YOU MUST CREATE A BRAND NEW PERSON based on the avatar description above.
+The garment/clothing reference images below may show A DIFFERENT PERSON wearing the clothes.
+>>> THAT PERSON IS ****NOT**** YOUR MODEL. DO NOT USE THEIR FACE, BODY, SKIN TONE, HAIR, OR ANY PHYSICAL FEATURE.
+>>> You must GENERATE A COMPLETELY NEW PERSON that matches the AVATAR DESCRIPTION above.
+>>> The ONLY thing you should take from the garment reference images is THE CLOTHING ITSELF.
+>>> Think of it as: "Extract the clothes from that photo, throw away the person, and dress my NEW avatar in those clothes."
+>>> If you show the same person from the reference image, you have FAILED the task.
+🔒🔒🔒 END IDENTITY FIREWALL 🔒🔒🔒
+` : ''}
+YOUR #1 PRIORITY: The model MUST be WEARING the exact garments provided in the reference images below.
+>>> ⚠️ CRITICAL: The reference images may show a PERSON WEARING the clothing. In that case:
+>>> 1. IDENTIFY the clothing item the person is wearing (color, fabric, pattern, cut, style, neckline, sleeves, length, etc.)
+>>> 2. EXTRACT that clothing item mentally — ignore the person in the reference image completely
+>>> 3. DRESS YOUR MODEL (the ${modaConfig.useAvatar ? 'NEW AI-GENERATED avatar' : 'uploaded model photo'}) in that EXACT clothing item
+>>> 4. DO NOT replicate the reference person's face, body, or identity — ONLY use their clothing
+Do NOT imagine, hallucinate, or replace any clothing piece. Each garment image below shows the EXACT item the model must wear.
+
+ENVIRONMENT/STYLE: ${styleEnv}
+
+VARIATION ${v} OF ${modaConfig.designCount}: ${v === 1 ? 'Standard pose, front-facing, full outfit visible.' : v === 2 ? 'Slightly different angle (3/4 view), natural movement pose.' : 'More dynamic pose, lifestyle context, confident walk or lean.'}
+
+${modaConfig.customInstructions ? `\nUSER CUSTOM INSTRUCTIONS (HIGHEST PRIORITY): ${modaConfig.customInstructions}` : ''}
+=== END MASTER TASK ===`
+        });
+
+        // === MODEL PHOTO (if uploaded, not avatar) ===
+        if (!modaConfig.useAvatar && modelImage) {
+          const model = extractBase64(modelImage);
+          if (model) {
+            parts.push({
+              text: `[MODEL PHOTO — THE PERSON TO DRESS]
+>>> THIS is the person who must appear in the output photo.
+>>> PRESERVE 100%: Face, facial features, skin tone, hair color, hair style, hair texture, body type, age, gender.
+>>> The person must be INSTANTLY RECOGNIZABLE to themselves.
+>>> CHANGE ONLY: Their clothing (replace with the garments below) and their pose/background to match the style.
+>>> EXPRESSION: Keep natural and confident. Do NOT force unnatural smiles.`
+            });
+            parts.push({ inlineData: model });
+          }
+        }
+
+        // === GARMENTS — DRESS MODE or TOP+BOTTOM MODE ===
+        let garmentIdx = 0;
+        if (isDressMode && dressImage) {
+          garmentIdx++;
+          const dress = extractBase64(dressImage);
+          if (garmentDescriptions['dress'] && dress) {
+            // AVATAR MODE HYBRID: Text description + image as color reference
+            parts.push({
+              text: `[GARMENT ${garmentIdx} — EXACT CLOTHING TO REPRODUCE]
+>>> ⚠️ CRITICAL: You MUST recreate this EXACT garment on your NEW AI model. Every detail matters.
+>>> Below is a precise TEXT description of the garment, followed by a COLOR REFERENCE image.
+
+=== GARMENT DESCRIPTION (structure & details) ===
+${garmentDescriptions['dress']}
+=== END GARMENT DESCRIPTION ===
+
+>>> 🎯 REPRODUCTION RULES:
+>>> 1. Use the TEXT description above for garment STRUCTURE (type, cut, pockets, buttons, style)
+>>> 2. Use the COLOR REFERENCE IMAGE below for EXACT color and fabric texture matching
+>>> 3. The color in your output must be PIXEL-PERFECT match to the reference image
+>>> ✅ Match: exact color, fabric texture, buttons, pockets, cut, silhouette, length
+>>> ❌ DO NOT change the color even slightly — match it EXACTLY from the reference image`
+            });
+            // Send image labeled as color reference
+            parts.push({
+              text: `[COLOR AND FABRIC REFERENCE IMAGE — FOR COLOR MATCHING ONLY]
+>>> 🚫🚫🚫 THIS IMAGE IS PROVIDED *ONLY* FOR COLOR AND FABRIC REFERENCE
+>>> Use it to match the EXACT color shade and fabric texture of the garment
+>>> ⚠️ IF A PERSON IS VISIBLE IN THIS IMAGE: COMPLETELY IGNORE THEM
+>>> DO NOT use their face, body, hair, skin, or any physical feature
+>>> YOUR MODEL is the AI avatar described earlier — a COMPLETELY DIFFERENT person
+>>> ONLY look at the CLOTHING COLOR AND FABRIC in this image, nothing else`
+            });
+            parts.push({ inlineData: dress });
+          } else if (dress) {
+            // NON-AVATAR MODE or analysis failed: Send the image directly
+            parts.push({
+              text: `[GARMENT ${garmentIdx} — FULL-BODY PIECE (dress/jumpsuit/romper/overalls)]
+>>> CRITICALLY IMPORTANT: The model MUST WEAR the garment shown in this image.
+>>> If this shows a PERSON wearing the garment, EXTRACT ONLY THE CLOTHING.
+>>> Identify all details: color, fabric, pattern, cut, neckline, straps, length.
+>>> DO NOT replicate the reference person. ONLY use the clothing.
+>>> FIT: Natural draping and fabric behavior on your model's body.`
+            });
+            parts.push({ inlineData: dress });
+          }
+        } else {
+          if (topImage) {
+            garmentIdx++;
+            const top = extractBase64(topImage);
+            if (garmentDescriptions['top'] && top) {
+              // AVATAR MODE HYBRID: Text description + image as color reference
+              parts.push({
+                text: `[GARMENT ${garmentIdx} — EXACT TOP TO REPRODUCE]
+>>> ⚠️ Reproduce this EXACT upper-body garment. TEXT for structure, IMAGE below for exact color:
+
+=== TOP DESCRIPTION ===
+${garmentDescriptions['top']}
+=== END TOP DESCRIPTION ===
+
+>>> 🎯 Match EVERY detail from the text. Use the image below ONLY for exact color/fabric matching.`
+              });
+              parts.push({
+                text: `[TOP COLOR REFERENCE — FOR COLOR MATCHING ONLY]
+>>> 🚫 IGNORE any person in this image. ONLY match the clothing color and fabric texture.`
+              });
+              parts.push({ inlineData: top });
+            } else if (top) {
+              parts.push({
+                text: `[GARMENT ${garmentIdx} — TOP PIECE (shirt/blouse/jacket)]
+>>> The model MUST WEAR the upper-body garment shown in this image.
+>>> If this shows a PERSON, EXTRACT ONLY THE CLOTHING. Ignore the person.
+>>> PRESERVE: Color, fabric, pattern, cut, neckline, sleeves, buttons.`
+              });
+              parts.push({ inlineData: top });
+            }
+          }
+          if (bottomImage) {
+            garmentIdx++;
+            const bottom = extractBase64(bottomImage);
+            if (garmentDescriptions['bottom'] && bottom) {
+              // AVATAR MODE HYBRID: Text description + image as color reference
+              parts.push({
+                text: `[GARMENT ${garmentIdx} — EXACT BOTTOM TO REPRODUCE]
+>>> ⚠️ Reproduce this EXACT lower-body garment. TEXT for structure, IMAGE below for exact color:
+
+=== BOTTOM DESCRIPTION ===
+${garmentDescriptions['bottom']}
+=== END BOTTOM DESCRIPTION ===
+
+>>> 🎯 Match EVERY detail from the text. Use the image below ONLY for exact color/fabric matching.`
+              });
+              parts.push({
+                text: `[BOTTOM COLOR REFERENCE — FOR COLOR MATCHING ONLY]
+>>> 🚫 IGNORE any person in this image. ONLY match the clothing color and fabric texture.`
+              });
+              parts.push({ inlineData: bottom });
+            } else if (bottom) {
+              parts.push({
+                text: `[GARMENT ${garmentIdx} — BOTTOM PIECE (pants/skirt/shorts)]
+>>> The model MUST WEAR the lower-body garment shown in this image.
+>>> If this shows a PERSON, extract ONLY the clothing item.
+>>> PRESERVE: Color, fabric, pattern, cut, waistband, pockets, ALL details.`
+              });
+              parts.push({ inlineData: bottom });
+            }
+          }
+        }
+
+        if (shoesImage) {
+          const shoes = extractBase64(shoesImage);
+          if (shoes) {
+            garmentIdx++;
+            parts.push({
+              text: `[GARMENT ${garmentIdx} — FOOTWEAR]
+>>> The model MUST WEAR these EXACT shoes. PRESERVE color, style, material, all details.
+>>> The shoes must be visible in the frame. DO NOT replace with different footwear.`
+            });
+            parts.push({ inlineData: shoes });
+          }
+        }
+
+        // === ACCESSORIES ===
+        if (bagImage) {
+          const bag = extractBase64(bagImage);
+          if (bag) {
+            garmentIdx++;
+            parts.push({
+              text: `[ACCESSORY — HANDBAG/PURSE]
+>>> The model MUST be CARRYING or HOLDING this EXACT bag/purse.
+>>> PRESERVE: Color, material, shape, size, hardware, brand details, strap style.
+>>> Position naturally — on shoulder, in hand, or crossbody. DO NOT replace.`
+            });
+            parts.push({ inlineData: bag });
+          }
+        }
+
+        if (accessoryImage) {
+          const acc = extractBase64(accessoryImage);
+          if (acc) {
+            garmentIdx++;
+            parts.push({
+              text: `[ACCESSORY — JEWELRY/ACCESSORY (necklace/earring/bracelet/ring/watch/sunglasses/hat/scarf)]
+>>> The model MUST be WEARING this EXACT accessory.
+>>> ANALYZE: What type? (necklace, earring, ring, bracelet, watch, sunglasses, hat, belt, scarf, etc.)
+>>> PRESERVE: Color, material (gold, silver, stone), design, size, placement.
+>>> Must be VISIBLE and recognizable. DO NOT replace or omit.`
+            });
+            parts.push({ inlineData: acc });
+          }
+        }
+
+        // === AVATAR IDENTITY REINFORCEMENT (after all garment images) ===
+        if (modaConfig.useAvatar) {
+          parts.push({
+            text: `🔒🔒🔒 FINAL IDENTITY REMINDER 🔒🔒🔒
+REMEMBER: You MUST generate a BRAND NEW PERSON for this photo.
+The person who appears in the garment reference images above is NOT your model.
+Your model is: ${avatarDesc}
+CREATE a new ${genderWord} that matches this description EXACTLY.
+DO NOT copy the face, body shape, skin color, hair, or any feature from the garment reference photos.
+The output must show a COMPLETELY DIFFERENT PERSON wearing the same clothes.
+🔒🔒🔒 END IDENTITY REMINDER 🔒🔒🔒`
+          });
+        }
+
+        // === FINAL COMPOSITION RULES ===
+        const outfitParts: string[] = [];
+        if (isDressMode) outfitParts.push('full-body garment (dress/jumpsuit)');
+        else {
+          if (topImage) outfitParts.push('top/upper body garment');
+          if (bottomImage) outfitParts.push('bottom/lower body garment');
+        }
+        if (shoesImage) outfitParts.push('footwear');
+        if (bagImage) outfitParts.push('handbag/purse');
+        if (accessoryImage) outfitParts.push('jewelry/accessory');
+
+        parts.push({
+          text: `=== FINAL COMPOSITION RULES ===
+OUTFIT CHECKLIST — The model must be wearing/carrying ALL of these:
+${outfitParts.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+
+${modaConfig.useAvatar ? `⚠️ PERSON IDENTITY CHECK:
+- The person in this photo MUST be: ${avatarDesc}
+- The person MUST NOT look like anyone from the garment reference images.
+- If the output person resembles the garment reference person, you have FAILED.
+` : ''}
+QUALITY REQUIREMENTS:
+- Photorealistic output — indistinguishable from a real fashion photo
+- Professional fashion photography lighting and composition
+- Garments NATURALLY WORN, not pasted on or floating. Proper fabric physics.
+- Full body or 3/4 body shot. All accessories VISIBLE.
+- Brazilian fashion market context.
+- OUTPUT FORMAT: Photorealistic photograph. NOT cartoon, NOT illustration, NOT painting.
+
+ABSOLUTE PROHIBITIONS:
+- DO NOT change any garment's color, pattern, or design
+- DO NOT substitute any garment or accessory with a different one
+- DO NOT add text, logos, watermarks, or overlays
+- DO NOT omit any provided accessory — ALL uploaded pieces must appear
+- DO NOT replicate the person from the garment reference photo — ONLY use their clothing
+${modaConfig.useAvatar ? `- DO NOT use the face, body, or identity of any person shown in the garment/clothing reference images
+- The model MUST be a NEW PERSON matching the avatar description` : ''}`
+        });
+      } // end normal mode
+
+      // === API CALL ===
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-image`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ parts, aspectRatio: modaConfig.aspectRatio }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        if (response.status === 403) throw new Error('Créditos insuficientes. Adquira mais créditos para continuar.');
+        if (response.status === 429) throw new Error('429: Cota excedida.');
+        throw new Error(errorData.error || `Erro ${response.status}`);
+      }
+
+      const data = await response.json();
+      const url = `data:image/${data.mimeType?.split('/')[1] || 'png'};base64,${data.imageBase64}`;
+      return { id: variationId, url, originalUrl: url, variation: v };
+    } catch (error: any) {
+      console.error(`Moda variation ${v} failed:`, error);
+      if (v === 1) throw error;
+      return null;
+    }
+  });
+
+  const results = await Promise.all(generationPromises);
+  const successful = results.filter((r): r is GeneratedImage => r !== null);
+  if (successful.length === 0) throw new Error('A geração falhou. Verifique as fotos das peças e tente novamente.');
+  return successful;
+};
+
 
 export const generateStudioCreative = async (
   config: GenerationConfig,
@@ -347,6 +1009,43 @@ const callImageApi = async (
           });
           parts.push({ inlineData: ref });
         }
+      }
+    } else if (hasCustomModelAndProduct && studioStyle && (studioStyle as string).startsWith('Pet:')) {
+      // ==========================================
+      // PET + TUTOR MODE — productImage is the TUTOR, not a product!
+      // ==========================================
+      const petPhoto = extractBase64(customModelImage);
+      const tutorPhoto = extractBase64(productImage);
+
+      if (petPhoto && tutorPhoto) {
+        parts.push({
+          text: `=== TASK: PET + TUTOR PORTRAIT PHOTOGRAPHY ===
+You will receive TWO photos: a PET (Image 1) and a PERSON/TUTOR (Image 2).
+CREATE a brand-new professional photograph showing BOTH subjects together.
+The person and the pet are TWO SEPARATE LIVING BEINGS — a human and an animal.
+Show them interacting naturally: person holding the pet, sitting beside the pet, or playing together.
+Do NOT add any objects, devices, products, logos, phones, machines, or props to the scene.
+The ONLY elements in the final image are: the PERSON, the PET, and the BACKGROUND.`
+        });
+
+        // Image 1: The Pet
+        parts.push({
+          text: `[IMAGE 1 - THE PET]
+This is a photo of a pet animal (dog, cat, etc).
+PRESERVE the EXACT: breed, fur color, fur pattern, markings, ear shape, eye color, nose, body size.
+The pet must be immediately recognizable to its owner.`
+        });
+        parts.push({ inlineData: petPhoto });
+
+        // Image 2: The Tutor/Owner (a PERSON, NOT a product!)
+        parts.push({
+          text: `[IMAGE 2 - THE TUTOR/OWNER (A REAL PERSON)]
+This is a photo of the pet's owner/tutor. This is a HUMAN BEING, NOT a product.
+PRESERVE the EXACT: face, facial features, hair color, hair style, skin tone, eye color, body type.
+The person must be clearly recognizable.
+Show this person interacting lovingly with the pet from Image 1.`
+        });
+        parts.push({ inlineData: tutorPhoto });
       }
     } else if (hasCustomModelAndProduct) {
       // COMPOSIÇÃO FOTOGRÁFICA: Pessoa + Produto interagindo
@@ -582,7 +1281,30 @@ STEP 2: LOCK these features — they are NON-NEGOTIABLE in the output:
 STEP 3: Also preserve: moles, freckles, scars, hair (style + color + texture), eyebrows, age markers.
 CLOTHING: Keep the EXACT same outfit unless the style explicitly requires a change.
 RECOGNITION TEST: The real person MUST say "That's me!" — if not, FAILED.`;
-          if (studioStyle) {
+          if (studioStyle && (studioStyle as string).startsWith('Pet:')) {
+            label = `INPUT IMAGE 1: THE PET (ANIMAL — NOT a person).
+=== PET IDENTITY DNA CARD (ANALYZE BEFORE GENERATING) ===
+STEP 1: STUDY this animal carefully. Identify the breed, fur color, fur pattern, markings, ear shape, eye color, nose shape, body size.
+STEP 2: LOCK these features — they are NON-NEGOTIABLE in the output:
+- BREED: Exact breed or mix. NEVER change the breed.
+- FUR: Exact color, pattern, markings, texture. A caramel dog stays caramel. A tabby cat stays tabby.
+- FACE: Exact ear shape, eye color, nose shape, facial structure.
+- BODY: Exact proportions, size, build.
+STEP 3: GENERATE the new photo. The pet MUST match the locked features exactly.
+ADAPT ONLY: Background, setting, and clothing/accessories to match the "${studioStyle}" style. NEVER change the animal.
+TEST: The owner MUST say "That's my pet!" — if not, FAILED.`;
+          } else if (studioStyle && (studioStyle === StudioStyle.RESTAURACAO_FIEL || studioStyle === StudioStyle.RESTAURACAO_COLORIZAR)) {
+            label = `=== THE OLD/DAMAGED PHOTOGRAPH TO RESTORE ===
+THIS IS THE INPUT PHOTO THAT NEEDS HD RESTORATION.
+DO NOT treat this as a person to re-photograph in a new scene.
+YOUR TASK: Take THIS EXACT photograph and output a DRAMATICALLY ENHANCED HD version.
+- RECONSTRUCT every face with sharp HD detail (clear eyes, skin texture, defined features)
+- SHARPEN every element (fabrics, vehicles, background, text)
+- BOOST colors to vivid modern levels
+- REMOVE all damage, scratches, stains, grain
+- The output must show the SAME scene but look like it was taken with a modern professional camera
+- The quality difference must be DRAMATIC and OBVIOUS`;
+          } else if (studioStyle) {
             label = `INPUT IMAGE 1: THE MAIN CHARACTER.
 === FACE DNA CARD (ANALYZE BEFORE GENERATING) ===
 STEP 1: STUDY this face. Identify the 5 UNIQUE features that make this person recognizable.
@@ -603,11 +1325,48 @@ PRESERVE: Exact face geometry, jawline, nose, eyes, lips, skin tone, hair, moles
 The person MUST be immediately recognizable.`;
           if (isEditing) {
             label = "INPUT IMAGE TO EDIT: PRESERVE COMPOSITION EXACTLY. MODIFY ONLY THE REQUESTED AREAS.";
+          } else if (studioStyle && (studioStyle as string).startsWith('Pet:')) {
+            label = `=== IDENTITY SOURCE: THIS IS THE REAL PET TO RE-PHOTOGRAPH ===
+YOUR TASK: Create a BRAND NEW professional photo of THIS PET (ANIMAL) in the "${studioStyle}" style.
+
+=== PET IDENTITY DNA CARD (ANALYZE BEFORE GENERATING — CRITICAL) ===
+STEP 1: STUDY this animal. What breed is it? What are its 5 most distinctive physical features?
+STEP 2: LOCK these features as NON-NEGOTIABLE:
+- BREED: Exact breed or mix (e.g., vira-lata caramelo, gato cinza rajado, golden retriever)
+- FUR COLOR: Exact shades and tones (NEVER change color)
+- FUR PATTERN: Exact markings, spots, stripes, patches in correct positions
+- FACE: Exact ear shape (floppy/pointed), eye color, nose shape, muzzle shape
+- BODY: Exact size, proportions, build
+Also preserve: tail shape, paw color, any unique markings or scars.
+
+STEP 3: GENERATE the new photo while checking each locked feature.
+
+WHAT MUST CHANGE: background, setting, props, accessories (all to match "${studioStyle}").
+WHAT MUST NOT CHANGE: the animal itself — breed, fur, face, body.
+
+SIDE-BY-SIDE TEST: The pet owner must look at both images and say "That's my pet!"
+If the animal looks like a different breed or has different coloring → FAILED.`;
           } else if (productImage) {
             label = `INPUT IMAGE 1: THE MAIN CHARACTER.
 === FACE IDENTITY LOCK ===
 PRESERVE FACE 100%: jawline, nose, eyes, lips, forehead, chin, cheekbones, skin tone, hair, moles, freckles, expression.
 BODY POSE: Must change to hold product. FACE: Must NOT change at all.`;
+          } else if (studioStyle && (studioStyle === StudioStyle.RESTAURACAO_FIEL || studioStyle === StudioStyle.RESTAURACAO_COLORIZAR)) {
+            label = `=== THE OLD/DAMAGED PHOTOGRAPH TO RESTORE TO HD ===
+THIS IS THE INPUT PHOTO THAT NEEDS HD RESTORATION AND ENHANCEMENT.
+DO NOT treat this as a person to re-photograph in a new scene.
+DO NOT create a brand new photo. ENHANCE THIS EXACT PHOTO.
+
+YOUR TASK: Output a DRAMATICALLY ENHANCED HD version of THIS EXACT photograph:
+- RECONSTRUCT every face with sharp HD detail — clear eyes, skin texture, defined jawlines, visible pores
+- SHARPEN every element to razor clarity — fabrics, vehicles, signs, text, background details
+- BOOST colors to vivid, saturated modern levels — faded colors become RICH and ALIVE
+- REMOVE all damage — scratches, stains, fold marks, grain, dust, aging artifacts
+- BOOST contrast to modern HD levels — deep blacks, bright whites, full dynamic range
+- Make the lighting look natural and professional
+
+The quality difference between input and output must be DRAMATIC.
+If the output looks similar to the input, YOU HAVE FAILED.`;
           } else if (studioStyle) {
             label = `=== IDENTITY SOURCE: THIS IS THE REAL PERSON TO RE-PHOTOGRAPH ===
 YOUR TASK: Create a BRAND NEW professional photo of THIS PERSON in the "${studioStyle}" style.
@@ -635,11 +1394,29 @@ If output = original photo unchanged → FAILED. If face is unrecognizable → F
         }
       }
 
-      // PRODUCT (if present without custom model)
+      // PRODUCT or TUTOR (if present without custom model)
       if (productImage && !referenceImage) {
         const prod = extractBase64(productImage);
         if (prod) {
-          parts.push({ text: `INPUT IMAGE 2: THE HERO PRODUCT. COMPOSITE THIS INTO THE SCENE.` });
+          // When pet+tutor style: treat productImage as TUTOR (person identity)
+          if (studioStyle && (studioStyle as string).startsWith('Pet:')) {
+            parts.push({
+              text: `INPUT IMAGE 2: THE TUTOR / PET OWNER (PERSON).
+=== TUTOR FACE DNA CARD (ANALYZE BEFORE GENERATING) ===
+STEP 1: STUDY this person's face. Identify the 5 features that make them UNIQUE.
+STEP 2: LOCK these features — they are NON-NEGOTIABLE:
+- FACE SHAPE: Exact jawline + chin + forehead proportions
+- NOSE: Bridge width, tip shape, nostril size
+- EYES: Shape, spacing, color, lid crease
+- SKIN: Exact tone (NEVER lighten/darken), moles, freckles, scars
+- EXPRESSION: Reproduce EXACTLY — do NOT add or remove smiles
+Also preserve: lips, hair (color + texture + style), eyebrows, age, body type.
+CRITICAL: This person MUST appear in the output photo TOGETHER with the pet from INPUT IMAGE 1.
+The tutor must be RECOGNIZABLE — their real face, not a fictional person.
+RECOGNITION TEST: The person MUST say "That's me with my pet!" — if not, FAILED.` });
+          } else {
+            parts.push({ text: `INPUT IMAGE 2: THE HERO PRODUCT. COMPOSITE THIS INTO THE SCENE.` });
+          }
           parts.push({ inlineData: prod });
         }
       }
@@ -1200,6 +1977,25 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
     ][variationIndex - 1] || validVariationLogic;
   }
 
+  // FORMATURA-SPECIFIC VARIATIONS: Unique poses/angles for long graduation sessions (up to 12 photos)
+  if (studioStyle && (studioStyle as string).startsWith('FORM_')) {
+    const graduationVariations = [
+      `GRADUATION VARIATION 1 — CLASSIC PORTRAIT: Medium close-up from chest up. Direct eye contact with camera. Confident, composed expression. Hands holding diploma at chest height. Straight-on camera angle.`,
+      `GRADUATION VARIATION 2 — 3/4 BODY: Three-quarter body shot. Slight body turn (30°) to the right. Diploma held at waist. Proud smile. Camera at eye level.`,
+      `GRADUATION VARIATION 3 — FULL BODY: Full body shot showing the complete gown. Standing with confident posture. One hand on hip, other holding diploma at side. Slight head tilt. Camera pulled back to show full outfit.`,
+      `GRADUATION VARIATION 4 — PROFILE EDITORIAL: 3/4 profile view (face turned 45° from camera). Dramatic side lighting emphasizing jawline. Diploma held close to body. Contemplative or serene expression. Editorial magazine feel.`,
+      `GRADUATION VARIATION 5 — SEATED RELAXED: Seated pose on a stool or bench. Relaxed, natural posture with crossed legs or leaning forward. Diploma resting on lap. Warm, genuine smile. Casual but still academic.`,
+      `GRADUATION VARIATION 6 — OVER-THE-SHOULDER: Looking back over the shoulder at camera. Body facing away, head turned with confident glance. The back of the gown and cap are visible. Cinematic, mysterious feel.`,
+      `GRADUATION VARIATION 7 — LOW ANGLE POWER: Camera positioned slightly below eye level (15° up), creating a powerful, heroic perspective. Graduate standing tall, chin slightly raised. Diploma held high.`,
+      `GRADUATION VARIATION 8 — CANDID JOY: Natural, candid-style shot. Laughing genuinely or smiling broadly. Movement and life in the expression. May be mid-walk or mid-gesture. Authentic happiness, not stiff.`,
+      `GRADUATION VARIATION 9 — CAP HOLD: Graduate holding the mortarboard cap with both hands against their chest, looking at camera. Cap tassel visible. Intimate, reflective moment. Close-up framing.`,
+      `GRADUATION VARIATION 10 — EDITORIAL WIDE: Wide shot with the graduate positioned to one side (rule of thirds). Generous negative space. The environment fills the frame. Person is smaller but clearly the subject.`,
+      `GRADUATION VARIATION 11 — DRAMATIC: High contrast, moody lighting. Deep shadows. The graduate emerges from darkness, lit by a single dramatic light source. Intense, powerful expression. Fine art portrait quality.`,
+      `GRADUATION VARIATION 12 — CELEBRATION DYNAMIC: Arms raised in victory. Cap may be mid-toss or held high. Maximum energy and movement. Confetti or streamers optional. Pure celebration captured in motion.`
+    ];
+    validVariationLogic = graduationVariations[(variationIndex - 1) % graduationVariations.length];
+  }
+
   if (hasReference) {
     validVariationLogic = [
       `STYLE-TRANSFER PHOTO SESSION (Variation 1):
@@ -1271,7 +2067,59 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   // 1. PHOTO-BASED PATH (CUSTOM MODEL UPLOADED)
   // 1. PHOTO-BASED PATH (CUSTOM MODEL UPLOADED)
   if (customModelImage) {
-    if (hasProduct) {
+    // PET STYLES — completely different prompt logic (no Face DNA, no product-hold)
+    if (studioStyle && (studioStyle as string).startsWith('Pet:')) {
+      const isTutorStyle = (studioStyle as string).includes('Tutor');
+      prompt += `
+       ================================================================================
+       *** PET PHOTOGRAPHY MODE ***
+       ================================================================================
+       
+       === PET IDENTITY DNA CARD (ANALYZE BEFORE GENERATING — TOP PRIORITY) ===
+       STEP 1: STUDY the PET from Input Image 1. This is an ANIMAL, NOT a person.
+       STEP 2: LOCK these features as NON-NEGOTIABLE:
+       - BREED: Exact breed or mix (vira-lata caramelo, gato rajado, golden retriever, etc.)
+       - FUR COLOR: Exact shades and tones — NEVER change the color. A caramel dog stays caramel.
+       - FUR PATTERN: Exact markings, spots, stripes, patches in correct positions
+       - FACE: Exact ear shape (floppy/pointed/erect), eye color, nose shape, muzzle shape
+       - BODY: Exact size, proportions, build. Do NOT change the pet's weight or body shape.
+       STEP 3: Also preserve: tail shape, paw color, any unique markings or scars.
+       
+       RECOGNITION TEST: The pet owner MUST say "That's my pet!" — if not, FAILED.
+       
+       ${isTutorStyle && hasProduct ? `
+       === TUTOR (OWNER) IDENTITY — FROM INPUT IMAGE 2 ===
+       Input Image 2 contains the PET OWNER (tutor). This is the REAL PERSON who owns the pet.
+       FACE DNA CARD (FOR THE TUTOR):
+       - PRESERVE 100% of the tutor's face: jawline, nose, eyes, lips, skin tone, expression, hair, moles.
+       - The tutor MUST appear in the output photo TOGETHER with the pet.
+       - The tutor must be RECOGNIZABLE — use their REAL face from Image 2, NOT a fictional person.
+       - BODY TYPE: Preserve the tutor's exact body proportions from Image 2.
+       
+       COMPOSITION: The tutor and pet should interact naturally — holding, sitting together, playing.
+       The tutor should look at camera or at their pet with genuine affection.
+       
+       CRITICAL RULES:
+       - DO NOT invent a new person. USE the tutor from Image 2.
+       - DO NOT add random objects (no card machines, no products, no props unless specified by style).
+       - DO NOT change the pet's appearance to match a generic breed.
+       ` : `
+       COMPOSITION: The pet is the SOLE SUBJECT of this photo.
+       The pet should be the hero/center of the image.
+       
+       CRITICAL RULES:
+       - DO NOT add people unless explicitly requested by the style.
+       - DO NOT add random objects or props unless specified by style.
+       - DO NOT change the pet's appearance to match a generic breed.
+       `}
+       
+       ANTI-HALLUCINATION (PET-SPECIFIC):
+       - FORBIDDEN: card machines, laptops, phones, products, office supplies, or ANY business props.
+       - FORBIDDEN: changing the pet's breed, color, or markings.
+       - FORBIDDEN: generating a different animal than the one in the input.
+       - ALLOWED: Only accessories/props mentioned in the style preset (e.g., Santa hat for Christmas).
+       `;
+    } else if (hasProduct) {
       // --- PRODUCT + PERSON COMPOSITION MODE ---
       prompt += `
        ================================================================================
@@ -1437,8 +2285,9 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   
   ⚠️ CRITICAL IDENTITY RULE:
   - The PERSON in the output MUST be the SAME person from Image 1 (primary photo)
-  - PRESERVE from Image 1: face, gender, body type, skin tone, hair, age, ethnicity
+  - PRESERVE from Image 1: face, gender, body type, skin tone, hair, ethnicity
   - DO NOT use the person from the reference image! Only use their POSE and ENVIRONMENT.
+  - DO NOT infer or copy the AGE of the person in Image 2 (reference). The person's age is defined ONLY by Image 1 and any explicit age field provided below.
   
   REPLICATE FROM REFERENCE IMAGE:
   - POSE and body language — match the exact pose, hand position, body angle
@@ -1450,14 +2299,25 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   Think: "Put the person from Image 1 into the EXACT SCENE and POSE of Image 2"
   The reference photo OVERRIDES the preset's pose, background, and lighting descriptions.
   The preset's STYLE elements (outfit type, vibe, quality) should still apply.
+  ${(studioStyle && (studioStyle as string).includes('Aniver') && config.birthdayAge) ? `
+  === BIRTHDAY AGE CONTEXT (CRITICAL - OVERRIDES REFERENCE IMAGE) ===
+  THE PERSON IS CELEBRATING THEIR ${config.birthdayAge}th BIRTHDAY.
+  - IGNORE any age the person in the reference image (Image 2) appears to be. USE ONLY "${config.birthdayAge}" for all age-related decorations.
+  - If number balloons are part of the style, display the NUMBER "${config.birthdayAge}" prominently using METALLIC FOIL NUMBER BALLOONS.
+  - Incorporate age-appropriate decorations and energy level for a ${config.birthdayAge}-year-old celebration.
+  - The birthday person should look happy, celebrated, and be the center of attention.
+  - If a cake is present, it should have "${config.birthdayAge}" or appropriate candles.
+  === END AGE CONTEXT ===
+  ` : ''}
   ` : hasReference ? `
   === STYLE REFERENCE ACTIVE (PRESERVE IDENTITY!) ===
   A style reference image has been provided. IGNORE all preset styles.
   
   ⚠️ CRITICAL IDENTITY RULE:
   - The PERSON in the output MUST be the same person from the PRIMARY image (Input Image 1)
-  - PRESERVE: face, gender, body type, skin tone, hair, age, ethnicity
+  - PRESERVE: face, gender, body type, skin tone, hair, ethnicity
   - DO NOT use the person from the reference image!
+  - DO NOT infer or copy the AGE of the person in Image 2 (reference). The person's age is defined ONLY by Image 1 and any explicit age field provided below.
   
   EXTRACT FROM REFERENCE (STYLE ONLY):
   - Background type and environment
@@ -1468,9 +2328,21 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - POSE and body language — replicate the exact pose from the reference
   
   Think: "Photograph the person from Image 1 using the STYLE and POSE of Image 2"
-  ` : (isStudioPhoto && studioStyle ? `
+  ${(studioStyle && (studioStyle as string).includes('Aniver') && config.birthdayAge) ? `
+  === BIRTHDAY AGE CONTEXT (CRITICAL - OVERRIDES REFERENCE IMAGE) ===
+  THE PERSON IS CELEBRATING THEIR ${config.birthdayAge}th BIRTHDAY.
+  - IGNORE any age the person in the reference image (Image 2) appears to be. USE ONLY "${config.birthdayAge}" for all age-related decorations.
+  - If number balloons are part of the style, display the NUMBER "${config.birthdayAge}" prominently using METALLIC FOIL NUMBER BALLOONS.
+  - Incorporate age-appropriate decorations and energy level for a ${config.birthdayAge}-year-old celebration.
+  - The birthday person should look happy, celebrated, and be the center of attention.
+  - If a cake is present, it should have "${config.birthdayAge}" or appropriate candles.
+  === END AGE CONTEXT ===
+  ` : ''}
+  ` : (isStudioPhoto && studioStyle ? (() => {
+  const isRestorationStyle = studioStyle === StudioStyle.RESTAURACAO_FIEL || studioStyle === StudioStyle.RESTAURACAO_COLORIZAR;
+  return `
   === STUDIO PRESET APPLIED: ${studioStyle} ===
-  ${getStudioPresets(studioStyle)}
+  ${getStudioPresets(studioStyle)}`;})() + `
   
   ${hasEnvironment ? `
   === ENVIRONMENT MOOD INFLUENCE (APPLY TO BACKGROUND) ===
@@ -1492,6 +2364,32 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   ` : `IMPORTANT: The above preset defines the EXACT style, background, and lighting for this photo.
   Follow these instructions PRECISELY. Do not deviate from the preset.`}
 
+  ${(studioStyle === StudioStyle.RESTAURACAO_FIEL || studioStyle === StudioStyle.RESTAURACAO_COLORIZAR) ? `
+  === PHOTO RESTORATION MODE (OVERRIDES ALL OTHER INSTRUCTIONS) ===
+  THIS IS A PHOTO RESTORATION AND HD ENHANCEMENT JOB.
+  
+  YOUR MISSION: RECREATE this exact photograph at DRAMATICALLY HIGHER QUALITY.
+  Imagine you are re-photographing this EXACT same moment but with a modern 100-megapixel professional camera.
+  
+  WHAT YOU MUST DO:
+  1. RECONSTRUCT FACES: Every face must be sharp, detailed, with visible skin texture, clear eyes, and defined features. If a face is blurry or damaged, RECONSTRUCT it based on available information — make it look like a modern HD portrait.
+  2. SHARPEN EVERYTHING: Every detail must be razor-sharp — fabric textures, hair, vehicle details, background elements, text on signs/stickers. Nothing should be soft or blurry.
+  3. ENHANCE COLORS: Make colors DRAMATICALLY more vivid and saturated. Faded blues become rich deep blues. Dull skin becomes warm and alive. The sky should be vivid. Everything should POP.
+  4. REMOVE ALL DAMAGE: Eliminate scratches, stains, fold marks, dust, grain, and aging artifacts completely.
+  5. BOOST CONTRAST: Modern HD contrast levels — deep rich blacks, bright clean whites, full dynamic range.
+  6. IMPROVE LIGHTING: Make the lighting look natural and professional, as if taken with modern camera equipment.
+  
+  SCENE FIDELITY (what stays the same):
+  - Same people in the same positions
+  - Same clothing (but make fabrics look crisp and detailed)
+  - Same background scene (but make it sharp and vivid)
+  - Same composition and framing
+  - Same number of people
+  
+  THE OUTPUT MUST LOOK DRAMATICALLY DIFFERENT FROM THE INPUT.
+  If someone placed the original and restored versions side by side, the quality difference should be IMMEDIATELY OBVIOUS and IMPRESSIVE.
+  === END RESTORATION MODE ===
+  ` : `
   === TRANSFORMATION TASK (CRITICAL — APPLIES TO ALL STUDIO STYLES) ===
   YOUR JOB IS TO CREATE A BRAND NEW PHOTOGRAPH of this person in the style described above.
   Do NOT simply return, retouch, or slightly modify the input photo. The output MUST show:
@@ -1513,6 +2411,7 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   WHAT MUST CHANGE: background, clothing style, pose, lighting, environment.
   WHAT MUST NOT CHANGE: face, body type, body weight, body proportions, skin tone, hair.
   === END TRANSFORMATION TASK ===
+  `}
 
   ${(studioStyle && (studioStyle as string).includes('Família')) || studioStyle === StudioStyle.FAMILY_PICNIC ? `
   === FAMILY MODE CROWD CONTROL ===
@@ -1543,6 +2442,16 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   ` : ''}
   ` : '')}
   
+  ${(studioStyle === StudioStyle.RESTAURACAO_FIEL || studioStyle === StudioStyle.RESTAURACAO_COLORIZAR) ? `
+  HD ENHANCEMENT MANDATE (CRITICAL):
+  - This is NOT a retouch — this is a DRAMATIC QUALITY TRANSFORMATION.
+  - FACES: Must be reconstructed with HD-level detail. Clear eyes, defined eyebrows, visible skin pores, sharp jawlines.
+  - DETAILS: Fabric weaves visible, text readable, vehicle badges sharp, hair strands defined.
+  - COLORS: Boost saturation by at least 30-40 percent. Faded colors become VIVID. The photo should look like it was taken with a modern camera.
+  - CONTRAST: Modern dynamic range. Rich shadows, clean highlights.
+  - The output should look like a COMPLETELY DIFFERENT LEVEL OF QUALITY compared to the input.
+  - If the output looks similar to the input, YOU HAVE FAILED. The improvement must be DRAMATIC and OBVIOUS.
+  ` : `
   HUMAN ELEMENT RULES:
   - RAW PHOTOGRAPHY: Real Brazilian person, Canon 5D quality. NO AI/3D LOOK.
   - FACE FIDELITY: The face is the MOST IMPORTANT element. It must be a 100% match to the input photo.
@@ -1558,6 +2467,7 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - FACE VERIFICATION: Before finalizing, verify the output face matches the input face in ALL of these:
     jawline shape, nose shape, eye shape/color, lip shape, forehead, chin, cheekbones, eyebrows, skin tone, hair, moles/freckles.
   - BODY VERIFICATION: Compare body in output vs input. The person must appear the SAME weight and build.
+  `}
   
   === ABSOLUTELY FORBIDDEN FOR PHOTOS ===
   - NO floating app icons, emojis, or social media icons
@@ -1702,7 +2612,9 @@ const constructPrompt = (config: GenerationConfig, variationIndex: number, custo
   - IGNORE the features, race, age, and hair of the person in Image 2.
   - FACE SOURCE: IMAGE 1 ONLY.
   - BODY/STYLE SOURCE: IMAGE 2.
-  
+  ${config.birthdayAge ? `
+  - AGE OVERRIDE (CRITICAL): The user specified age "${config.birthdayAge}". USE THIS for all birthday decorations (balloons, cake numbers, candles, etc.). DO NOT use the apparent age from Image 2.
+  ` : ''}
   NEGATIVE PROMPT: Mixed identity, morphing features, looking like reference person, blended faces, cloning reference.
   `;
   }
@@ -2723,7 +3635,7 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.CORRETOR_IMOVEIS: return "STYLE: Real Estate Agent / Broker. LAYOUT: Confident professional pose. BACKGROUND: Modern luxury apartment interior, large windows with city view, or elegant property entrance. Props: Keys, tablet, professional attire. LIGHTING: Bright natural daylight, warm and inviting.";
     case StudioStyle.VENDEDOR_CARROS: return "STYLE: Car Salesperson / Dealership. LAYOUT: Showroom presence. BACKGROUND: Luxury car showroom with polished floors, premium vehicles, modern architecture. Props: Car keys, professional suit, tablet. LIGHTING: Bright showroom lighting with reflections.";
     case StudioStyle.MEDICO_DENTISTA: return "STYLE: Healthcare Professional / Doctor / Dentist. LAYOUT: Trustworthy medical portrait. BACKGROUND: Clean medical office, white walls, modern clinic equipment, or blurred hospital corridor. Props: White coat, stethoscope, clipboard. LIGHTING: Clean clinical white lighting, professional and sterile.";
-    case StudioStyle.ADVOGADO: return "STYLE: Lawyer / Attorney. LAYOUT: Authoritative professional portrait. BACKGROUND: Law office with bookshelves full of law books, wooden desk, leather chair, scales of justice. Props: Suit, legal documents, glasses. LIGHTING: Warm sophisticated office lighting, golden hour from windows.";
+    case StudioStyle.ADVOGADO: return "STYLE: Brazilian Lawyer / Advogado(a). OUTPUT: REAL PHOTOGRAPH taken with a Canon EOS R5, 85mm f/1.4 lens, shallow depth of field. NOT illustration, NOT digital art, NOT CGI. Must look like a REAL photo taken by a professional photographer in São Paulo or Brasília. SKIN: Natural skin texture with pores, subtle imperfections, true-to-life Brazilian skin tones. NO airbrushed/smoothed skin. BACKGROUND: Modern Brazilian law firm office — clean desk, some law books (NOT a massive American library), a laptop, simple elegant decor. Think Pinheiro Neto or Mattos Filho style offices — contemporary, bright. WARDROBE: Professional but contemporary Brazilian style — blazer (no tie for men is OK), well-fitted suit, modern cut. LIGHTING: Soft natural window light mixed with office overhead, like a real candid portrait taken during a workday. POSE: Natural and relaxed — NOT stiff, NOT arms crossed unless it looks genuine. Think LinkedIn photo by a real photographer.";
     case StudioStyle.PERSONAL_TRAINER: return "STYLE: Personal Trainer / Fitness Coach. LAYOUT: Energetic athletic pose. BACKGROUND: Modern gym with equipment, functional training area, or outdoor fitness park. Props: Stopwatch, training gloves, athletic wear. LIGHTING: Dynamic gym lighting with energy, rim lights for definition.";
     case StudioStyle.CABELEIREIRO: return "STYLE: Hairdresser / Barber / Stylist. LAYOUT: Creative professional pose. BACKGROUND: Modern salon with mirrors, styling chairs, professional products, industrial chic decor. Props: Scissors, comb, styling tools, black cape. LIGHTING: Soft flattering salon lighting with ring light effect.";
     case StudioStyle.ARQUITETO: return "STYLE: Architect / Interior Designer. LAYOUT: Creative professional portrait. BACKGROUND: Modern design studio, architectural models, blueprints on walls, minimalist workspace. Props: Blueprints, scale ruler, tablet with design software. LIGHTING: Natural studio light from large windows, clean and modern.";
@@ -2831,6 +3743,12 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.POLITICO_COMICIO: return "STYLE: Political Portrait - Rally/Campaign. LAYOUT: Close-up or medium shot of candidate. BACKGROUND: Solid colored studio backdrop — use a VIBRANT SOLID COLOR (blue, yellow, orange, or red gradient). Clean, no objects. POSE: Natural, approachable, looking at camera. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: White or light social shirt, clean and professional. LIGHTING: Professional editorial lighting with rim light separating subject from background. VIBE: Energetic, hopeful, modern political campaign, clean and professional.";
     case StudioStyle.POLITICO_GABINETE: return "STYLE: Political Portrait - Office/Cabinet. LAYOUT: Formal seated or standing portrait. BACKGROUND: Elegant office with dark wood bookshelf, Brazilian flag stand visible, institutional decor. POSE: Seated at desk or standing beside it, formal and authoritative. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: Dark suit with tie, very formal. LIGHTING: Warm ambient office lighting with professional fill light. VIBE: Authority, governance, institutional, statesmanship.";
     case StudioStyle.POLITICO_CAMPANHA_RURAL: return "STYLE: Political Portrait - Community/Rural Campaign. LAYOUT: Candidate in outdoor community setting. BACKGROUND: Blurred rural or small-town scene — farmland, community market, or simple neighborhood. POSE: Walking, greeting, or standing with open arms gesture. EXPRESSION: MATCH INPUT EXACTLY. DO NOT FORCE SMILE. CLOTHING: Casual shirt (polo or button-down), no tie, sleeves rolled up. LIGHTING: Natural golden hour outdoor light. VIBE: Approachable, man-of-the-people, grassroots, humble.";
+    case StudioStyle.POLITICO_PUNHO: return "STYLE: Political Portrait - Fist Pump Victory. LAYOUT: Medium shot of the candidate with one or both fists raised in a victory/strength gesture. BACKGROUND: Clean light grey or soft gradient studio backdrop. POSE: Energetic, one arm raised with closed fist showing strength and determination, the other hand may also be in a fist at chest level. EXPRESSION: MATCH INPUT EXACTLY. Determined, victorious, passionate. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: Dark polo shirt OR button-down shirt, professional but not suit-level formal. LIGHTING: Professional studio lighting with rim light for drama. VIBE: Victory, strength, energy, 'I fight for you' political campaign energy.";
+    case StudioStyle.POLITICO_CORACAO: return "STYLE: Political Portrait - Heart Hands. LAYOUT: Medium shot of the candidate making a heart shape with both hands in front of their chest. BACKGROUND: Clean white or light grey studio backdrop, very clean and professional. POSE: Standing upright, both hands forming a heart shape in front of the chest, arms creating a frame around the heart gesture. EXPRESSION: MATCH INPUT EXACTLY. Warm, sincere, approachable. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: Clean white social shirt or light-colored professional shirt. LIGHTING: Soft, bright studio lighting, clean and warm. VIBE: Love for the people, warmth, empathy, connection, social campaign energy.";
+    case StudioStyle.POLITICO_APONTANDO: return "STYLE: Political Portrait - Pointing at Camera. LAYOUT: Medium shot of the candidate pointing directly at the camera with one finger in an 'I'm counting on you' gesture (Uncle Sam style). BACKGROUND: Clean light grey or white studio backdrop. POSE: Confident stance, one arm extended forward pointing index finger directly at the camera lens, other hand may be at the side or on hip. EXPRESSION: MATCH INPUT EXACTLY. Confident, engaging, direct eye contact with camera. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: Blue or dark social button-down shirt, professional. LIGHTING: Professional studio lighting, clean and sharp. VIBE: Direct engagement, 'count on me / I count on you', voter connection, call-to-action energy.";
+    case StudioStyle.POLITICO_CAMISA_BRANCA: return "STYLE: Political Portrait - White Shirt Studio. LAYOUT: Close-up head and shoulders portrait of the candidate in a crisp white shirt. BACKGROUND: Clean white or very light grey gradient studio backdrop, spotlessly clean. POSE: Natural, relaxed but professional. Shoulders slightly angled, face looking directly at camera. EXPRESSION: MATCH INPUT EXACTLY. Natural confidence, approachable, trustworthy. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: Crisp, perfectly pressed white social dress shirt, top button may be open (no tie). Clean and professional. LIGHTING: Professional softbox lighting, bright and clean, minimal shadows. High-key lighting setup. VIBE: Clean, professional, modern candidate. Premium headshot quality. Institutional but approachable.";
+    case StudioStyle.POLITICO_BANDEIRA_ESTADO: return "STYLE: Political Portrait - State/Municipal Flag. LAYOUT: The candidate wearing a white social shirt with a STATE or MUNICIPAL flag draped over the shoulders like a cape/shawl. BACKGROUND: Clean light grey or white studio backdrop. POSE: Proud and patriotic, hands holding the flag draped across shoulders or one hand on heart. EXPRESSION: MATCH INPUT EXACTLY. Proud, regional patriotism, committed. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: White social shirt underneath the flag drape. FLAG: A generic Brazilian state flag with green and white tones (NOT the national flag). Do NOT use the Brazilian federal flag. LIGHTING: Professional studio softbox, clean and bright. VIBE: Regional pride, local governance, community connection, municipal patriotism.";
+    case StudioStyle.POLITICO_CASUAL: return "STYLE: Political Portrait - Casual Modern Youth. LAYOUT: Medium portrait of a modern, approachable candidate with a casual urban look. BACKGROUND: Clean light grey studio backdrop. POSE: Relaxed, confident, slightly casual — may have hands in pockets or arms crossed casually. EXPRESSION: MATCH INPUT EXACTLY. Cool, confident, modern, approachable. DO NOT FORCE SMILE — use the exact expression from the input photo. CLOTHING: Clean white crew-neck t-shirt OR casual white V-neck, modern and simple. May wear stylish sunglasses if appropriate. LIGHTING: Professional studio lighting with slight editorial edge/rim light for a modern feel. VIBE: New generation politician, modern, relatable to younger voters, break-the-mold, approachable and real.";
 
     // PALCO & ORATÓRIA STYLES — Realistic Event Photography (NOT CGI)
     case StudioStyle.PALESTRANTE_PALCO: return "STYLE: REALISTIC EVENT PHOTOGRAPHY — Professional Speaker at Conference. CAMERA: Canon 5D Mark IV, 85mm f/1.8 lens, shot from audience level at medium distance. FRAMING: MEDIUM SHOT from waist up, NEVER full body. BODY PRESERVATION: CRITICAL — Preserve the person's EXACT body type, weight, and proportions from the input photo. Do NOT make the person thinner or heavier. Do NOT widen the torso or change body shape in any way. BACKGROUND: Real conference stage with warm spotlights, subtle stage backdrop (dark or branded), blurred audience heads visible in foreground creating depth. Bokeh from stage lights. LIGHTING: Warm amber/white stage spotlight from above and slightly front, creating natural facial highlights. Soft fill from side. NO neon, NO blue LED walls, NO lens flares. Natural event photography lighting like a professional conference photographer would capture. POSE: Speaking naturally with one hand gesturing at chest level, or holding a headset microphone. Relaxed, confident posture — NOT exaggerated theatrical poses. PROPS: Small headset microphone on ear (skin-colored or black). OUTFIT: Smart blazer (beige, navy, or black) over a simple shirt or blouse. Professional but not overdone. VIBE: Real conference speaker captured by event photographer. Warm, authentic, professional. Like a photo that would appear in a Forbes or LinkedIn article. NEGATIVE: CGI look, neon lights, LED screens, lens flares, full body shot, artificial lighting, body distortion, weight change, oversized or undersized body parts, 3D render look.";
@@ -2880,17 +3798,203 @@ const getStudioPresets = (style: StudioStyle): string => {
     case StudioStyle.TIKTOK_FESTIVAL: return "STYLE: TikTok Music Festival / Concert. CRITICAL: This must look like an excited concert/festival photo taken by a friend, NOT professional event photography. LAYOUT: Person at a music festival or live concert. BACKGROUND: Stage lights in distance, massive crowd, LED wristbands glowing, confetti in air, laser show effects, festival grounds with tents and lights. Epic live music atmosphere. LIGHTING: Dynamic colored stage lights (purple, blue, pink, green) illuminating face. Phone flash or LED wristband glow. Dark background with colorful light splashes. POSE: Hands up in the air dancing, singing along, holding up phone recording, festival peace sign, jumping with crowd. Pure ecstasy and joy. On someone's shoulders or in the front row. OUTFIT: Festival fashion — glitter on face, crop top, high-waisted shorts, chunky boots, flower crown, body chains, neon accessories, face gems, temporary tattoos. VIBE: Festival season, music is life, crowd surfing energy, main stage vibes, Lollapalooza/Rock in Rio energy. CAMERA: iPhone photo in dark concert environment, motion blur possible, colorful light streaks.";
 
     // ADVOGADOS ESPECIAL ⚖️
-    case StudioStyle.ADV_MINIMALISTA: return "STYLE: Minimalist Lawyer Portrait. LAYOUT: Standing portrait, arms crossed or hands clasped. BACKGROUND: Clean pure white or very light gray studio background with soft shadows on floor. NO furniture, NO props, NO distractions — ONLY the clean backdrop. WARDROBE: Dark navy or black blazer over white blouse/shirt. Crisp, clean lines. LIGHTING: High-key professional studio lighting, soft and even, like a premium LinkedIn headshot. POSE: Confident, authoritative, arms crossed. VIBE: Apple-style minimalism, modern law firm partner.";
-    case StudioStyle.ADV_MODERNO: return "STYLE: Modern Contemporary Lawyer. LAYOUT: Half-body portrait, relaxed confident pose. BACKGROUND: Soft neutral gray or beige gradient background. Ultra-clean, no distractions. WARDROBE: Modern suit WITHOUT tie, open collar, charcoal or light gray suit. Contemporary and approachable. LIGHTING: Soft studio lighting from the side, subtle shadow for depth. POSE: Relaxed confident expression, hands at sides or one in pocket. VIBE: Modern startup lawyer, approachable yet professional, Silicon Valley legal counsel aesthetic.";
-    case StudioStyle.ADV_ESCRITORIO: return "STYLE: Clean Office Lawyer Portrait. LAYOUT: Seated at a modern minimalist desk, looking at camera. BACKGROUND: Clean bright office with organized law bookshelves slightly blurred behind. White/cream walls, modern furniture. A laptop or legal books on the desk. WARDROBE: Professional blazer in cream, navy, or charcoal. LIGHTING: Natural daylight from large windows, bright and warm. POSE: Sitting confidently, hands on desk or gesturing naturally. VIBE: Senior associate at a modern boutique law firm.";
-    case StudioStyle.ADV_EXECUTIVO_DARK: return "STYLE: Executive Dark Portrait - Distinguished Lawyer. LAYOUT: Half-body portrait, classic formal pose. BACKGROUND: Dark moody background — deep charcoal or very dark navy. Subtle warm rim light. NO visible room elements, just dark gradient. WARDROBE: Classic navy or dark suit with tie, formal and distinguished. LIGHTING: Dramatic Rembrandt-style lighting with warm key light from one side, subtle fill. Rich shadows for gravitas. POSE: Serious, authoritative, hands clasped or one hand adjusting jacket. VIBE: Supreme Court justice, senior partner, distinguished legal authority.";
-    case StudioStyle.ADV_EDITORIAL: return "STYLE: Editorial Fashion-Forward Lawyer. LAYOUT: Fashion editorial pose, leaning against wall or in a power stance. BACKGROUND: Minimalist architectural background — concrete wall, modern art gallery, or clean geometric shapes. Urban chic. WARDROBE: Fashion-forward professional — black turtleneck with blazer, or monochrome outfit. Delicate gold jewelry. LIGHTING: Editorial photography lighting — dramatic directional light, fashion magazine quality. POSE: Fashion editorial poses — leaning, looking away then back at camera, power stance. VIBE: Vogue Business magazine cover, fashion meets law, modern female lawyer breaking stereotypes.";
-    case StudioStyle.ADV_CORPORATIVO: return "STYLE: Corporate Premium Lawyer with City View. LAYOUT: Standing portrait with panoramic city visible. BACKGROUND: Floor-to-ceiling glass windows with city skyline behind, blurred bokeh of buildings and sky. Premium corner office feel. WARDROBE: Sharp tailored suit in light gray or navy, polished shoes, subtle accessories. LIGHTING: Natural backlight from windows creating a halo effect, supplemented by office lighting. Golden hour cityscape behind. POSE: Standing confidently, one hand in pocket, looking at camera with assured expression. VIBE: Managing partner of a top-tier international law firm, penthouse office views.";
+    case StudioStyle.ADV_MINIMALISTA: return "STYLE: Minimalist Brazilian Lawyer Portrait. OUTPUT: REAL PHOTOGRAPH taken with Sony A7IV, 85mm f/1.8, shallow depth of field. NOT illustration, NOT CGI, NOT digital painting. SKIN: Natural pores, real skin texture, true Brazilian skin tone. NO airbrushing. BACKGROUND: Clean white or very light gray studio backdrop with soft floor shadow. NO furniture, NO props — ONLY clean empty space behind the person. WARDROBE: Dark navy or charcoal blazer, white shirt, clean modern cut. No tie. LIGHTING: High-key professional studio lighting, soft and even, real photography catchlights in eyes. POSE: Standing confident, natural posture. Arms relaxed or one hand in pocket. NOT stiff. VIBE: Premium LinkedIn headshot by a top Brazilian photographer.";
+    case StudioStyle.ADV_MODERNO: return "STYLE: Modern Contemporary Brazilian Lawyer. OUTPUT: REAL PHOTOGRAPH taken with Canon R5, 50mm f/1.4. NOT illustration, NOT CGI. SKIN: Natural texture, pores, real Brazilian skin. NO smoothing. BACKGROUND: Soft neutral gray or warm beige gradient. Clean, no distractions. WARDROBE: Modern suit WITHOUT tie, open collar, charcoal or light gray. Contemporary Brazilian professional style. LIGHTING: Soft directional studio light from left, subtle shadow on opposite side. Natural-looking catchlights. POSE: Relaxed confident expression, hands at sides or one in pocket. Natural body language. VIBE: Modern SP attorney, approachable yet authoritative.";
+    case StudioStyle.ADV_ESCRITORIO: return "STYLE: Brazilian Law Firm Office Portrait. OUTPUT: REAL PHOTOGRAPH taken with Canon R6, 35mm f/1.4. NOT illustration, NOT CGI. SKIN: Natural texture, real pores, genuine Brazilian skin tone. BACKGROUND: Clean bright modern office — think Faria Lima district. Some law books on shelf (blurred, few, NOT a massive old library). White/cream walls, glass elements, a laptop on desk. Modern Brazilian corporate aesthetic. WARDROBE: Professional blazer, modern cut, well-fitted. LIGHTING: Real office environment — natural daylight from large windows mixed with soft overhead. POSE: Seated naturally at desk, looking at camera. Genuine expression, not overly posed. VIBE: Senior associate at a relevant Brazilian law firm. Real everyday office photo.";
+    case StudioStyle.ADV_EXECUTIVO_DARK: return "STYLE: Executive Dark Portrait - Distinguished Brazilian Lawyer. OUTPUT: REAL PHOTOGRAPH taken with Sony A7RV, 85mm f/1.4. NOT illustration, NOT digital art, NOT CGI. SKIN: Natural skin with real texture, pores visible, true Brazilian skin tone. NO smoothing or airbrushing. BACKGROUND: Dark moody — deep charcoal gradient. Subtle warm rim light separating subject from background. Clean, no props visible. WARDROBE: Classic dark suit, subtle tie optional, formal and distinguished but modern cut. LIGHTING: Rembrandt-style with warm key light from one side, subtle fill. Real photography shadows with natural falloff. POSE: Confident, dignified. Natural expression — serious but approachable. VIBE: Partner at a top-tier Brazilian firm. Real editorial portrait quality.";
+    case StudioStyle.ADV_EDITORIAL: return "STYLE: Editorial Brazilian Lawyer Portrait. OUTPUT: REAL PHOTOGRAPH taken with a Hasselblad X2D, 80mm f/1.9. NOT illustration, NOT CGI, NOT digital painting. SKIN: Real texture, pores, imperfections preserved. True Brazilian skin tone. BACKGROUND: Minimalist architectural — clean concrete wall or modern glass building. Urban São Paulo aesthetic. WARDROBE: Fashion-forward professional — black turtleneck with structured blazer, or monochrome all-black. Subtle gold jewelry OK. LIGHTING: Directional editorial light — single side source with controlled spill. Real photography quality. POSE: Editorial but natural — leaning slightly, confident stance. Not stiff. VIBE: Folha de São Paulo interview portrait or GQ Brasil editorial. Fashion meets law.";
+    case StudioStyle.ADV_CORPORATIVO: return "STYLE: Corporate Brazilian Lawyer with City View. OUTPUT: REAL PHOTOGRAPH taken with Canon R5, 35mm f/2.0. NOT illustration, NOT CGI. SKIN: Natural Brazilian skin with real texture and pores. NO smoothing. BACKGROUND: Floor-to-ceiling glass windows with blurred city skyline (São Paulo or Rio style). Premium corner office. City lights as soft bokeh. WARDROBE: Sharp tailored suit — light gray, navy, or charcoal. Modern Brazilian executive fit. LIGHTING: Natural backlight from windows creating rim separation, supplemented by fill light. POSE: Standing near window, one hand in pocket or at side. Genuine confident expression. VIBE: Managing partner of a major Brazilian law firm. Real candid corporate photography.";
 
-    // RESTAURAÇÃO DE FOTOS STYLES
-    case StudioStyle.RESTAURACAO_RETRATO: return "STYLE: Old Photo Restoration - Portrait. TASK: RESTORE AND ENHANCE this old/damaged photograph. DO NOT generate a new person or scene. PRESERVE the EXACT same person, pose, clothing, and background from the input image. RESTORE: Fix scratches, stains, fading, discoloration, blur, grain, and damage. ENHANCE: Improve clarity, sharpness, and detail. Add natural skin texture and realistic lighting. MAINTAIN: The exact same facial features, expression, hairstyle, clothing, and composition. OUTPUT: A high-quality, restored version of the SAME photo — as if it was taken with a modern camera. DO NOT change the person's appearance, age, or add elements not present in the original.";
-    case StudioStyle.RESTAURACAO_FAMILIA: return "STYLE: Old Photo Restoration - Family/Group. TASK: RESTORE AND ENHANCE this old family/group photograph. CRITICAL: PRESERVE EVERY PERSON exactly as they appear. Count all people and maintain the exact same count. RESTORE: Fix all damage (scratches, tears, fading, stains, water damage, fold marks). ENHANCE: Improve all faces with clarity while keeping their EXACT original expression and features. DO NOT change anyone's expression. DO NOT add or remove people. MAINTAIN: Same composition, same background, same clothing, same poses. OUTPUT: A pristine, high-resolution version of the original family photo.";
-    case StudioStyle.RESTAURACAO_COLORIZAR: return "STYLE: Photo Colorization - B&W to Color. TASK: CONVERT this black-and-white or sepia photograph to FULL REALISTIC COLOR. PRESERVE: The EXACT same person, pose, expression, clothing, background, and composition. COLORIZE NATURALLY: Apply realistic skin tones, hair colors, clothing colors, and background colors based on the era and context of the photo. Use historically accurate color palettes. ENHANCE: Improve clarity and detail while adding color. DO NOT modify the composition, expression, or any element — only ADD COLOR. OUTPUT: A naturally colorized, high-quality version that looks like it was originally taken in color.";
+    // RESTAURAÇÃO DE FOTOS STYLES — 100% FIDELITY RESTORATION
+    case StudioStyle.RESTAURACAO_FIEL: return "PRIMARY TASK: PROFESSIONAL PHOTO RESTORATION AND HD ENHANCEMENT. You are a world-class digital photo restoration specialist.\n\nACTION REQUIRED — You MUST actively transform this old/damaged photo into a STUNNING high-definition version:\n\n1. HD UPSCALING: Dramatically increase image clarity and sharpness. Every face, texture, and detail must become crystal clear as if shot with a modern 50-megapixel camera.\n2. DAMAGE REMOVAL: Completely eliminate ALL scratches, tears, fold marks, stains, water damage, dust spots, specks, scanning artifacts, and any physical deterioration. The output must look PRISTINE.\n3. CONTRAST AND TONES: Boost contrast to modern HD levels. Restore deep blacks and bright highlights. Fix any fading — make the tonal range rich and full.\n4. COLOR ENHANCEMENT (if color photo): Make colors MORE VIVID and saturated than the faded original. Restore the original vibrant color palette — skin tones should glow with life, clothing colors should pop, backgrounds should be rich. Fix any color casts from aging.\n5. FACE ENHANCEMENT: Sharpen every face in the photo. Add realistic skin detail, clear eyes with visible catchlights, defined features. Every person must be recognizable but look DRAMATICALLY BETTER.\n6. DETAIL RECOVERY: Recover fine details — fabric textures, hair strands, vehicle details, text on signs, landscape elements. Everything should be sharp and defined.\n7. NOISE REDUCTION: Remove film grain and noise while preserving natural texture. The result should look clean and modern.\n\nFIDELITY RULES — Keep the SAME scene:\n- Same people, same poses, same expressions, same clothing, same background, same composition and framing.\n- Same number of people — do not add or remove anyone.\n- IF BLACK AND WHITE: Keep it black and white but make it DRAMATICALLY sharper and with richer tonal range. Deep blacks, bright whites, beautiful grey gradients.\n- IF SEPIA: Keep sepia tone but enhance dramatically.\n- Do NOT create a new scene or add new elements.\n\nOUTPUT: A DRAMATICALLY ENHANCED version that looks like the same moment captured with a modern professional camera. The difference between input and output should be STUNNING — night and day. The viewer should say WOW.";
+    case StudioStyle.RESTAURACAO_COLORIZAR: return "PRIMARY TASK: PROFESSIONAL PHOTO RESTORATION, HD ENHANCEMENT, AND NATURAL COLORIZATION. You are a world-class digital photo restoration and colorization specialist.\n\nACTION REQUIRED — You MUST actively transform this old/damaged photo into a STUNNING full-color high-definition version:\n\n1. HD UPSCALING: Dramatically increase image clarity and sharpness. Every face, texture, and detail must become crystal clear as if shot with a modern 50-megapixel camera.\n2. DAMAGE REMOVAL: Completely eliminate ALL scratches, tears, fold marks, stains, water damage, dust spots, specks, scanning artifacts, and any physical deterioration.\n3. CONTRAST AND TONES: Boost contrast to modern HD levels. Rich deep blacks, bright highlights, full tonal range.\n4. FACE ENHANCEMENT: Sharpen every face. Add realistic skin detail with natural color — warm skin tones, clear eyes, defined features. Every person must be recognizable but look DRAMATICALLY BETTER.\n5. DETAIL RECOVERY: Recover fine details — fabric textures, hair strands, vehicle details, text, landscape elements. Everything sharp and defined.\n6. NOISE REDUCTION: Remove film grain and noise while preserving natural texture.\n\nCOLORIZATION — Add REALISTIC, VIVID color:\n- SKIN: Natural warm skin tones appropriate for ethnicity. Healthy, alive, glowing.\n- CLOTHING: Vibrant, realistic colors based on fabric type and era. Make them POP.\n- VEHICLES: Accurate colors — if a blue car is visible in the tones, make it a rich vivid blue.\n- SKY AND NATURE: Rich blue sky, lush green vegetation, warm earth tones.\n- ENVIRONMENT: Realistic colors for buildings, roads, objects based on context and era.\n- The colorization should look NATURAL and BELIEVABLE — as if the photo was originally taken in color.\n- If the photo is ALREADY in color: enhance and make colors MORE VIVID instead of re-colorizing.\n\nFIDELITY RULES — Keep the SAME scene:\n- Same people, same poses, same expressions, same clothing, same background, same composition.\n- Same number of people — do not add or remove anyone.\n- Do NOT create a new scene or add new elements.\n\nOUTPUT: A DRAMATICALLY ENHANCED, naturally colorized version that looks like the same moment captured with a modern professional camera in full color. The transformation should be BREATHTAKING.";
+
+    // PET 🐾 STYLES — Animal Identity Preservation Photography
+    // Anti-hallucination prefix applied to all pet styles
+    case StudioStyle.PET_ESTUDIO_CLASSICO: return "Professional pet studio portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Dark charcoal studio backdrop with soft gradient. LIGHTING: Professional studio softbox lighting with catchlights in eyes and amber rim light. Pet looking at camera. Photorealistic, magazine-quality pet portrait.";
+    case StudioStyle.PET_JARDIM_TROPICAL: return "Tropical garden pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Lush tropical garden with colorful flowers, palm leaves, ferns, dappled sunlight. Brazilian tropical atmosphere. Warm, vibrant natural light. Photorealistic outdoor pet portrait.";
+    case StudioStyle.PET_PRAIA_SUNSET: return "Sunset beach pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Golden sand beach at sunset, gentle waves, palm tree silhouettes, dramatic orange-pink sky. Golden hour backlighting with warm glow. Photorealistic cinematic pet portrait.";
+    case StudioStyle.PET_NATAL_FESTIVO: return "Christmas festive pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Cozy Christmas setting with decorated tree, warm bokeh lights, wrapped presents. Pet may wear a small Santa hat. Warm holiday lighting. Photorealistic festive portrait.";
+    case StudioStyle.PET_RENASCENCA: return "Renaissance royal pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Dark oil painting backdrop, ornate golden frame edges, classical drapes. Pet in royal costume with cape and crown. Rembrandt lighting. Oil painting quality aesthetic.";
+    case StudioStyle.PET_TUTOR_ESTUDIO: return "CRITICAL: The output image MUST contain BOTH the person AND the pet together. An image with only the person or only the pet is a FAILURE. CREATE a completely new professional studio photograph showing the person from Image 2 HOLDING or sitting BESIDE the pet from Image 1. They are two separate beings - a HUMAN and an ANIMAL. Preserve the EXACT face and likeness of the person. Preserve the EXACT breed and appearance of the pet. SCENE: Clean white or light gray studio backdrop. Professional softbox lighting with catchlights in both subjects' eyes. Warm, loving bond visible. COMPOSITION: Both subjects must be clearly visible and occupy significant space in the frame. The pet should be in the person's arms or on their lap. Premium family portrait studio. Photorealistic.";
+    case StudioStyle.PET_TUTOR_NATUREZA: return "CRITICAL: The output image MUST contain BOTH the person AND the pet together. An image with only the person or only the pet is a FAILURE. CREATE a completely new outdoor photograph showing the person from Image 2 WITH the pet from Image 1 in a beautiful natural setting. They are two separate beings - a HUMAN and an ANIMAL. Preserve the EXACT face and likeness of the person. Preserve the EXACT breed and appearance of the pet. SCENE: Beautiful green park, meadow with flowers, or forest path. Golden hour warm sunlight. COMPOSITION: Both subjects must be clearly visible. Person sitting with pet, walking together, or holding pet. Genuine joy and companionship. Lifestyle outdoor photography. Photorealistic.";
+    case StudioStyle.PET_FILHOTE_FOFURA: return "Adorable puppy/kitten cuteness portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Soft pastel studio backdrop, fluffy blankets, cute props. Very soft diffused lighting. Maximum cuteness factor. Photorealistic newborn-style pet photo.";
+    case StudioStyle.PET_ELEGANTE: return "Elegant sophisticated pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Dark velvet backdrop with golden accents. Dramatic studio lighting with rim light on fur. Pet on velvet cushion. Aristocratic luxury aesthetic. Photorealistic.";
+    case StudioStyle.PET_AVENTURA_OUTDOOR: return "Adventure outdoor pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Dramatic mountain trail, forest path, or lake shore. Golden hour dramatic natural light. Epic adventure photography. Photorealistic.";
+    case StudioStyle.PET_FASHION: return "High-fashion pet editorial portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Clean fashion studio backdrop. Pet wearing stylish bandana or bow tie. Fashion editorial lighting. Vogue magazine quality. Photorealistic.";
+    case StudioStyle.PET_ANJO_ASAS: return "Angel wings pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Ethereal heavenly atmosphere with soft clouds and golden sunbeams. Pet has beautiful white feathered angel wings. Only the pet gets wings. Soft glowing backlighting. Photorealistic with magical elements.";
+    case StudioStyle.PET_FAZENDINHA: return "Country farm pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Rustic farm with wooden barn, hay bales, sunflower field. Pet wearing cowboy hat or bandana. Warm golden afternoon sunlight. Photorealistic country charm.";
+    case StudioStyle.PET_PASCOA: return "Easter pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Pastel spring garden with flowers and Easter eggs. Pet wearing bunny ears headband. Soft bright spring daylight. Photorealistic festive portrait.";
+    case StudioStyle.PET_HALLOWEEN: return "Halloween costume pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Cute spooky Halloween with carved pumpkins, autumn leaves. Pet in fun costume (cape or witch hat). Moody purple-orange lighting. Photorealistic.";
+    case StudioStyle.PET_SUPER_HEROI: return "Superhero pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Dramatic cityscape rooftop at sunset. Pet wearing superhero cape flowing in wind. Cinematic dramatic lighting. Epic comic book hero atmosphere. Photorealistic.";
+    case StudioStyle.PET_AQUARELA: return "Watercolor artistic pet portrait. CREATE a completely new artwork of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). STYLE: Detailed watercolor technique with visible brushstrokes and color bleeding at edges. Soft pastel watercolor washes in background. Gallery-quality fine art watercolor painting.";
+    case StudioStyle.PET_CHEF: return "Chef pet portrait. CREATE a completely new photograph of the PET from the input photo. The PET is the SOLE SUBJECT — do NOT add any people to the image. Preserve the EXACT likeness of the pet (breed, fur color, markings, face). SCENE: Professional kitchen. Pet wearing white chef hat and small apron. Cooking utensils nearby. Bright kitchen lighting. Ratatouille vibes. Photorealistic.";
+
+    // FORMATURA 🎓 STYLES — Graduation Photography with Visual Consistency Lock
+    // All graduation styles share the GRADUATION CONSISTENCY LOCK to ensure coherent ensaio sessions
+    case StudioStyle.FORM_BECA_CLASSICA: return `STYLE: Brazilian Graduation Portrait — Classic Gown & Cap. OUTPUT: REAL PHOTOGRAPH taken with Canon R5, 85mm f/1.4, shallow DOF. NOT illustration, NOT CGI.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY — APPLY TO ALL GRADUATION PHOTOS) ===
+WARDROBE (NON-NEGOTIABLE): Traditional Brazilian academic gown (BECA) — solid BLACK fabric, long-sleeved, floor-length, with WHITE or CREAM collar/jabot detail at the neckline. Academic mortarboard cap (CAPELO) — BLACK with gold tassel hanging to the right side. The gown must look IDENTICAL in every photo of this session.
+PROPS (NON-NEGOTIABLE): GREEN graduation diploma scroll (CANUDO) tied with a GOLD satin ribbon bow. The scroll is approximately 30cm long, rolled tightly. If held, it must be gripped naturally by the person's hand. NEVER generate a different colored scroll or ribbon.
+COLOR PALETTE: Black (gown), Gold (tassel, ribbon, accents), Green (diploma scroll), White (collar). These are the ONLY accent colors.
+ANTI-HALLUCINATION: Do NOT replace the beca with casual clothes, suits, or fantasy costumes. Do NOT change the scroll color. Do NOT add random objects (phones, bags, cards). Do NOT add other people unless the style specifically requires it.
+=== END GRADUATION CONSISTENCY LOCK ===
+SCENE: Professional dark studio with charcoal/black gradient backdrop. Clean, timeless composition.
+LIGHTING: Professional 3-point studio setup — key light from front-right creating soft facial modeling, fill light from left, subtle rim light from behind for hair separation. Warm amber tones.
+POSE: Standing upright with confident posture. One hand may hold the diploma scroll at chest height. Direct eye contact with camera. Proud, accomplished expression.
+FRAMING: Medium shot from waist up or 3/4 body. Person fills 70% of the frame.
+VIBE: Classical, timeless, premium graduation portrait. Brazilian formatura tradition at its finest.`;
+
+    case StudioStyle.FORM_CHAPEU_JOGADO: return `STYLE: Brazilian Graduation — Cap Toss Celebration. OUTPUT: REAL PHOTOGRAPH, cinematic action shot.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) — shown being tossed upward in celebration, captured mid-air above the person's head.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — may be held in one hand while the other tosses the cap, or tucked under arm.
+COLOR PALETTE: Black, Gold, Green, White only.
+ANTI-HALLUCINATION: Do NOT replace beca with casual clothes. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Outdoor campus setting or open area with blue sky background. Golden confetti particles floating in the air around the person. Dramatic sky with warm sunset tones.
+LIGHTING: Golden hour sunlight from behind creating dramatic rim light and warm lens flare. The person is beautifully backlit.
+POSE: Dynamic celebratory gesture — one arm throwing the cap upward, caught mid-motion. Joyful expression — mouth open in celebration, genuine happiness. Body slightly arched back from the throw.
+FRAMING: Full body or 3/4 shot to capture the dynamic movement and the cap in the air.
+VIBE: Pure joy, life milestone moment, freedom and accomplishment. The iconic graduation cap toss photo.`;
+
+    case StudioStyle.FORM_DIPLOMA_ELEGANTE: return `STYLE: Brazilian Graduation — Elegant Diploma Portrait. OUTPUT: REAL PHOTOGRAPH with editorial quality.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) worn properly on head. Cap must sit level with tassel on right side.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — THIS IS THE HERO PROP. Must be held prominently, center-frame.
+COLOR PALETTE: Black, Gold, Green, White only.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Warm neutral studio backdrop — soft beige or champagne gradient. Minimal, letting the person and diploma be the full focus.
+LIGHTING: Soft beauty dish lighting from front, subtle warm fill. Elegant, flattering, magazine-quality illumination. Catchlights in eyes.
+POSE: Holding the diploma scroll elegantly with both hands at chest height, slightly angled toward camera. The scroll is the focal point of the composition. Proud, serene smile. Chin slightly raised with confidence.
+FRAMING: Medium close-up — from chest up. Tight, intimate, editorial.
+VIBE: Sophisticated elegance, quiet pride, editorial graduation portrait. Like a magazine cover celebrating academic achievement.`;
+
+    case StudioStyle.FORM_UNIFORME_PROFISSAO: return `STYLE: Brazilian Graduation — Professional Uniform Portrait. OUTPUT: REAL PHOTOGRAPH.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) worn OPEN, revealing the PROFESSIONAL UNIFORM underneath. The beca hangs open like a prestigious outer robe. Academic BLACK mortarboard cap (CAPELO) on head.
+PROFESSIONAL UNIFORM LOGIC: Auto-detect the most likely profession based on the graduation context:
+- If medical/health → White lab coat + stethoscope underneath the open beca
+- If law → Dark blazer + formal shirt underneath
+- If engineering → Hard hat held in hand + professional shirt underneath
+- If nursing → Scrubs or white uniform underneath
+- DEFAULT → Clean professional white shirt underneath
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon held in one hand.
+COLOR PALETTE: Black (beca), Gold, Green, White + profession-specific accents.
+ANTI-HALLUCINATION: Do NOT remove the beca entirely. The beca MUST be present, worn open. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Clean studio backdrop with subtle professional context — blurred bookshelf or clean wall.
+LIGHTING: Professional studio lighting, clean and bright. High-key with controlled shadows.
+POSE: Confident, standing tall. One hand holding diploma, the other showing the uniform/tools of the profession. Expression shows pride in both academic and professional achievement.
+FRAMING: 3/4 body shot to show both the beca and the uniform underneath.
+VIBE: Dual identity — scholar AND professional. Celebrating the journey from student to practitioner.`;
+
+    case StudioStyle.FORM_ESTUDIO_CLEAN: return `STYLE: Brazilian Graduation — Modern Clean Studio. OUTPUT: REAL PHOTOGRAPH, high-key modern aesthetic.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) on head with gold tassel.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon.
+COLOR PALETTE: Black, Gold, Green, White only.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Pure white (#FFFFFF) or very light grey seamless studio backdrop. Absolutely clean, modern, minimal. No props, no furniture — only the graduate.
+LIGHTING: High-key studio lighting — large softboxes creating even, bright illumination with minimal shadows. Soft contact shadow on floor only. Apple-style clean aesthetic.
+POSE: Natural and modern — relaxed confident stance. May be standing straight, sitting on a white cube/stool, or in a gentle lean. Authentic natural expression — not overly formal.
+FRAMING: Full body or 3/4 shot with generous negative space around the graduate.
+VIBE: Contemporary, clean, Instagram-worthy. Modern minimalist graduation portrait that feels timeless and premium.`;
+
+    case StudioStyle.FORM_JARDIM_BOTANICO: return `STYLE: Brazilian Graduation — Botanical Garden Golden Hour. OUTPUT: REAL PHOTOGRAPH, outdoor natural light.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) on head.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon.
+COLOR PALETTE: Black, Gold, Green, White + natural greens from environment.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Lush botanical garden or beautiful landscaped park with tropical plants, flowering trees, colorful flowers. Rich green foliage creating a natural frame around the graduate. Brazilian tropical garden atmosphere.
+LIGHTING: Golden hour sunlight — warm, directional, creating beautiful dappled light through leaves. Natural lens flare. Warm color temperature (3500K). Bokeh from background foliage.
+POSE: Walking along a garden path, or standing among flowers, or seated on a stone garden bench. Relaxed, joyful expression. The garden creates a romantic natural backdrop.
+FRAMING: Medium shot or full body, allowing the beautiful garden setting to be visible while the graduate remains the clear subject.
+VIBE: Romantic, natural, dreamy. The beauty of nature celebrating a personal achievement. Golden hour magic.`;
+
+    case StudioStyle.FORM_BIBLIOTECA: return `STYLE: Brazilian Graduation — Classic Library Portrait. OUTPUT: REAL PHOTOGRAPH, warm moody tones.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) on head.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon. May also hold or be near open books.
+COLOR PALETTE: Black, Gold, Green, White + warm wood tones from library.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Grand academic library — tall wooden bookshelves filled with leather-bound books, ornate wooden furniture, reading tables. Classic academic atmosphere. Think of a prestigious university library — warm, scholarly, timeless.
+LIGHTING: Warm ambient library lighting — desk lamps with warm glow, soft light filtering through windows, golden tones. Rembrandt-style sidelighting creating depth and scholarly mood. Rich warm shadows between bookshelves.
+POSE: Standing confidently in front of bookshelves, or leaning against a bookshelf with arms crossed casually, or seated at a reading desk with the diploma. Intellectual, reflective expression — a scholar in their element.
+FRAMING: Medium shot or 3/4, using the depth of the library bookshelves as a layered background.
+VIBE: Academic prestige, intellectual depth, reverence for knowledge. The library as cathedral of learning.`;
+
+    case StudioStyle.FORM_PRETO_DOURADO: return `STYLE: Brazilian Graduation — Black & Gold Luxury. OUTPUT: REAL PHOTOGRAPH, premium editorial quality.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with gold-accented details — gold collar trim, gold buttons, gold cord honor sash (if applicable). Academic BLACK mortarboard cap (CAPELO) with prominent gold tassel.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — may have a gold seal visible.
+COLOR PALETTE: Dominant BLACK and GOLD. Minimal green from scroll. NO other colors.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Premium dark environment — black marble or textured dark walls with subtle gold Art Deco accents. Elegant, luxurious. Perhaps gold-framed artwork in soft background blur. Dark and opulent.
+LIGHTING: Dramatic Rembrandt lighting — warm golden key light from one side creating rich contrast. Gold-filtered rim light. Deep shadows emphasizing the luxury black-and-gold palette. Elegant bokeh from gold accent lights.
+POSE: Powerful, elegant stance. The gold accents must catch the light. Regal posture — this is a coronation-like moment. Chin slightly elevated, unwavering eye contact.
+FRAMING: Medium shot from waist up, dramatic lighting emphasizing contrast between black gown and gold accents.
+VIBE: Absolute luxury, premium achievement, black-tie academic elegance. This is the VIP graduation photo.`;
+
+    case StudioStyle.FORM_CAMPUS: return `STYLE: Brazilian Graduation — University Campus. OUTPUT: REAL PHOTOGRAPH, candid campus life aesthetic.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) on head.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon.
+COLOR PALETTE: Black, Gold, Green, White + warm campus tones.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: University campus — grand academic building entrance with columns, or wide campus walkway with trees, or in front of the university main building. Visible architectural elements of a Brazilian university (arches, columns, stone steps, iron gates). Campus lawn with pathways.
+LIGHTING: Bright natural daylight — late morning or late afternoon sun. Warm but not harsh. Soft shadows from campus trees. Clean and vibrant.
+POSE: Walking across the campus with confidence, or standing on the steps of the main building, or leaning against a campus column with the diploma held to the side. Natural, authentic campus moment. Genuine happy smile — this is THEIR campus, THEIR achievement.
+FRAMING: 3/4 or full body to show the campus environment contextually. The architecture provides scale and grandeur.
+VIBE: Campus pride, institutional belonging, 'I made it' energy. Connection between the graduate and the institution that shaped them.`;
+
+    case StudioStyle.FORM_CANUDO_CELEBRACAO: return `STYLE: Brazilian Graduation — Diploma Celebration. OUTPUT: REAL PHOTOGRAPH, high-energy party moment.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) — may be slightly askew from celebrating.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — HELD HIGH in celebration. Gold confetti particles floating around.
+COLOR PALETTE: Black, Gold, Green, White + gold confetti sparkles.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects.
+=== END LOCK ===
+SCENE: Event celebration environment — blurred festive background with warm bokeh lights, gold confetti falling, perhaps a stage or ballroom setting in soft blur behind. Festive party energy.
+LIGHTING: Dynamic event-style lighting — warm spotlights from above, golden bokeh from celebration lights, confetti catching the light and creating sparkle effects. Bright and energetic.
+POSE: Pure celebration — holding the diploma scroll HIGH above the head triumphantly with one or both arms, mouth open in a victory shout/laugh, eyes bright with joy. The body language screams 'I DID IT!' Dynamic, not static.
+FRAMING: Medium shot capturing the upraised arms and the scroll, confetti around.
+VIBE: Maximum celebration energy, victory moment, euphoric joy. The climax of years of effort.`;
+
+    case StudioStyle.FORM_FAMILIA_ORGULHO: return `STYLE: Brazilian Graduation — Family Pride Portrait. OUTPUT: REAL PHOTOGRAPH, emotional family moment.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE (GRADUATE): Traditional BLACK academic gown (BECA) with WHITE collar/jabot. Academic BLACK mortarboard cap (CAPELO) on head.
+WARDROBE (FAMILY): Smart casual/formal — parents/siblings in clean, well-dressed attire appropriate for a graduation ceremony. Simple, elegant.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — held by the graduate or shared between family members.
+COLOR PALETTE: Black, Gold, Green, White + neutral family clothing tones.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects. Do NOT add people — only the people from input images.
+=== END LOCK ===
+SCENE: Clean, warm studio backdrop OR outdoor campus/garden setting. The focus is 100% on the human connection between family members.
+LIGHTING: Warm, soft, flattering light. Bright, joyful atmosphere. Natural warmth that emphasizes the emotional moment.
+POSE: Family group embrace — the graduate at center surrounded by proud family members. Genuine hugs, tears of joy OK, authentic proud smiles. The graduate may have one arm around parents while holding the diploma. Physical closeness showing deep family bond.
+FRAMING: Group shot from waist up, tight enough to feel intimate but wide enough to include all family members.
+VIBE: Deep pride, love, gratitude. 'I did this for us.' The most emotional photo of the graduation set — raw authentic family love.
+IMPORTANT: If only one person is in the input photo, generate 2-3 family members (parents/siblings) celebrating with them. Match the graduate's ethnicity and cultural context.`;
+
+    case StudioStyle.FORM_COLACAO_PALCO: return `STYLE: Brazilian Graduation — On Stage at Ceremony (Colação de Grau). OUTPUT: REAL PHOTOGRAPH, event photography style.
+=== GRADUATION CONSISTENCY LOCK (MANDATORY) ===
+WARDROBE: Traditional BLACK academic gown (BECA) with WHITE collar/jabot and honor sash/stole. Academic BLACK mortarboard cap (CAPELO) on head. Formal ceremony attire.
+PROPS: GREEN diploma scroll (CANUDO) with GOLD ribbon — being received from a dean/rector figure, or held after receiving.
+COLOR PALETTE: Black, Gold, Green, White + stage lighting colors.
+ANTI-HALLUCINATION: Do NOT replace beca. Do NOT change scroll color. Do NOT add random objects not related to a graduation ceremony.
+=== END LOCK ===
+SCENE: University auditorium stage — podium/lectern visible, institutional banner or university seal in background, rows of seated graduates in soft background blur. Official ceremony setting with stage curtains and institutional decorations.
+LIGHTING: Professional ceremony/event lighting — warm stage spotlights from above, dramatic stage illumination highlighting the graduate on stage. Slightly backlit for stage drama. Audience area darker, creating natural depth separation.
+POSE: The moment of receiving the diploma — shaking hands with an authority figure (dean/rector) while receiving the scroll, or immediately after receiving it with the scroll held up. Moment of formality + pride. Walking across the stage with head held high.
+FRAMING: Medium shot capturing the stage moment — the graduate, the podium, and enough stage context to tell the story.
+VIBE: Official, institutional, ceremonial. The formal moment when years of study become an official degree. Gravitas and solemnity mixed with personal pride.`;
 
     default: return "Professional studio lighting with clean photographic composition.";
   }

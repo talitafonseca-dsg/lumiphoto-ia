@@ -16,13 +16,15 @@ if (GEMINI_KEYS.length === 0) {
     const singleKey = Deno.env.get("GEMINI_API_KEY");
     if (singleKey) GEMINI_KEYS.push(singleKey);
 }
+console.log(`🔑 Loaded ${GEMINI_KEYS.length} Gemini API keys`);
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
 });
 
-// Round-robin counter for key rotation
-let keyIndex = 0;
+// Random start for key rotation — each edge function instance starts at a random key
+// This prevents all concurrent requests from hitting the same key
+let keyIndex = Math.floor(Math.random() * 1000);
 
 function getNextKey(): string {
     if (GEMINI_KEYS.length === 0) throw new Error("No Gemini API keys configured");
@@ -69,27 +71,8 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        // 2. Verify user has credits (SERVER-SIDE ENFORCEMENT)
-        const { data: { user: freshUser }, error: creditError } = await supabaseAdmin.auth.admin.getUserById(user.id);
-
-        if (creditError || !freshUser) {
-            return new Response(JSON.stringify({ error: "Erro ao verificar créditos" }), {
-                status: 500,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-        }
-
-        const currentCredits = (freshUser.user_metadata?.credits as number) || 0;
-        if (currentCredits <= 0) {
-            console.warn(`❌ BLOCKED: ${user.email} tried to generate with 0 credits`);
-            return new Response(JSON.stringify({
-                error: "Créditos insuficientes. Adquira mais créditos para continuar.",
-                current_credits: currentCredits
-            }), {
-                status: 403,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-        }
+        // Credits already verified by deduct-credits edge function (called before this)
+        // Removing duplicate getUserById check to save ~2s
 
         // 3. Parse request
         const { parts, aspectRatio } = await req.json();
@@ -105,8 +88,8 @@ Deno.serve(async (req: Request) => {
         let finalAspectRatio = aspectRatio || "1:1";
         if (finalAspectRatio === "4:5") finalAspectRatio = "3:4";
 
-        // 3. Try Gemini with key rotation (retry on 429)
-        const maxRetries = Math.min(GEMINI_KEYS.length, 3);
+        // 3. Try Gemini with key rotation (retry on 429) — try ALL available keys with backoff
+        const maxRetries = Math.max(GEMINI_KEYS.length, 3);
         let lastError: any = null;
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -126,15 +109,29 @@ Deno.serve(async (req: Request) => {
                 });
 
                 if (!response.candidates || response.candidates.length === 0) {
-                    throw new Error("429 RESOURCE_EXHAUSTED: Limite atingido.");
+                    throw new Error("Nenhuma imagem gerada. Tente novamente com outra foto ou descrição.");
                 }
 
-                const imagePart = response.candidates[0].content.parts.find(
+                const candidate = response.candidates[0];
+                
+                // Safety check: Gemini may return candidates with undefined content
+                // when the response is blocked by content/safety filters
+                if (!candidate.content || !candidate.content.parts) {
+                    const finishReason = (candidate as any).finishReason || 'unknown';
+                    console.error(`⚠️ Gemini returned empty content. finishReason: ${finishReason}`);
+                    throw new Error(
+                        finishReason === 'SAFETY' || finishReason === 'BLOCKED'
+                            ? "A IA bloqueou esta geração por política de segurança. Tente com outra foto ou estilo."
+                            : "O modelo não conseguiu gerar a imagem. Tente novamente com outra foto."
+                    );
+                }
+
+                const imagePart = candidate.content.parts.find(
                     (p: any) => p.inlineData
                 );
 
                 if (!imagePart || !imagePart.inlineData) {
-                    throw new Error("O modelo não gerou a imagem esperada.");
+                    throw new Error("O modelo não gerou a imagem esperada. Tente novamente.");
                 }
 
                 // Success! Return the image
@@ -153,7 +150,9 @@ Deno.serve(async (req: Request) => {
                 const is429 = err.message?.includes("429") || err.message?.toLowerCase().includes("quota") || err.message?.toLowerCase().includes("resource_exhausted");
 
                 if (is429 && attempt < maxRetries - 1) {
-                    console.log(`⚠️ Key ${attempt + 1} hit rate limit, trying next key...`);
+                    const waitMs = Math.min(2000 * Math.pow(2, attempt), 10000); // 2s, 4s, 8s, max 10s
+                    console.log(`⚠️ Key ${(attempt % GEMINI_KEYS.length) + 1} hit rate limit, waiting ${waitMs}ms before trying next key...`);
+                    await new Promise(r => setTimeout(r, waitMs));
                     continue; // Try next key
                 }
 
@@ -169,7 +168,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
             JSON.stringify({
                 error: is429
-                    ? "Servidor ocupado. Aguarde alguns segundos e tente novamente."
+                    ? "Servidor temporariamente ocupado. Por favor aguarde 30 segundos e tente novamente."
                     : errorMsg,
             }),
             {

@@ -8,13 +8,15 @@ interface StudioTrialUploadProps {
     accentColor?: string;
     ctaLabel?: string;
     descriptionLabel?: string;
-    trialType?: string; // 'studio' | 'aniversario' | 'delivery'
+    trialType?: string; // 'studio' | 'aniversario' | 'delivery' | 'estetica'
 }
 
 const STYLE_LABELS: Record<string, string[]> = {
     studio: ['🏢 Executivo Pro', '👨‍👩‍👧 Família Clean', '✨ Inspiracional'],
     aniversario: ['🥂 Estúdio Clean', '🏠 Casual em Casa', '✨ Luxo Dourado'],
     delivery: ['🏠 Recebendo em Casa', '🎬 Estúdio Premium', '🤤 Interagindo com o Produto'],
+    estetica: ['💄 Maquiagem Studio', '💼 Executivo Beauty', '🏥 Clínica Estética'],
+    pet: ['🐕 Estúdio Clássico', '🌴 Jardim Tropical', '🎄 Ensaio de Natal'],
 };
 
 // Compress image to max 1280px to avoid mobile upload timeouts

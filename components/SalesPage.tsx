@@ -15,15 +15,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
     const [refLoading, setRefLoading] = useState(false);
     const [refCopied, setRefCopied] = useState(false);
     const [refError, setRefError] = useState<string | null>(null);
-    const [isMuted, setIsMuted] = useState(true);
-    const videoRef = useRef<HTMLVideoElement>(null);
 
-    const toggleMute = () => {
-        if (videoRef.current) {
-            videoRef.current.muted = !videoRef.current.muted;
-            setIsMuted(videoRef.current.muted);
-        }
-    };
 
     const handleGenerateReferral = async () => {
         if (!refEmail || !refEmail.includes('@')) {
@@ -121,43 +113,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
                     </div>
                 </div>
 
-                {/* HERO VIDEO */}
-                <div className="mt-16 flex justify-center px-4">
-                    <div className="relative w-full max-w-[340px] md:max-w-[380px]">
-                        <div className="absolute -inset-2 bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-transparent blur-2xl rounded-3xl pointer-events-none" />
-                        <div className="relative rounded-[24px] overflow-hidden border-2 border-white/10 shadow-[0_20px_60px_rgba(245,158,11,0.15)]">
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                muted
-                                loop
-                                playsInline
-                                preload="metadata"
-                                poster="/lorena_poster.jpg"
-                                className="w-full h-auto block"
-                                style={{ aspectRatio: '9/16' }}
-                            >
-                                <source src="/lorena.mp4" type="video/mp4" />
-                            </video>
-                            <button
-                                onClick={toggleMute}
-                                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-black/80 hover:border-amber-500/40 transition-all duration-300 z-10"
-                                aria-label={isMuted ? 'Ativar som' : 'Desativar som'}
-                            >
-                                {isMuted ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>
-                                )}
-                            </button>
-                        </div>
-                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-5 py-2 bg-black/70 backdrop-blur-xl rounded-full border border-amber-500/30 shadow-lg">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400 whitespace-nowrap">
-                                ✨ Veja a mágica acontecer
-                            </p>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* HERO GRID */}
                 <div className="mt-20 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 px-4 opacity-80 lg:opacity-100">

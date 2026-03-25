@@ -36,6 +36,7 @@ interface Stats {
     };
     salesBySourcePage?: Record<string, { count: number; revenue: number }>;
     salesByUtmSource?: Record<string, { count: number; revenue: number }>;
+    trialRawData?: Array<{ id: string; ip_hash: string; session_id: string; status: string; delivery_style: string; created_at: string }>;
 }
 
 export const AdminDashboard: React.FC = () => {
@@ -48,7 +49,7 @@ export const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [adminTab, setAdminTab] = useState<'dashboard' | 'affiliates' | 'campaigns' | 'trials'>('dashboard');
+    const [adminTab, setAdminTab] = useState<'dashboard' | 'affiliates' | 'campaigns' | 'trials' | 'trial_metrics' | 'recovery'>('dashboard');
     const [affiliates, setAffiliates] = useState<any[]>([]);
     const [affLoading, setAffLoading] = useState(false);
     const [showAddAffiliate, setShowAddAffiliate] = useState(false);
@@ -76,6 +77,13 @@ export const AdminDashboard: React.FC = () => {
     const [resendingId, setResendingId] = useState<string | null>(null);
     const [resendResults, setResendResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
 
+    // PIX Recovery state
+    const [pendingPix, setPendingPix] = useState<any>(null);
+    const [pixLoading, setPixLoading] = useState(false);
+    const [sendingRecovery, setSendingRecovery] = useState<string | null>(null);
+    const [sendingAllRecovery, setSendingAllRecovery] = useState(false);
+    const [recoveryResult, setRecoveryResult] = useState<any>(null);
+
     // Fix body overflow for admin page scrolling
     useEffect(() => {
         document.body.style.overflow = 'auto';
@@ -85,6 +93,15 @@ export const AdminDashboard: React.FC = () => {
             document.documentElement.style.overflow = '';
         };
     }, []);
+
+    // Helper: always get a fresh token (refreshes if expired)
+    const getFreshToken = async (): Promise<string> => {
+        const { data } = await supabase.auth.refreshSession();
+        if (data.session?.access_token) return data.session.access_token;
+        // Fallback to cached session
+        const { data: cached } = await supabase.auth.getSession();
+        return cached.session?.access_token || '';
+    };
 
     const handleLogin = async () => {
         setLoginLoading(true);
@@ -110,7 +127,7 @@ export const AdminDashboard: React.FC = () => {
         setLoading(true);
         setError('');
         try {
-            const session = token || (await supabase.auth.getSession()).data.session?.access_token;
+            const session = token || await getFreshToken();
             const res = await fetch(
                 `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-stats`,
                 {
@@ -140,7 +157,7 @@ export const AdminDashboard: React.FC = () => {
     const fetchAffiliates = async () => {
         setAffLoading(true);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
@@ -155,7 +172,7 @@ export const AdminDashboard: React.FC = () => {
     const handleAddAffiliate = async () => {
         setAddAffLoading(true);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
@@ -174,7 +191,7 @@ export const AdminDashboard: React.FC = () => {
         if (!showPayoutModal || !payoutData.amount) return;
         setPayoutLoading(true);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
@@ -208,7 +225,7 @@ export const AdminDashboard: React.FC = () => {
     const fetchCampaignUsers = async () => {
         setCampaignUsersLoading(true);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
@@ -228,7 +245,7 @@ export const AdminDashboard: React.FC = () => {
         setCampaignSending(true);
         setCampaignResult(null);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
@@ -249,7 +266,7 @@ export const AdminDashboard: React.FC = () => {
     const fetchTrialPurchases = async () => {
         setTrialsLoading(true);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}`, 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
@@ -262,10 +279,51 @@ export const AdminDashboard: React.FC = () => {
         setTrialsLoading(false);
     };
 
+    const fetchPendingPix = async () => {
+        setPixLoading(true);
+        setRecoveryResult(null);
+        try {
+            const session = await getFreshToken();
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+                body: JSON.stringify({ action: 'list_pending_pix' }),
+            });
+            const data = await res.json();
+            setPendingPix(data);
+        } catch { setError('Erro ao carregar PIX pendentes'); }
+        setPixLoading(false);
+    };
+
+    const sendRecoveryEmail = async (paymentIds: string[], all = false) => {
+        if (all) setSendingAllRecovery(true);
+        else if (paymentIds.length === 1) setSendingRecovery(paymentIds[0]);
+        setRecoveryResult(null);
+        try {
+            const session = await getFreshToken();
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+                body: JSON.stringify(all ? { action: 'send_pix_recovery', send_all: true } : { action: 'send_pix_recovery', payment_ids: paymentIds }),
+            });
+            const data = await res.json();
+            setRecoveryResult(data);
+            if (!data.error) await fetchPendingPix();
+        } catch { setError('Erro ao enviar lembrete'); }
+        setSendingRecovery(null);
+        setSendingAllRecovery(false);
+    };
+
+    const buildWhatsAppMessage = (p: any) => {
+        const planLabels: Record<string, string> = { starter: 'Starter (10 Fotos)', essencial: 'Essencial (30 Fotos)', pro: 'Pro (80 Fotos)', premium: 'Premium (100 Fotos)' };
+        const planName = planLabels[p.plan_type] || p.plan_type || 'LumiPhotoIA';
+        return encodeURIComponent(`Oi! 😊 Vi que você iniciou a compra do pacote *${planName}* no LumiphotoIA, mas o PIX ficou pendente. Quer que eu te ajude a finalizar? 🎉\n\nAcesse: https://www.lumiphotoia.online`);
+    };
+
     const resendTrialEmail = async (gen: any) => {
         setResendingId(gen.id);
         try {
-            const session = (await supabase.auth.getSession()).data.session?.access_token;
+            const session = await getFreshToken();
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}`, 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
@@ -490,12 +548,18 @@ export const AdminDashboard: React.FC = () => {
                 <button onClick={() => { setAdminTab('campaigns'); fetchCampaignUsers(); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'campaigns' ? 'bg-purple-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
                     📧 Campanhas
                 </button>
+                <button onClick={() => setAdminTab('trial_metrics')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'trial_metrics' ? 'bg-cyan-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
+                    📊 Métricas Trial
+                </button>
                 <button onClick={() => { setAdminTab('trials'); fetchTrialPurchases(); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'trials' ? 'bg-amber-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
                     📸 Compras Trial
                 </button>
+                <button onClick={() => { setAdminTab('recovery'); fetchPendingPix(); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${adminTab === 'recovery' ? 'bg-red-500 text-white' : 'bg-white/5 text-white/50 hover:text-white/80'}`}>
+                    🔄 Recuperar Vendas
+                </button>
 
                 {/* Time Period Filter */}
-                {adminTab === 'dashboard' && (
+                {(adminTab === 'dashboard' || adminTab === 'trial_metrics') && (
                     <div className="flex items-center gap-1.5 ml-auto bg-zinc-900/70 rounded-xl p-1 border border-white/5">
                         <Calendar size={14} className="text-white/30 ml-2" />
                         {(['today', 'yesterday', '7d', '30d', 'month', 'all'] as const).map(period => (
@@ -517,7 +581,243 @@ export const AdminDashboard: React.FC = () => {
             <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
                 {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">{error}</div>}
 
-                {adminTab === 'trials' ? (
+                {adminTab === 'trial_metrics' ? (() => {
+                    /* ==================== TRIAL METRICS TAB ==================== */
+                    const rawTrials = stats?.trialRawData || [];
+                    // Filter by time period (using local timezone, not UTC)
+                    // Helper: format Date as 'YYYY-MM-DD' in local timezone (e.g. BRT/UTC-3)
+                    const toLocalDateStr = (d: Date) => {
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        return `${yyyy}-${mm}-${dd}`;
+                    };
+                    const nowDate = new Date();
+                    const todayStr = toLocalDateStr(nowDate);
+                    const yesterdayDate = new Date(nowDate); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                    const yesterdayStr = toLocalDateStr(yesterdayDate);
+                    const d7 = new Date(nowDate); d7.setDate(d7.getDate() - 7);
+                    const d30 = new Date(nowDate); d30.setDate(d30.getDate() - 30);
+                    const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
+
+                    const filtered = rawTrials.filter((t: any) => {
+                        if (timePeriod === 'all') return true;
+                        const tDate = new Date(t.created_at);
+                        // Convert record date to local timezone string for day comparison
+                        const tDay = toLocalDateStr(tDate);
+                        if (timePeriod === 'today') return tDay === todayStr;
+                        if (timePeriod === 'yesterday') return tDay === yesterdayStr;
+                        if (timePeriod === '7d') return tDate >= d7;
+                        if (timePeriod === '30d') return tDate >= d30;
+                        if (timePeriod === 'month') return tDate >= monthStart;
+                        return true;
+                    });
+
+                    // Compute metrics from filtered data
+                    const total = filtered.length;
+                    const uniqueIps = new Set(filtered.map((t: any) => t.ip_hash).filter(Boolean)).size;
+                    const uniqueSessions = new Set(filtered.map((t: any) => t.session_id).filter(Boolean)).size;
+                    const byStatus: Record<string, number> = {};
+                    const byNiche: Record<string, number> = {};
+                    const byDay: Record<string, number> = {};
+
+                    filtered.forEach((t: any) => {
+                        const status = t.status || 'unknown';
+                        byStatus[status] = (byStatus[status] || 0) + 1;
+                        const niche = t.delivery_style || 'delivery';
+                        // Normalize to page name
+                        const page = (niche === 'studio' || niche === 'Estúdio Escuro Premium') ? 'ensaio_profissional' : niche;
+                        byNiche[page] = (byNiche[page] || 0) + 1;
+                        const day = toLocalDateStr(new Date(t.created_at));
+                        byDay[day] = (byDay[day] || 0) + 1;
+                    });
+
+                    const paidCount = (byStatus['paid_single'] || 0) + (byStatus['paid_pack'] || 0);
+                    const conversionRate = total > 0 ? Math.round((paidCount / total) * 1000) / 10 : 0;
+                    const todayCount = byDay[todayStr] || 0;
+
+                    // Build chart data (last 30 days)
+                    const chartDays: Record<string, number> = {};
+                    for (let i = 29; i >= 0; i--) {
+                        const dd = new Date(nowDate); dd.setDate(dd.getDate() - i);
+                        chartDays[toLocalDateStr(dd)] = 0;
+                    }
+                    rawTrials.forEach((t: any) => {
+                        const day = toLocalDateStr(new Date(t.created_at));
+                        if (chartDays[day] !== undefined) chartDays[day]++;
+                    });
+
+                    // Page config (maps delivery_style → source page)
+                    const nicheConfig: Record<string, { emoji: string; label: string; color: string; barColor: string }> = {
+                        delivery: { emoji: '🍔', label: 'Página Delivery', color: 'text-orange-400', barColor: 'bg-orange-500' },
+                        ensaio_profissional: { emoji: '📸', label: 'Página Ensaios', color: 'text-indigo-400', barColor: 'bg-indigo-500' },
+                        pet: { emoji: '🐾', label: 'Página Pet', color: 'text-pink-400', barColor: 'bg-pink-500' },
+                        estetica: { emoji: '💄', label: 'Página Estética', color: 'text-rose-400', barColor: 'bg-rose-500' },
+                        aniversario: { emoji: '🎂', label: 'Página Aniversário', color: 'text-amber-400', barColor: 'bg-amber-500' },
+                    };
+
+                    return (
+                        <div className="space-y-6">
+                            <h2 className="text-lg font-bold flex items-center gap-2"><BarChart3 size={20} className="text-cyan-400" /> Métricas de Trial Gratuito {timePeriod !== 'all' && <span className="text-sm font-normal text-white/40">({periodLabels[timePeriod]})</span>}</h2>
+
+                            {total === 0 ? (
+                                <div className="text-center py-16 text-white/40">
+                                    <Camera size={48} className="mx-auto mb-4 opacity-50" />
+                                    <p className="text-lg">Nenhuma geração trial {timePeriod !== 'all' ? 'neste período' : 'registrada ainda'}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* KPI Cards */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                            <Camera size={20} className="text-cyan-400 mb-2" />
+                                            <p className="text-2xl font-black text-white">{total}</p>
+                                            <p className="text-xs text-white/50 font-bold mt-1">Total Gerações</p>
+                                        </div>
+                                        <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                            <Users size={20} className="text-blue-400 mb-2" />
+                                            <p className="text-2xl font-black text-white">{uniqueIps}</p>
+                                            <p className="text-xs text-white/50 font-bold mt-1">IPs Únicos</p>
+                                            <p className="text-[10px] text-white/30 mt-0.5">{uniqueSessions} sessões</p>
+                                        </div>
+                                        <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                            <TrendingUp size={20} className="text-emerald-400 mb-2" />
+                                            <p className="text-2xl font-black text-white">{conversionRate}%</p>
+                                            <p className="text-xs text-white/50 font-bold mt-1">Conversão Trial</p>
+                                            <p className="text-[10px] text-white/30 mt-0.5">{paidCount} pagos</p>
+                                        </div>
+                                        <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                            <Zap size={20} className="text-amber-400 mb-2" />
+                                            <p className="text-2xl font-black text-white">{todayCount}</p>
+                                            <p className="text-xs text-white/50 font-bold mt-1">Hoje</p>
+                                            <p className="text-[10px] text-white/30 mt-0.5">gerações hoje</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Status Breakdown */}
+                                    <div>
+                                        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Por Status</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {Object.entries(byStatus).map(([status, count]) => {
+                                                const statusColors: Record<string, string> = {
+                                                    preview: 'bg-zinc-500/20 border-zinc-500/30 text-zinc-400',
+                                                    paid_single: 'bg-blue-500/20 border-blue-500/30 text-blue-400',
+                                                    paid_pack: 'bg-purple-500/20 border-purple-500/30 text-purple-400',
+                                                    expired: 'bg-red-500/20 border-red-500/30 text-red-400',
+                                                };
+                                                const statusLabels: Record<string, string> = {
+                                                    preview: '👁️ Preview',
+                                                    paid_single: '💳 Pagou 1 Foto',
+                                                    paid_pack: '💎 Pagou Pack',
+                                                    expired: '⏰ Expirado',
+                                                };
+                                                return (
+                                                    <div key={status} className={`p-4 rounded-xl border ${statusColors[status] || 'bg-white/5 border-white/10 text-white/60'}`}>
+                                                        <p className="text-2xl font-black">{count}</p>
+                                                        <p className="text-xs font-bold mt-1">{statusLabels[status] || status}</p>
+                                                        <p className="text-[10px] opacity-60 mt-0.5">{total > 0 ? Math.round((Number(count) / total) * 100) : 0}%</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Per Page/Niche Breakdown with bars */}
+                                    <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Gerações por Página</h3>
+                                        <div className="space-y-3">
+                                            {Object.entries(byNiche)
+                                                .sort(([, a], [, b]) => (b as number) - (a as number))
+                                                .map(([niche, count]) => {
+                                                    const cfg = nicheConfig[niche] || { emoji: '📷', label: niche, color: 'text-white/60', barColor: 'bg-white/30' };
+                                                    const pct = total > 0 ? Math.round((Number(count) / total) * 100) : 0;
+                                                    return (
+                                                        <div key={niche}>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className={`text-sm font-bold ${cfg.color}`}>{cfg.emoji} {cfg.label}</span>
+                                                                <span className="text-sm font-bold text-white/60">{count} <span className="text-[10px] text-white/30">({pct}%)</span></span>
+                                                            </div>
+                                                            <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
+                                                                <div className={`h-full rounded-full ${cfg.barColor} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+
+                                    {/* Daily Chart */}
+                                    <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Gerações por Dia (últimos 30 dias)</h3>
+                                        <div className="flex items-end gap-[3px] h-32">
+                                            {Object.entries(chartDays).map(([day, count]) => {
+                                                const maxTrialDay = Math.max(...Object.values(chartDays).map(Number), 1);
+                                                const height = (Number(count) / maxTrialDay) * 100;
+                                                const shortDay = day.slice(5);
+                                                return (
+                                                    <div key={day} className="flex-1 flex flex-col items-center gap-1 group relative">
+                                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 rounded text-[9px] text-white/80 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            {shortDay}: {count}
+                                                        </div>
+                                                        <div
+                                                            className="w-full rounded-t bg-gradient-to-t from-cyan-600 to-cyan-400 group-hover:from-cyan-500 group-hover:to-cyan-300 transition-all"
+                                                            style={{ height: `${Math.max(height, Number(count) > 0 ? 4 : 1)}%` }}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="flex justify-between mt-2">
+                                            <span className="text-[9px] text-white/20">{Object.keys(chartDays)[0]?.slice(5)}</span>
+                                            <span className="text-[9px] text-white/20">Hoje</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Recent Trials Table */}
+                                    <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                        <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Últimas Gerações {timePeriod !== 'all' && `(${periodLabels[timePeriod]})`}</h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="text-white/30 text-[10px] uppercase tracking-wider">
+                                                        <th className="text-left pb-3 pr-4">IP Hash</th>
+                                                        <th className="text-left pb-3 pr-4">Status</th>
+                                                        <th className="text-left pb-3 pr-4">Página</th>
+                                                        <th className="text-left pb-3">Data</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {filtered.slice(0, 50).map((t: any) => {
+                                                        const statusBadge: Record<string, string> = {
+                                                            preview: 'bg-zinc-500/20 text-zinc-400',
+                                                            paid_single: 'bg-blue-500/20 text-blue-400',
+                                                            paid_pack: 'bg-purple-500/20 text-purple-400',
+                                                            expired: 'bg-red-500/20 text-red-400',
+                                                        };
+                                                        const pageKey = (t.delivery_style === 'studio' || t.delivery_style === 'Estúdio Escuro Premium') ? 'ensaio_profissional' : (t.delivery_style || 'delivery');
+                                                        const cfg = nicheConfig[pageKey] || { emoji: '📷', label: t.delivery_style, color: '', barColor: '' };
+                                                        return (
+                                                            <tr key={t.id} className="hover:bg-white/[0.02]">
+                                                                <td className="py-2.5 pr-4 text-white/50 font-mono text-xs">{t.ip_hash}</td>
+                                                                <td className="py-2.5 pr-4">
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusBadge[t.status] || 'bg-white/10 text-white/50'}`}>
+                                                                        {t.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-2.5 pr-4 text-xs">{cfg.emoji} {cfg.label}</td>
+                                                                <td className="py-2.5 text-white/40 text-xs">{fmtDate(t.created_at)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    );
+                })() : adminTab === 'trials' ? (
                     /* ==================== TRIAL PURCHASES TAB ==================== */
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -612,6 +912,138 @@ export const AdminDashboard: React.FC = () => {
                                     );
                                 })}
                             </div>
+                        )}
+                    </div>
+                ) : adminTab === 'recovery' ? (
+                    /* ==================== PIX RECOVERY TAB ==================== */
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                            <h2 className="text-lg font-bold flex items-center gap-2"><RefreshCw size={20} className="text-red-400" /> Recuperação de Vendas — PIX Pendentes</h2>
+                            <div className="flex items-center gap-2">
+                                <button onClick={fetchPendingPix} className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors" title="Atualizar">
+                                    <RefreshCw size={16} className={`text-white/60 ${pixLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                                {pendingPix?.pending?.length > 0 && (
+                                    <button
+                                        onClick={() => sendRecoveryEmail([], true)}
+                                        disabled={sendingAllRecovery}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl text-sm font-bold hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all disabled:opacity-50"
+                                    >
+                                        {sendingAllRecovery ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                        Enviar Todos
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Recovery Result Toast */}
+                        {recoveryResult && (
+                            <div className={`p-4 rounded-xl border text-sm ${recoveryResult.error ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
+                                {recoveryResult.error
+                                    ? `❌ Erro: ${recoveryResult.error}`
+                                    : `✅ ${recoveryResult.sent} email(s) enviado(s)${recoveryResult.skipped > 0 ? ` · ${recoveryResult.skipped} ignorado(s) (cooldown 6h)` : ''}${recoveryResult.failed > 0 ? ` · ${recoveryResult.failed} falha(s)` : ''}`
+                                }
+                                {recoveryResult.message && <span className="block mt-1 text-white/50">{recoveryResult.message}</span>}
+                            </div>
+                        )}
+
+                        {pixLoading ? (
+                            <div className="flex items-center justify-center py-16"><Loader2 size={32} className="animate-spin text-red-500" /></div>
+                        ) : !pendingPix ? (
+                            <div className="text-center py-16 text-white/40">
+                                <RefreshCw size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">Carregue os dados para ver PIX pendentes</p>
+                            </div>
+                        ) : pendingPix.pending?.length === 0 ? (
+                            <div className="text-center py-16 text-white/40">
+                                <CreditCard size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="text-lg">Nenhum PIX pendente (1h–48h) 🎉</p>
+                                <p className="text-sm mt-2">Todos os pagamentos foram processados</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* KPI Cards */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
+                                        <CreditCard size={20} className="text-red-400 mb-2" />
+                                        <p className="text-2xl font-black text-white">{pendingPix.summary.total}</p>
+                                        <p className="text-xs text-white/50 font-bold mt-1">PIX Pendentes</p>
+                                    </div>
+                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5">
+                                        <DollarSign size={20} className="text-amber-400 mb-2" />
+                                        <p className="text-2xl font-black text-white">{fmt(pendingPix.summary.totalValue)}</p>
+                                        <p className="text-xs text-white/50 font-bold mt-1">Valor em Risco</p>
+                                    </div>
+                                    <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5">
+                                        <MessageSquare size={20} className="text-green-400 mb-2" />
+                                        <p className="text-2xl font-black text-white">{pendingPix.summary.withWhatsapp}</p>
+                                        <p className="text-xs text-white/50 font-bold mt-1">Com WhatsApp</p>
+                                    </div>
+                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5">
+                                        <Mail size={20} className="text-blue-400 mb-2" />
+                                        <p className="text-2xl font-black text-white">{pendingPix.summary.alreadySent}</p>
+                                        <p className="text-xs text-white/50 font-bold mt-1">Emails Enviados</p>
+                                    </div>
+                                </div>
+
+                                {/* Pending PIX Table */}
+                                <div className="bg-zinc-900/60 rounded-2xl border border-white/5 p-5">
+                                    <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">PIX Pendentes (1h – 48h)</h3>
+                                    <div className="space-y-3">
+                                        {pendingPix.pending.map((p: any) => {
+                                            const isSending = sendingRecovery === p.id;
+                                            const alreadySent = p.recovery_email_count > 0;
+                                            const whatsappClean = p.whatsapp?.replace(/\D/g, '');
+                                            return (
+                                                <div key={p.id} className="bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors">
+                                                    <div className="flex items-start justify-between flex-wrap gap-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-white text-sm truncate">{p.payer_email}</p>
+                                                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">{p.plan_type}</span>
+                                                                <span className="text-xs text-white/40">{fmt(Number(p.amount || 0))}</span>
+                                                                <span className="text-xs text-red-400 font-bold">⏰ há {p.time_ago}</span>
+                                                                {alreadySent && (
+                                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+                                                                        📧 {p.recovery_email_count}x enviado
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* Send Email Button */}
+                                                            <button
+                                                                onClick={() => sendRecoveryEmail([p.id])}
+                                                                disabled={isSending}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-400 text-xs font-bold transition-all disabled:opacity-50"
+                                                                title="Enviar email de recuperação"
+                                                            >
+                                                                {isSending ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
+                                                                Email
+                                                            </button>
+                                                            {/* WhatsApp Button */}
+                                                            {whatsappClean ? (
+                                                                <a
+                                                                    href={`https://wa.me/55${whatsappClean}?text=${buildWhatsAppMessage(p)}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-green-400 text-xs font-bold transition-all"
+                                                                    title="Abrir WhatsApp com mensagem pronta"
+                                                                >
+                                                                    <MessageSquare size={12} />
+                                                                    WhatsApp
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-[10px] text-white/20 px-2">Sem WhatsApp</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 ) : adminTab === 'campaigns' ? (

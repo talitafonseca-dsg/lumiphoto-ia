@@ -12,7 +12,8 @@ if (GEMINI_KEYS.length === 0) {
     if (singleKey) GEMINI_KEYS.push(singleKey);
 }
 
-let keyIndex = 0;
+// Random start for key rotation — distributes load across instances
+let keyIndex = Math.floor(Math.random() * 1000);
 function getNextKey(): string {
     if (GEMINI_KEYS.length === 0) throw new Error("No Gemini API keys configured");
     const key = GEMINI_KEYS[keyIndex % GEMINI_KEYS.length];
@@ -48,15 +49,21 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        const apiKey = getNextKey();
-        const ai = new GoogleGenAI({ apiKey });
+        // Retry with key rotation and backoff
+        const maxRetries = Math.max(GEMINI_KEYS.length, 3);
+        let lastError: any = null;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: {
-                parts: [
-                    {
-                        text: `You are a professional fashion and photography analyst. Analyze this image and provide a DETAILED description in the following format:
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const apiKey = getNextKey();
+            try {
+                const ai = new GoogleGenAI({ apiKey });
+
+                const response = await ai.models.generateContent({
+                    model: "gemini-2.5-flash",
+                    contents: {
+                        parts: [
+                            {
+                                text: `You are a professional fashion and photography analyst. Analyze this image and provide a DETAILED description in the following format:
 
 CLOTHING: Describe every garment visible — type (dress, blouse, pants, suit, etc.), exact color, fabric texture, pattern, cut/style, and any details (buttons, zippers, embroidery, accessories).
 
@@ -72,26 +79,47 @@ HAIR: Describe the hairstyle visible — length, color, texture, styling.
 
 Be extremely specific and detailed. This description will be used to recreate a similar photo with a DIFFERENT person, so accuracy is critical.
 If there is NO person in the image (just clothing on a hanger, flat-lay, or product), describe the clothing/item in detail and note that it's a standalone garment/product.`
+                            },
+                            {
+                                inlineData: {
+                                    data: imageData,
+                                    mimeType: mimeType || "image/jpeg"
+                                }
+                            }
+                        ]
                     },
+                });
+
+                const textContent = response.candidates?.[0]?.content?.parts
+                    ?.filter((p: any) => p.text)
+                    ?.map((p: any) => p.text)
+                    ?.join("\n") || "";
+
+                return new Response(
+                    JSON.stringify({ description: textContent }),
                     {
-                        inlineData: {
-                            data: imageData,
-                            mimeType: mimeType || "image/jpeg"
-                        }
+                        status: 200,
+                        headers: { ...corsHeaders, "Content-Type": "application/json" },
                     }
-                ]
-            },
-        });
+                );
+            } catch (err: any) {
+                lastError = err;
+                const is429 = err.message?.includes("429") || err.message?.toLowerCase().includes("quota") || err.message?.toLowerCase().includes("resource_exhausted");
+                if (is429 && attempt < maxRetries - 1) {
+                    const waitMs = Math.min(2000 * Math.pow(2, attempt), 10000);
+                    console.log(`\u26A0\uFE0F Analyze key ${(attempt % GEMINI_KEYS.length) + 1} hit rate limit, waiting ${waitMs}ms...`);
+                    await new Promise(r => setTimeout(r, waitMs));
+                    continue;
+                }
+                break;
+            }
+        }
 
-        const textContent = response.candidates?.[0]?.content?.parts
-            ?.filter((p: any) => p.text)
-            ?.map((p: any) => p.text)
-            ?.join("\n") || "";
-
+        // All retries failed
         return new Response(
-            JSON.stringify({ description: textContent }),
+            JSON.stringify({ error: lastError?.message || "Erro ao analisar imagem" }),
             {
-                status: 200,
+                status: 500,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             }
         );

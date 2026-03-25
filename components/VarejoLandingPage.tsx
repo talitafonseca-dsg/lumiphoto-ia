@@ -53,10 +53,10 @@ export const VarejoLandingPage: React.FC<VarejoLandingPageProps> = ({ onGetStart
             <nav className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 w-auto object-contain" />
+                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 md:h-10 w-auto object-contain" />
                         <div className="flex flex-col leading-none">
-                            <span className="text-[11px] font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
-                            <span className="text-[7px] font-black uppercase tracking-[0.15em] text-teal-400">🛍️ Varejo</span>
+                            <span className="text-[11px] md:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
+                            <span className="text-[7px] md:text-[11px] font-black uppercase tracking-[0.15em] text-teal-400">🛍️ Varejo</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -74,15 +74,15 @@ export const VarejoLandingPage: React.FC<VarejoLandingPageProps> = ({ onGetStart
                     <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-green-500/8 blur-[180px] rounded-full" />
                 </div>
 
-                <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-16">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div className="text-center lg:text-left">
+                        <div className="text-center lg:text-left min-w-0 overflow-hidden">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-[0.15em] mb-6">
                                 <ShoppingBag size={14} />
                                 Para Lojistas & E-commerce
                             </div>
 
-                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.95] tracking-tight mb-6">
+                            <h1 className="text-[1.6rem] sm:text-3xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.95] tracking-tight mb-6 break-words">
                                 Seus produtos{' '}
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">
                                     não vendem
@@ -93,7 +93,7 @@ export const VarejoLandingPage: React.FC<VarejoLandingPageProps> = ({ onGetStart
                                 </span>
                             </h1>
 
-                            <p className="text-base md:text-lg text-white/50 max-w-xl mb-6 leading-relaxed">
+                            <p className="text-sm sm:text-base md:text-lg text-white/50 max-w-full md:max-w-xl mb-6 leading-relaxed break-words">
                                 O cliente scrolla, vê uma foto escura tirada na mesa da cozinha e <strong className="text-white/80">ignora seu produto</strong>. Enquanto o concorrente com fotos profissionais
                                 vende <strong className="text-emerald-400">3x mais</strong>. A IA resolve isso em 30 segundos.
                             </p>

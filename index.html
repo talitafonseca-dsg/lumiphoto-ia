@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 
 <head>
-  <!-- Meta Pixel Code -->
+  <!-- Meta Pixel Code (init is handled inside TrackPro with advanced matching) -->
   <script>
     !function (f, b, e, v, n, t, s) {
       if (f.fbq) return; n = f.fbq = function () {
@@ -15,8 +15,7 @@
       s.parentNode.insertBefore(t, s)
     }(window, document, 'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '4260013394267682');
-    // NÃO coloque fbq('track', ...) aqui — o TrackPro cuida disso com deduplicação.
+    // fbq('init') é feito UMA vez dentro do TrackPro com advanced matching
   </script>
   <!-- End Meta Pixel Code -->
 
@@ -214,10 +213,132 @@
         }, 500);
       };
 
+      // Auto-recover cached email for better Meta matching
+      function getCachedEmail() {
+        // From TrackPro identity cache (highest priority — explicitly set by user)
+        try {
+          var cached = localStorage.getItem('_tp_cached_email');
+          if (cached) return cached;
+        } catch (e) { }
+        try {
+          // From recent purchase
+          var rp = localStorage.getItem('lumiphoto_recent_purchase');
+          if (rp) { var d = JSON.parse(rp); if (d.email) return d.email; }
+        } catch (e) { }
+        try {
+          // From Supabase auth session
+          var keys = Object.keys(localStorage);
+          for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('supabase.auth') >= 0) {
+              var s = JSON.parse(localStorage.getItem(keys[i]));
+              if (s && s.user && s.user.email) return s.user.email;
+            }
+          }
+        } catch (e) { }
+        // From URL params (checkout return)
+        try {
+          var extRef = getParam('external_reference');
+          if (extRef) {
+            var ref = JSON.parse(decodeURIComponent(extRef));
+            if (ref.email) return ref.email;
+            if (ref.payer_email) return ref.payer_email;
+          }
+        } catch (e) { }
+        return null;
+      }
+
+      // Auto-recover cached phone for better Meta matching (+1.77% matches)
+      function getCachedPhone() {
+        // From TrackPro identity cache (highest priority)
+        try {
+          var cached = localStorage.getItem('_tp_cached_phone');
+          if (cached) return cached;
+        } catch (e) { }
+        try {
+          var rp = localStorage.getItem('lumiphoto_recent_purchase');
+          if (rp) { var d = JSON.parse(rp); if (d.phone) return d.phone; }
+        } catch (e) { }
+        try {
+          var keys = Object.keys(localStorage);
+          for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('supabase.auth') >= 0) {
+              var s = JSON.parse(localStorage.getItem(keys[i]));
+              if (s && s.user && s.user.user_metadata && s.user.user_metadata.whatsapp) return s.user.user_metadata.whatsapp;
+            }
+          }
+        } catch (e) { }
+        return null;
+      }
+
+      // Normalize email: lowercase, trim, strip invisible chars
+      function normalizeEmail(e) {
+        if (!e) return null;
+        return e.toLowerCase().trim().replace(/[\r\n\t\s]+/g, '');
+      }
+
+      // Normalize phone for BR: digits only, ensure +55 prefix
+      function normalizePhone(p) {
+        if (!p) return null;
+        var digits = p.replace(/\D/g, '');
+        if (!digits) return null;
+        // Add BR country code if missing (10-11 digit local numbers)
+        if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
+        return digits;
+      }
+
+      // Single fbq('init') — called ONCE on boot with best available data
+      var _fbqInitDone = false;
+      var _lastMatchEmail = null;
+      function ensureFbqInit(email, phone) {
+        if (_fbqInitDone) return;
+        _fbqInitDone = true;
+        if (typeof fbq === 'function') {
+          var normEmail = normalizeEmail(email);
+          var normPhone = normalizePhone(phone);
+          _lastMatchEmail = normEmail;
+          var advancedMatch = {
+            external_id: persistentEid,
+            country: 'br'
+          };
+          if (normEmail) advancedMatch.em = normEmail;
+          if (normPhone) advancedMatch.ph = normPhone;
+          fbq('init', '4260013394267682', advancedMatch);
+        }
+      }
+
+      // Re-init Pixel with new user data when it becomes available
+      // Safe to call multiple times — only re-inits when email changes
+      window.trackProUpdateIdentity = function (email, phone) {
+        var normEmail = normalizeEmail(email);
+        var normPhone = normalizePhone(phone);
+        if (!normEmail || normEmail === _lastMatchEmail) return;
+        _lastMatchEmail = normEmail;
+        if (typeof fbq === 'function') {
+          var advancedMatch = {
+            external_id: persistentEid,
+            country: 'br'
+          };
+          advancedMatch.em = normEmail;
+          if (normPhone) advancedMatch.ph = normPhone;
+          fbq('init', '4260013394267682', advancedMatch);
+          console.log('🔄 Pixel re-init with email:', normEmail);
+        }
+        // Also persist for future page loads
+        try {
+          localStorage.setItem('_tp_cached_email', normEmail);
+          if (normPhone) localStorage.setItem('_tp_cached_phone', normPhone);
+        } catch (e) { }
+      };
+
       window.trackPro = function (eventName, params) {
         params = params || {};
         var eventId = params.event_id || genId();
         var fbLoginId = params.fb_login_id || getFbLoginId();
+        var resolvedEmail = params.email || getCachedEmail();
+        var resolvedPhone = params.phone || getCachedPhone();
+
+        // Ensure Pixel is initialized (once) with best data
+        ensureFbqInit(resolvedEmail, resolvedPhone);
 
         var payload = {
           event_name: eventName,
@@ -225,19 +346,20 @@
           event_time: Math.floor(Date.now() / 1000),
           source_url: window.location.href,
           referrer_url: document.referrer || null,
+          user_agent: navigator.userAgent || null,
           user_id: USER_ID,
           fbp: getFbp(),
           fbc: getFbc(),
           fb_login_id: fbLoginId,
           user_data: {
-            email: params.email || null,
-            phone: params.phone || null,
+            email: resolvedEmail || null,
+            phone: resolvedPhone || null,
             first_name: params.first_name || null,
             last_name: params.last_name || null,
             city: params.city || null,
             state: params.state || null,
             zip_code: params.zip_code || null,
-            country: params.country || null,
+            country: params.country || 'br',
             date_of_birth: params.date_of_birth || null,
             gender: params.gender || null,
             external_id: params.external_id || persistentEid
@@ -256,9 +378,9 @@
           keepalive: true
         }).catch(function () { });
 
+        // Fire browser Pixel event (NO re-init — just track)
         if (typeof fbq === 'function') {
-          fbq('init', '4260013394267682', { external_id: params.external_id || persistentEid });
-          fbq('track', eventName, params.custom_data || {}, { eventID: eventId });
+          fbq('trackSingle', '4260013394267682', eventName, params.custom_data || {}, { eventID: eventId });
         }
       };
 
@@ -269,7 +391,7 @@
         if (_vcFired) return;
         var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         var docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) - window.innerHeight;
-        if (docHeight > 0 && (scrollTop / docHeight) >= 0.5) {
+        if (docHeight > 0 && (scrollTop / docHeight) >= 0.25) {
           _vcFired = true;
           trackPro('ViewContent', {
             custom_data: {

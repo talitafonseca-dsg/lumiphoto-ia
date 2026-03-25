@@ -109,6 +109,29 @@ export const deliveryFaqs: FAQItem[] = [
     },
 ];
 
+export const petFaqs: FAQItem[] = [
+    {
+        q: 'A foto do meu pet precisa ser de boa qualidade?',
+        a: 'Não! Qualquer foto serve — desfocada, com iluminação ruim, com fundo bagunçado. A IA transforma fotos do dia a dia em ensaios de estúdio. Quanto pior a foto original, mais impressionante fica o resultado.',
+    },
+    {
+        q: 'Funciona para qualquer raça ou tipo de pet?',
+        a: 'Sim. Cães de qualquer porte e raça, gatos, coelhos, hamsters, pássaros — a IA reconhece e adapta o ensaio para cada tipo de animal.',
+    },
+    {
+        q: 'Posso usar a foto para imprimir em quadro ou caneca?',
+        a: 'Sim! A resolução é alta o suficiente para impressão em formatos grandes, quadros, canecas e camisetas. As fotos são suas, sem restrição de uso.',
+    },
+    {
+        q: 'Posso fazer ensaio com eu e meu pet juntos?',
+        a: 'Sim! É um dos tipos mais emocionantes. Você manda uma foto sua com o pet e a IA transforma os dois em um ensaio profissional. Perfeito para quadros de família.',
+    },
+    {
+        q: 'Posso usar para vender ensaios para outros tutores?',
+        a: 'Sim! Muitos clientes revendem ensaios. Compram créditos e cobram R$ 80–120 por ensaio. Uso comercial é 100% liberado em todos os planos.',
+    },
+];
+
 // ========== COMPONENTE FAQ ==========
 
 interface FAQSectionProps {

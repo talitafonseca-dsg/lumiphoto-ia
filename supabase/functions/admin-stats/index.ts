@@ -205,7 +205,28 @@ Deno.serve(async (req: Request) => {
             console.log("generation_logs table not available yet");
         }
 
-        // 4. STRATEGIC METRICS
+        // 4. TRIAL RAW DATA (frontend will filter/aggregate)
+        let trialRawData: any[] = [];
+
+        try {
+            const { data: trialRows } = await supabaseAdmin
+                .from("trial_generations")
+                .select("id, ip_hash, session_id, status, delivery_style, created_at")
+                .order("created_at", { ascending: false });
+
+            trialRawData = (trialRows || []).map((t: any) => ({
+                id: t.id,
+                ip_hash: t.ip_hash ? t.ip_hash.substring(0, 10) + "..." : "—",
+                session_id: t.session_id,
+                status: t.status,
+                delivery_style: t.delivery_style || "delivery",
+                created_at: t.created_at,
+            }));
+        } catch {
+            console.log("trial_generations table not available yet");
+        }
+
+        // 5. STRATEGIC METRICS
         const conversionRate = totalUsers > 0 ? (uniqueBuyers / totalUsers * 100) : 0;
         const repeatRate = uniqueBuyers > 0 ? (repeatBuyers / uniqueBuyers * 100) : 0;
         const creditsUtilization = totalCreditsInSystem; // remaining credits
@@ -230,6 +251,7 @@ Deno.serve(async (req: Request) => {
             generationStats,
             salesBySourcePage,
             salesByUtmSource,
+            trialRawData,
         };
 
         return new Response(JSON.stringify(response), { status: 200, headers: corsHeaders });

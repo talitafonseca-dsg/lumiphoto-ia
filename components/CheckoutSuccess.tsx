@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Mail, ArrowRight, Sparkles, Copy, Check, Clock, XCircle } from 'lucide-react';
+import { CheckCircle, Mail, ArrowRight, Sparkles, Copy, Check, Clock, XCircle, Download } from 'lucide-react';
 
 interface CheckoutSuccessProps {
-    onGoToLogin: () => void;
+    onGoToLogin: (sourcePage?: string) => void;
 }
 
 const DEFAULT_PASSWORD = 'lumi123456';
@@ -12,12 +12,14 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
     const [planName, setPlanName] = useState('');
     const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null);
     const [status, setStatus] = useState<'success' | 'failure' | 'pending'>('success');
+    const [isTrialPurchase, setIsTrialPurchase] = useState(false);
+    const [trialProductType, setTrialProductType] = useState<'single' | 'pack'>('single');
+    const [sourcePage, setSourcePage] = useState<string>('');
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const path = window.location.pathname;
 
-        // Determine status from URL (use local variable, not state, since state hasn't updated yet)
         let currentStatus: 'success' | 'failure' | 'pending' = 'success';
         if (path.includes('/checkout/failure') || params.get('collection_status') === 'rejected') {
             currentStatus = 'failure';
@@ -26,72 +28,77 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
         }
         setStatus(currentStatus);
 
-        // Extract email and plan from external_reference
         const externalRef = params.get('external_reference');
         let extractedEmail = '';
         let extractedPlan = '';
         if (externalRef) {
             try {
                 const ref = JSON.parse(externalRef);
+                // Support both 'email' (regular plans) and 'payer_email' (trial)
+                if (ref.payer_email) { extractedEmail = ref.payer_email; setBuyerEmail(ref.payer_email); }
                 if (ref.email) { extractedEmail = ref.email; setBuyerEmail(ref.email); }
                 if (ref.plan) { extractedPlan = ref.plan; setPlanName(ref.plan); }
+                if (ref.source_page) { setSourcePage(ref.source_page); }
+                if (ref.type === 'trial') {
+                    setIsTrialPurchase(true);
+                    setTrialProductType(ref.product_type || 'single');
+                }
             } catch { /* ignore */ }
         }
 
-        // Fire Purchase event via TrackPro (sends both client Pixel AND server CAPI)
-        // NOTE: Mercado Pago does NOT return payment_amount in the redirect URL.
-        // We determine value from the plan name in external_reference.
         if (currentStatus === 'success') {
             const planPrices: Record<string, number> = {
-                'starter': 37,
-                'essencial': 57,
-                'pro': 97,
-                'premium': 117,
+                'starter': 37, 'essencial': 57, 'pro': 97, 'premium': 117,
             };
             const purchaseValue = planPrices[extractedPlan.toLowerCase()] || 37;
 
-            // DEDUP: Build a unique key from the payment params to prevent duplicate tracking
-            const params = new URLSearchParams(window.location.search);
-            const paymentId = params.get('payment_id')
-                || params.get('collection_id')
-                || '';
+            const innerParams = new URLSearchParams(window.location.search);
+            const paymentId = innerParams.get('payment_id') || innerParams.get('collection_id') || '';
             const dedupKey = paymentId ? `lumiphoto_purchase_tracked_${paymentId}` : '';
 
-            // Only fire if we have a payment ID and haven't tracked this specific payment yet
-            if (paymentId && dedupKey && !sessionStorage.getItem(dedupKey)) {
-                sessionStorage.setItem(dedupKey, '1');
-
-                // IMPORTANT: Only fire client-side Pixel (fbq), NOT trackPro.
-                // The mercadopago-webhook already sends server-side CAPI via trackPro.
-                // Using both would cause DUPLICATE Purchase events in Meta.
-                // Use deterministic event_id matching the webhook for Meta's built-in dedup.
-                if (typeof (window as any).fbq === 'function') {
-                    const eventId = `purchase_${paymentId}`;
-                    (window as any).fbq('track', 'Purchase', {
-                        value: purchaseValue,
-                        currency: 'BRL',
-                        content_name: extractedPlan || 'LumiPhoto Credits',
-                        content_type: 'product',
-                    }, { eventID: eventId });
-                    console.log('✅ Client Pixel: Purchase event fired (fbq only, no CAPI — webhook handles CAPI)', { value: purchaseValue, plan: extractedPlan, paymentId, eventId });
+            // Client-side Purchase tracking (+ server-side CAPI via webhook).
+            // Meta deduplicates via eventID, so both can fire safely.
+            if (paymentId && dedupKey && !localStorage.getItem(dedupKey)) {
+                localStorage.setItem(dedupKey, '1');
+                const eventId = `purchase_${paymentId}`;
+                try {
+                    // Use trackPro for full CAPI + browser pixel dedup
+                    if (typeof (window as any).trackPro === 'function') {
+                        (window as any).trackPro('Purchase', {
+                            event_id: eventId,
+                            email: extractedEmail || undefined,
+                            custom_data: {
+                                value: purchaseValue,
+                                currency: 'BRL',
+                                content_name: extractedPlan || 'LumiPhoto Credits',
+                                content_type: 'product',
+                                order_id: paymentId,
+                            },
+                        });
+                        console.log('✅ Purchase tracked via trackPro (browser + CAPI)', { paymentId, plan: extractedPlan, value: purchaseValue });
+                    } else if (typeof (window as any).fbq === 'function') {
+                        // Fallback: direct fbq if trackPro not loaded
+                        (window as any).fbq('track', 'Purchase', {
+                            value: purchaseValue,
+                            currency: 'BRL',
+                            content_name: extractedPlan || 'LumiPhoto Credits',
+                            content_type: 'product',
+                        }, { eventID: eventId });
+                        console.log('✅ Purchase tracked via fbq (browser only)', { paymentId, plan: extractedPlan, value: purchaseValue });
+                    }
+                } catch (e) {
+                    console.error('Failed to track Purchase:', e);
                 }
-            } else if (!paymentId) {
-                console.log('⏭️ Purchase tracking SKIPPED — no payment_id in URL');
-            } else {
-                console.log('⏭️ Purchase tracking SKIPPED — already tracked for:', paymentId);
             }
         }
 
-        // Save purchase info to localStorage so AuthScreen can use it
         if (currentStatus === 'success') {
             localStorage.setItem('lumiphoto_recent_purchase', JSON.stringify({
-                email: extractedEmail,
-                password: DEFAULT_PASSWORD,
-                timestamp: Date.now(),
+                email: extractedEmail, password: DEFAULT_PASSWORD, timestamp: Date.now(),
+                source_page: sourcePage || localStorage.getItem('source_page') || '',
             }));
         }
 
-        // Clean up URL — delay to let tracking complete
         setTimeout(() => {
             window.history.replaceState({}, '', window.location.pathname);
         }, 3000);
@@ -129,10 +136,8 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
                     <p className="text-white/60 text-lg mb-8">
                         Houve um problema com o pagamento. Tente novamente ou use outro método.
                     </p>
-                    <button
-                        onClick={onGoToLogin}
-                        className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white"
-                    >
+                    <button onClick={() => onGoToLogin(sourcePage || localStorage.getItem('source_page') || '')}
+                        className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white">
                         <span>Voltar ao Início</span>
                         <ArrowRight size={20} />
                     </button>
@@ -156,19 +161,23 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
                     </div>
                     <h1 className="text-3xl font-black mb-4 text-amber-400">Pagamento Pendente</h1>
                     <p className="text-white/60 text-lg mb-6">
-                        Seu pagamento está sendo processado. Assim que confirmado, seus créditos serão liberados.
+                        {isTrialPurchase
+                            ? 'Seu pagamento está sendo processado. Assim que confirmado, sua foto HD será enviada por email.'
+                            : 'Seu pagamento está sendo processado. Assim que confirmado, seus créditos serão liberados.'
+                        }
                     </p>
                     <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 mb-8 text-left">
                         <p className="text-amber-400 font-bold text-xs uppercase tracking-wider mb-2">Após a aprovação:</p>
                         <p className="text-white/50 text-sm">
-                            Você receberá um email com seus dados de acesso.
-                            A senha padrão é: <span className="text-amber-400 font-mono font-bold">lumi123456</span>
+                            {isTrialPurchase
+                                ? 'Você receberá um email com o link de download e seus dados de acesso.'
+                                : 'Você receberá um email com seus dados de acesso.'
+                            }
+                            {' '}A senha padrão é: <span className="text-amber-400 font-mono font-bold">lumi123456</span>
                         </p>
                     </div>
-                    <button
-                        onClick={onGoToLogin}
-                        className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white"
-                    >
+                    <button onClick={() => onGoToLogin(sourcePage || localStorage.getItem('source_page') || '')}
+                        className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white">
                         <span>Voltar ao Início</span>
                         <ArrowRight size={20} />
                     </button>
@@ -180,7 +189,6 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
     // Success screen
     return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6">
-            {/* Background Effects */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-green-600/20 rounded-full blur-[150px]" />
             </div>
@@ -196,73 +204,78 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
                     </div>
                 </div>
 
-                {/* Title */}
                 <h1 className="text-3xl font-black mb-2 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                    Pagamento Confirmado!
+                    {isTrialPurchase ? 'Foto Liberada em HD!' : 'Pagamento Confirmado!'}
                 </h1>
 
-                {planName && (
+                {planName && !isTrialPurchase && (
                     <p className="text-amber-500 font-bold text-sm uppercase tracking-wider mb-2">
                         Pacote {planName}
                     </p>
                 )}
 
                 <p className="text-white/60 text-base mb-6">
-                    Sua conta foi criada com sucesso! Anote seus dados de acesso abaixo.
+                    {isTrialPurchase
+                        ? 'Sua foto HD sem marca d\'água foi enviada por email. Sua conta também já está pronta!'
+                        : 'Sua conta foi criada com sucesso! Anote seus dados de acesso abaixo.'
+                    }
                 </p>
+
+                {/* Trial: Email download notice */}
+                {isTrialPurchase && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-4 mb-5 text-left space-y-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Download size={16} className="text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="text-white font-bold text-sm">
+                                    {trialProductType === 'single' ? '📥 Foto HD enviada por email!' : '📥 3 Fotos HD enviadas por email!'}
+                                </p>
+                                {buyerEmail && (
+                                    <p className="text-emerald-300 text-xs font-mono break-all">{buyerEmail}</p>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-white/40 text-xs ml-10">Abra seu email para baixar. Verifique também a caixa de spam.</p>
+                    </div>
+                )}
 
                 {/* Credentials Card */}
                 <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 backdrop-blur-xl rounded-2xl p-5 border border-amber-500/30 mb-6 text-left space-y-4">
                     <p className="text-amber-400 font-black text-xs uppercase tracking-[0.2em] text-center">
-                        🔐 Seus Dados de Acesso
+                        🔐 {isTrialPurchase ? 'Sua Conta LumiPhotoIA' : 'Seus Dados de Acesso'}
                     </p>
 
-                    {/* Email Field */}
                     <div className="bg-black/30 rounded-xl p-3 border border-white/10">
                         <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Email</p>
                         <div className="flex items-center justify-between gap-2">
-                            <p className="text-white font-bold text-sm break-all">
-                                {buyerEmail || 'O email usado na compra'}
-                            </p>
+                            <p className="text-white font-bold text-sm break-all">{buyerEmail || 'O email usado na compra'}</p>
                             {buyerEmail && (
-                                <button
-                                    onClick={() => copyToClipboard(buyerEmail, 'email')}
-                                    className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                    title="Copiar email"
-                                >
-                                    {copiedField === 'email' ? (
-                                        <Check size={14} className="text-emerald-400" />
-                                    ) : (
-                                        <Copy size={14} className="text-white/40" />
-                                    )}
+                                <button onClick={() => copyToClipboard(buyerEmail, 'email')}
+                                    className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Copiar email">
+                                    {copiedField === 'email' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-white/40" />}
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    {/* Password Field */}
                     <div className="bg-black/30 rounded-xl p-3 border border-white/10">
                         <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Senha</p>
                         <div className="flex items-center justify-between gap-2">
-                            <p className="text-amber-400 font-mono font-bold text-lg tracking-wider">
-                                {DEFAULT_PASSWORD}
-                            </p>
-                            <button
-                                onClick={() => copyToClipboard(DEFAULT_PASSWORD, 'password')}
-                                className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                title="Copiar senha"
-                            >
-                                {copiedField === 'password' ? (
-                                    <Check size={14} className="text-emerald-400" />
-                                ) : (
-                                    <Copy size={14} className="text-white/40" />
-                                )}
+                            <p className="text-amber-400 font-mono font-bold text-lg tracking-wider">{DEFAULT_PASSWORD}</p>
+                            <button onClick={() => copyToClipboard(DEFAULT_PASSWORD, 'password')}
+                                className="flex-shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Copiar senha">
+                                {copiedField === 'password' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-white/40" />}
                             </button>
                         </div>
                     </div>
 
                     <p className="text-white/30 text-[10px] text-center">
-                        ⚠️ Recomendamos alterar sua senha após o primeiro acesso
+                        {isTrialPurchase && trialProductType === 'pack'
+                            ? '✨ Conta criada com 7 créditos para gerar mais fotos!'
+                            : '⚠️ Recomendamos alterar sua senha após o primeiro acesso'
+                        }
                     </p>
                 </div>
 
@@ -272,20 +285,19 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
                         <Mail size={16} className="text-indigo-400" />
                     </div>
                     <p className="text-white/40 text-xs">
-                        Também enviamos esses dados para o seu email
+                        {isTrialPurchase
+                            ? 'O link de download HD + dados de acesso foram enviados para seu email'
+                            : 'Também enviamos esses dados para o seu email'
+                        }
                     </p>
                 </div>
 
-                {/* CTA Button */}
-                <button
-                    onClick={onGoToLogin}
-                    className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:from-amber-500 hover:to-yellow-500 transition-all text-white"
-                >
+                <button onClick={() => onGoToLogin(sourcePage || localStorage.getItem('source_page') || '')}
+                    className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:from-amber-500 hover:to-yellow-500 transition-all text-white">
                     <span>Fazer Login Agora</span>
                     <ArrowRight size={20} />
                 </button>
 
-                {/* Footer */}
                 <p className="text-white/20 text-xs mt-8">
                     © {new Date().getFullYear()} LumiphotoIA. Todos os direitos reservados.
                 </p>

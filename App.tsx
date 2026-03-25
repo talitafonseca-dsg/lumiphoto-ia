@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Palette,
@@ -60,7 +60,7 @@ import {
   Gift
 } from 'lucide-react';
 import { CreationType, VisualStyle, StudioStyle, StudioStyleMeta, MascotStyle, MascotStyleMeta, MockupStyle, MockupStyleMeta, AspectRatio, SocialClass, GenerationConfig, GeneratedImage, ColorPalette, UGCEnvironment, UGCModel, DeliveryStyle, DeliveryStyleMetaMap } from './types';
-import { generateStudioCreative, editGeneratedImage, animateGeneratedImage, generateDeliveryCreative } from './services/geminiService';
+import { generateStudioCreative, editGeneratedImage, animateGeneratedImage, generateDeliveryCreative, generateModaCreative } from './services/geminiService';
 import { submitVideoGeneration, waitForVideo } from './services/videoService';
 import { generatePPTX } from './services/pptService';
 import { translations, Language } from './translations';
@@ -79,7 +79,10 @@ import { AdvogadasLandingPage } from './components/AdvogadasLandingPage';
 import { EsteticaLandingPage } from './components/EsteticaLandingPage';
 import { BeautyLandingPage } from './components/BeautyLandingPage';
 import { VarejoLandingPage } from './components/VarejoLandingPage';
+import { ModaLandingPage } from './components/ModaLandingPage';
+import { ModaStudioPage } from './components/ModaStudioPage';
 import { DeliveryLandingPage } from './components/DeliveryLandingPage';
+import { PetLandingPage } from './components/PetLandingPage';
 import { TrialResultModal, type TrialPreviewImage } from './components/TrialResultModal';
 import { TrialSuccessPage } from './components/TrialSuccessPage';
 import UrgencyBanner from './components/UrgencyBanner';
@@ -143,7 +146,12 @@ const App: React.FC = () => {
   const [videoProgress, setVideoProgress] = useState<number>(0);
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const pendingAnimateVariation = useRef<GeneratedImage | null>(null);
-  const [results, setResults] = useState<GeneratedImage[]>([]);
+  const [results, setResults] = useState<GeneratedImage[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('lumi_results');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
   const [credits, setCredits] = useState<number>(0);
@@ -183,11 +191,25 @@ const App: React.FC = () => {
     StudioStyle.ADV_CORPORATIVO,
   ], []);
 
+  // Curated styles for the virtual "Populares" category (most popular styles)
+  const POPULARES_CURATED_STYLES = React.useMemo(() => [
+    StudioStyle.FAMILY_STUDIO_CLEAN,
+    StudioStyle.INSP_FUNDO_BOLD_BLUE,
+    StudioStyle.FAMILY_LIFESTYLE_HOME,
+    StudioStyle.EXECUTIVO_PRO,
+    StudioStyle.INSP_POWER_PORTRAIT,
+    StudioStyle.EDITORIAL_VOGUE,
+    StudioStyle.INSP_GOLDEN_HOUR,
+    StudioStyle.LUXURY_GOLD,
+  ], []);
+
   // Base categories from StudioStyleMeta (static, no dependencies)
   const allCategories = React.useMemo(() => {
     const cats = new Set(Object.values(StudioStyleMeta).map(m => m.category));
+    // Add virtual curated category
+    cats.add('Populares ⭐');
     const catArray = Array.from(cats);
-    const order = ['Advogado ⚖️', 'TikTok Viral 🔥', 'Inspiracional', 'Profissional', 'Moda & Beleza', 'Casual', 'Família', 'Aniversário', 'Palco & Oratória', 'Ofícios & Serviços', 'Político', 'Restauração', 'Comercial', 'Criativo'];
+    const order = ['Populares ⭐', 'Advogado ⚖️', 'TikTok Viral 🔥', 'Inspiracional', 'Profissional', 'Moda & Beleza', 'Lifestyle', 'Família', 'Aniversário', 'Formatura', 'Palco & Oratória', 'Ofícios & Serviços', 'Político', 'Restauração', 'Comercial', 'Criativo'];
     return catArray.sort((a, b) => {
       const indexA = order.indexOf(a);
       const indexB = order.indexOf(b);
@@ -200,9 +222,10 @@ const App: React.FC = () => {
 
   const getTranslatedCategory = (cat: string) => {
     const mapping: Record<string, { label: string, icon: string }> = {
+      'Populares ⭐': { label: 'Populares', icon: '⭐' },
       'Profissional': { label: t.studio.categories.professional, icon: '💼' },
       'Moda & Beleza': { label: t.studio.categories.fashion, icon: '✨' },
-      'Casual': { label: t.studio.categories.fitness, icon: '☀️' },
+      'Lifestyle': { label: 'Lifestyle', icon: '☀️' },
       'Família': { label: t.studio.categories.family, icon: '👨‍👩‍👧‍👦' },
       'Aniversário': { label: 'Aniversário', icon: '🎂' },
       'Comercial': { label: t.studio.categories.commercial, icon: '🏪' },
@@ -212,7 +235,8 @@ const App: React.FC = () => {
       'Palco & Oratória': { label: 'Palco & Oratória', icon: '🎤' },
       'Ofícios & Serviços': { label: 'Ofícios & Serviços', icon: '🔧' },
       'TikTok Viral 🔥': { label: 'TikTok Viral', icon: '📱' },
-      'Inspiracional': { label: 'Inspiracional', icon: '🔥' }
+      'Inspiracional': { label: 'Inspiracional', icon: '🔥' },
+      'Formatura': { label: 'Formatura', icon: '🎓' }
     };
     const m = mapping[cat];
     return m ? `${m.icon} ${m.label}` : cat;
@@ -334,9 +358,22 @@ const App: React.FC = () => {
   // Ref for auto-scroll to results on mobile
   const resultsAreaRef = useRef<HTMLDivElement>(null);
 
+  // Persist results in sessionStorage so they survive tab-switches (e.g. video download)
+  useEffect(() => {
+    try {
+      if (results.length > 0) {
+        sessionStorage.setItem('lumi_results', JSON.stringify(results));
+      } else {
+        sessionStorage.removeItem('lumi_results');
+      }
+    } catch { /* quota exceeded — ignore */ }
+  }, [results]);
+
   // Auto-scroll to results on mobile when generation completes
+  // Also close the mobile sidebar so results are immediately visible
   useEffect(() => {
     if (results.length > 0 && !isGenerating && window.innerWidth < 768) {
+      setShowMobileSidebar(false);
       setTimeout(() => {
         resultsAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 300);
@@ -350,8 +387,22 @@ const App: React.FC = () => {
   }, [results]);
 
   // Persist selected studio category so page refresh keeps the correct studio
+  // Also normalize designCount when switching categories in/out of Formatura
   useEffect(() => {
     sessionStorage.setItem('lumi_studio_category', selectedCategory);
+    // When entering Formatura, ensure designCount is at least 3 (Formatura minimum)
+    if (selectedCategory === 'Formatura') {
+      setConfig(prev => ({
+        ...prev,
+        designCount: prev.designCount < 3 ? 3 : prev.designCount
+      }));
+    } else {
+      // When leaving Formatura, cap designCount back to standard max (3)
+      setConfig(prev => ({
+        ...prev,
+        designCount: prev.designCount > 3 ? 3 : prev.designCount
+      }));
+    }
   }, [selectedCategory]);
 
 
@@ -402,6 +453,7 @@ const App: React.FC = () => {
         setCredits(session.user.user_metadata.credits);
       }
       if (session?.user) {
+        setShowAuth(false);
         setShowSalesPage(false);
       } else {
         setShowSalesPage(true);
@@ -589,18 +641,18 @@ const App: React.FC = () => {
     setResults([]);
     setSelectedImage(null);
     setActivePulseStep(null);
+    // CAP design count to available credits (declared before try so catch can access for refunds)
+    let effectiveDesignCount = isCreativeBackground ? 6 : config.designCount;
+    if (user && credits > 0 && credits < effectiveDesignCount) {
+      effectiveDesignCount = credits;
+    }
     try {
-      // CAP design count to available credits (prevent generating more than user can afford)
-      let effectiveDesignCount = isCreativeBackground ? 6 : config.designCount;
-      if (user && credits > 0 && credits < effectiveDesignCount) {
-        effectiveDesignCount = credits;
-      }
 
       // === DEDUCT CREDITS BEFORE GENERATION ===
       if (user) {
         try {
-          const session = (await supabase.auth.getSession()).data.session;
-          const res = await fetch(
+          let session = (await supabase.auth.getSession()).data.session;
+          let res = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
             {
               method: 'POST',
@@ -611,6 +663,32 @@ const App: React.FC = () => {
               body: JSON.stringify({ count: effectiveDesignCount }),
             }
           );
+          // Auto-retry on 401: refresh session and try once more
+          if (res.status === 401) {
+            console.warn('⚠️ deduct-credits returned 401, refreshing session and retrying...');
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            if (refreshData?.session) {
+              session = refreshData.session;
+              res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({ count: effectiveDesignCount }),
+                }
+              );
+            } else {
+              // Session refresh failed — force re-login
+              console.error('❌ Session refresh failed, signing out...');
+              await supabase.auth.signOut();
+              setError('Sua sessão expirou. Por favor, faça login novamente.');
+              setIsGenerating(false);
+              return;
+            }
+          }
           if (res.ok) {
             const data = await res.json();
             setCredits(data.newCredits);
@@ -621,6 +699,9 @@ const App: React.FC = () => {
             if (res.status === 403) {
               setShowPaywall(true);
               setError(`❌ Créditos insuficientes! Você tem ${errData.current_credits || 0} créditos mas precisa de ${effectiveDesignCount}.`);
+            } else if (res.status === 401) {
+              await supabase.auth.signOut();
+              setError('Sua sessão expirou. Por favor, faça login novamente.');
             } else {
               setError('Erro ao processar créditos. Tente novamente.');
             }
@@ -663,8 +744,35 @@ const App: React.FC = () => {
         }, uploadedImage, studioRefImage, productImage, stickerImage, customModelImage, environmentImage, (await getAuthToken()) || undefined);
       }
 
+      // === REFUND credits for images that failed to generate ===
+      const successCount = generated.filter((img: any) => img.url || img.imageBase64 || img.imageUrl).length;
+      const failedCount = effectiveDesignCount - successCount;
+      if (user && failedCount > 0) {
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          const refundRes = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({ count: -failedCount }),
+            }
+          );
+          if (refundRes.ok) {
+            const refundData = await refundRes.json();
+            setCredits(refundData.newCredits);
+            console.log(`🔄 Refunded ${failedCount} credits for failed images: ${refundData.previousCredits} → ${refundData.newCredits}`);
+          }
+        } catch (refundErr) {
+          console.error('Error refunding credits:', refundErr);
+        }
+      }
+
       // Inject Layout Mode Metadata
-      const resultsWithMeta = generated.map(img => ({
+      const resultsWithMeta = generated.map((img: any) => ({
         ...img,
         layoutMode: config.useBoxLayout ? 'box' : 'default' as 'box' | 'default'
       }));
@@ -694,6 +802,32 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Critical Generation Error:", err);
+
+      // === REFUND ALL deducted credits on total failure ===
+      if (user && effectiveDesignCount > 0) {
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          const refundRes = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({ count: -effectiveDesignCount }),
+            }
+          );
+          if (refundRes.ok) {
+            const refundData = await refundRes.json();
+            setCredits(refundData.newCredits);
+            console.log(`🔄 FULL REFUND: ${effectiveDesignCount} credits returned on error: ${refundData.previousCredits} → ${refundData.newCredits}`);
+          }
+        } catch (refundErr) {
+          console.error('Error refunding credits on failure:', refundErr);
+        }
+      }
+
       if (err.message?.includes("Requested entity was not found") || err.message?.includes("API key not valid")) {
         setError("Erro de configuração: chave API inválida. Contate o suporte.");
         setIsGenerating(false);
@@ -702,7 +836,7 @@ const App: React.FC = () => {
       const isQuota = err.message?.includes('429') || err.message?.includes('quota');
       setIsQuotaError(isQuota);
       setError(isQuota
-        ? "Limite de Uso Atingido. A conta compartilhada atingiu o limite. Conecte sua própria chave API para continuar."
+        ? "⏳ Servidor temporariamente ocupado. Aguarde 30 segundos e tente novamente. Seus créditos foram devolvidos."
         : (err.message || "Erro desconhecido na engine neural. Tente novamente.")
       );
     } finally {
@@ -792,6 +926,31 @@ const App: React.FC = () => {
         }
       }
     } catch (err: any) {
+      // === REFUND 1 credit on refresh failure ===
+      if (user) {
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          const refundRes = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({ count: -1 }),
+            }
+          );
+          if (refundRes.ok) {
+            const refundData = await refundRes.json();
+            setCredits(refundData.newCredits);
+            console.log(`🔄 Refunded 1 credit for failed refresh: ${refundData.previousCredits} → ${refundData.newCredits}`);
+          }
+        } catch (refundErr) {
+          console.error('Error refunding credit on refresh failure:', refundErr);
+        }
+      }
+
       if (err.message?.includes("Requested entity was not found") || err.message?.includes("API key not valid")) {
         setError("Erro de configuração: chave API inválida. Contate o suporte.");
         setRefreshingId(null);
@@ -1495,6 +1654,115 @@ const App: React.FC = () => {
     );
   }
 
+  if (currentPath === '/moda') {
+    if (showAuth) {
+      return <AuthScreen
+        segmentLabel="👗 Moda"
+        segmentColor="text-rose-400"
+        onLogin={() => { referrerPath.current = '/moda'; setSelectedCategory('Moda & Beleza'); setShowAuth(false); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
+    }
+    // Show Moda Studio when user entered from login/studio button
+    if (!showSalesPage) {
+      return (
+        <>
+          <ModaStudioPage
+            onNavigateBack={() => setShowSalesPage(true)}
+            credits={credits}
+            isGenerating={isGenerating}
+            results={results}
+            error={error}
+            isLoggedIn={!!user}
+            onShowPaywall={() => setShowPaywall(true)}
+            onGenerate={async (modaConfig, modelImg, topImg, bottomImg, shoesImg, dressImg, bagImg, accessoryImg) => {
+              setIsGenerating(true);
+              setResults([]);
+              setError(null);
+              try {
+                // Deduct credits
+                if (user) {
+                  const session = (await supabase.auth.getSession()).data.session;
+                  const creditRes = await fetch(
+                    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deduct-credits`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                      body: JSON.stringify({ count: modaConfig.designCount || 3 }),
+                    }
+                  );
+                  if (creditRes.ok) {
+                    const creditData = await creditRes.json();
+                    setCredits(creditData.newCredits);
+                  } else if (creditRes.status === 403) {
+                    setShowPaywall(true);
+                    setIsGenerating(false);
+                    return;
+                  }
+                }
+                // Dedicated Moda generation with proper garment + accessory labels
+                const generated = await generateModaCreative(
+                  modaConfig,
+                  modelImg,
+                  topImg,
+                  bottomImg,
+                  shoesImg,
+                  dressImg,
+                  bagImg,
+                  accessoryImg,
+                  (await getAuthToken()) || undefined
+                );
+                setResults(generated);
+              } catch (err: any) {
+                setError(err.message || 'Erro ao gerar look');
+              } finally {
+                setIsGenerating(false);
+              }
+            }}
+            onDownload={(url) => downloadImageDirectly(url)}
+          />
+          {showPaywall && (
+            <div className="fixed inset-0 z-[60] bg-black overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <CheckoutPage onBack={() => setShowPaywall(false)} />
+            </div>
+          )}
+        </>
+      );
+    }
+    return (
+      <>
+        <UrgencyBanner />
+        <ModaLandingPage
+          onGetStarted={() => { referrerPath.current = '/moda'; navigateTo('/checkout'); }}
+          onViewStudio={() => { referrerPath.current = '/moda'; setShowSalesPage(false); }}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+        {segmentBlockedMsg && (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setSegmentBlockedMsg(null)}>
+            <div className="bg-zinc-900 border border-rose-500/30 rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+              <div className="text-3xl mb-3">🔒</div>
+              <p className="text-white text-sm leading-relaxed">{segmentBlockedMsg.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
+              <button onClick={() => setSegmentBlockedMsg(null)} className="mt-4 px-5 py-2 bg-rose-500 text-white text-xs font-black rounded-lg">Entendido</button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   if (currentPath === '/delivery') {
     // Handle trial success redirect
     if (currentPath.includes('trial-success')) {
@@ -1541,6 +1809,39 @@ const App: React.FC = () => {
     );
   }
 
+  if (currentPath === '/ensaio-pet') {
+    if (showAuth) {
+      return <AuthScreen
+        segmentLabel="🐾 Pets"
+        segmentColor="text-amber-400"
+        onLogin={() => { referrerPath.current = '/ensaio-pet'; navigateTo('/'); setShowSalesPage(false); }}
+        onBack={() => { setShowAuth(false); }}
+      />;
+    }
+    return (
+      <>
+        <PetLandingPage
+          onGetStarted={() => { referrerPath.current = '/ensaio-pet'; navigateTo('/checkout'); }}
+          onViewStudio={() => handleViewStudio('pet', () => { referrerPath.current = '/ensaio-pet'; setSelectedCategory('Pet 🐾'); navigateTo('/'); setShowSalesPage(false); })}
+          onLogin={() => setShowAuth(true)}
+          onFreeTrialGenerate={handleTrialGenerate}
+          isTrialGenerating={isTrialGenerating}
+          trialError={trialError}
+        />
+        {showTrialModal && (
+          <TrialResultModal
+            isOpen={showTrialModal}
+            onClose={() => setShowTrialModal(false)}
+            images={trialImages}
+            generationId={trialGenerationId}
+            sessionId={trialSessionId}
+            expiresAt={trialExpiresAt}
+          />
+        )}
+      </>
+    );
+  }
+
   // ADMIN ROUTE
   if (currentPath === '/admin') {
     return <AdminDashboard />;
@@ -1562,11 +1863,19 @@ const App: React.FC = () => {
   }
 
   if (currentPath === '/checkout/success' || currentPath.includes('collection_status=approved')) {
-    return <CheckoutSuccess onGoToLogin={() => { navigateTo('/'); setShowAuth(true); }} />;
+    return <CheckoutSuccess onGoToLogin={(sourcePage) => {
+      const target = sourcePage || localStorage.getItem('source_page') || '/';
+      navigateTo(target);
+      setShowAuth(true);
+    }} />;
   }
 
   if (currentPath === '/checkout/failure' || currentPath === '/checkout/pending') {
-    return <CheckoutSuccess onGoToLogin={() => { navigateTo('/'); setShowAuth(true); }} />;
+    return <CheckoutSuccess onGoToLogin={(sourcePage) => {
+      const target = sourcePage || localStorage.getItem('source_page') || '/';
+      navigateTo(target);
+      setShowAuth(true);
+    }} />;
   }
 
   // Show loading while checking auth
@@ -1779,30 +2088,30 @@ const App: React.FC = () => {
                             ) : (
                               <>
                                 <div className="w-14 h-14 md:w-11 md:h-11 bg-amber-500/20 rounded-2xl md:rounded-xl flex items-center justify-center mb-2 text-amber-400 group-hover:scale-110 transition-transform"><User size={28} className="md:hidden" /><User size={22} className="hidden md:block" /></div>
-                                <p className="text-sm md:text-[11px] font-black uppercase tracking-wider text-white">{t.studio.upload_subject}</p>
-                                <p className="text-[10px] md:text-[8px] text-white/40 mt-1 text-center font-medium max-w-[200px] leading-tight">Clique para enviar sua selfie</p>
+                                <p className="text-sm md:text-[11px] font-black uppercase tracking-wider text-white">{referrerPath.current === '/ensaio-pet' ? '🐾 Seu Pet' : t.studio.upload_subject}</p>
+                                <p className="text-[10px] md:text-[8px] text-white/40 mt-1 text-center font-medium max-w-[200px] leading-tight">{referrerPath.current === '/ensaio-pet' ? 'Clique para enviar a foto do seu pet' : 'Clique para enviar sua selfie'}</p>
                               </>
                             )}
                           </label>
                         </div>
 
-                        {/* 2. PRODUCT PHOTO — Hidden on advogadas/aniversário pages */}
+                        {/* 2. PRODUCT/TUTOR PHOTO — Hidden on advogadas/aniversário pages */}
                         {referrerPath.current !== '/ensaio-advogadas' && referrerPath.current !== '/ensaio-aniversario' && (
-                          <div className="relative group">
+                          <div className={`relative group ${referrerPath.current === '/ensaio-pet' ? 'col-span-2' : ''}`}>
                             <input type="file" id="sidebar-product-upload" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'product')} />
-                            <label htmlFor="sidebar-product-upload" className={`flex flex-col items-center justify-center p-3 md:p-3 rounded-xl md:rounded-xl border-2 border-dashed transition-all cursor-pointer h-32 md:h-24 ${productImage ? 'bg-emerald-600/10 border-emerald-500/50' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'}`}>
+                            <label htmlFor="sidebar-product-upload" className={`flex flex-col items-center justify-center p-3 md:p-3 rounded-xl md:rounded-xl border-2 border-dashed transition-all cursor-pointer ${referrerPath.current === '/ensaio-pet' ? 'min-h-[100px] md:min-h-[90px]' : 'h-32 md:h-24'} ${productImage ? (referrerPath.current === '/ensaio-pet' ? 'bg-blue-600/10 border-blue-500/50' : 'bg-emerald-600/10 border-emerald-500/50') : (referrerPath.current === '/ensaio-pet' ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/30 hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)]' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20')}`}>
                               {productImage ? (
                                 <div className="relative w-full h-full flex flex-col items-center justify-center">
-                                  <img src={productImage} className="max-h-16 md:max-h-12 rounded-lg shadow-lg object-contain" />
-                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"><Check size={10} className="text-white" /></div>
+                                  <img src={productImage} className={`${referrerPath.current === '/ensaio-pet' ? 'max-h-20 md:max-h-16' : 'max-h-16 md:max-h-12'} rounded-lg shadow-lg object-contain`} />
+                                  <div className={`absolute -top-1 -right-1 w-5 h-5 ${referrerPath.current === '/ensaio-pet' ? 'bg-blue-500' : 'bg-emerald-500'} rounded-full flex items-center justify-center shadow-lg`}><Check size={10} className="text-white" /></div>
                                   <button onClick={(e) => { e.preventDefault(); setProductImage(null); }} className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 border border-white/20 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors"><X size={10} className="text-white" /></button>
-                                  <p className="mt-1 text-[8px] font-black uppercase text-emerald-400">Produto</p>
+                                  <p className={`mt-1 text-[8px] font-black uppercase ${referrerPath.current === '/ensaio-pet' ? 'text-blue-400' : 'text-emerald-400'}`}>{referrerPath.current === '/ensaio-pet' ? '✅ Foto do Tutor enviada' : 'Produto'}</p>
                                 </div>
                               ) : (
                                 <>
-                                  <div className="w-8 h-8 md:w-7 md:h-7 bg-white/5 rounded-lg flex items-center justify-center mb-1.5 text-white/30 group-hover:text-white/60 transition-all"><Package size={14} /></div>
-                                  <p className="text-[9px] md:text-[8px] font-black uppercase tracking-wider text-white/70">{t.studio.upload_product}</p>
-                                  <p className="text-[7px] text-white/25 mt-1 text-center font-bold bg-white/5 px-1.5 py-0.5 rounded-full">OPCIONAL</p>
+                                  <div className={`${referrerPath.current === '/ensaio-pet' ? 'w-12 h-12 md:w-10 md:h-10 bg-blue-500/20 rounded-xl' : 'w-8 h-8 md:w-7 md:h-7 bg-white/5 rounded-lg'} flex items-center justify-center mb-1.5 ${referrerPath.current === '/ensaio-pet' ? 'text-blue-400' : 'text-white/30'} group-hover:text-white/60 transition-all`}>{referrerPath.current === '/ensaio-pet' ? <User size={20} /> : <Package size={14} />}</div>
+                                  <p className={`${referrerPath.current === '/ensaio-pet' ? 'text-sm md:text-[11px]' : 'text-[9px] md:text-[8px]'} font-black uppercase tracking-wider ${referrerPath.current === '/ensaio-pet' ? 'text-white' : 'text-white/70'}`}>{referrerPath.current === '/ensaio-pet' ? '👤 Foto do Tutor' : t.studio.upload_product}</p>
+                                  <p className={`text-[${referrerPath.current === '/ensaio-pet' ? '10' : '7'}px] ${referrerPath.current === '/ensaio-pet' ? 'text-white/40 mt-1' : 'text-white/25 mt-1 text-center font-bold bg-white/5 px-1.5 py-0.5 rounded-full'}`}>{referrerPath.current === '/ensaio-pet' ? 'Envie sua foto para ensaios com tutor' : 'OPCIONAL'}</p>
                                 </>
                               )}
                             </label>
@@ -1883,20 +2192,49 @@ const App: React.FC = () => {
                     {/* RESULT COUNT SELECTOR */}
                     <div className="col-span-2 p-3 rounded-xl bg-zinc-900/50 border border-white/5 space-y-2 md:space-y-3">
                       <p className="text-[10px] md:text-[9px] font-black uppercase tracking-wider text-white/60">🖼️ {t.studio.image_quantity}</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[1, 2, 3].map((count) => (
-                          <button
-                            key={count}
-                            onClick={() => setConfig(prev => ({ ...prev, designCount: count }))}
-                            className={`py-3 md:py-2 rounded-lg text-sm md:text-xs font-black transition-all ${config.designCount === count ? 'bg-amber-500 text-black shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10 active:scale-95'}`}
-                          >
-                            {count} {count === 1 ? 'foto' : 'fotos'}
-                          </button>
-                        ))}
-                      </div>
+                      {selectedCategory === 'Formatura' ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-3 gap-2">
+                            {[3, 6, 12].map((count) => (
+                              <button
+                                key={count}
+                                onClick={() => setConfig(prev => ({ ...prev, designCount: count }))}
+                                className={`py-3 md:py-2 rounded-lg text-sm md:text-xs font-black transition-all ${config.designCount === count ? 'bg-amber-500 text-black shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10 active:scale-95'}`}
+                              >
+                                {count === 12 ? '12 ✨' : `${count}`} {count === 1 ? 'foto' : 'fotos'}
+                              </button>
+                            ))}
+                          </div>
+                          {config.designCount === 12 && (
+                            <p className="text-[9px] text-amber-400/70 text-center">🎓 Ensaio Completo — 12 poses únicas com coerência visual</p>
+                          )}
+                          {config.designCount === 6 && (
+                            <p className="text-[9px] text-amber-400/70 text-center">🎓 Mini Ensaio — 6 poses variadas</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {[1, 2, 3].map((count) => (
+                            <button
+                              key={count}
+                              onClick={() => setConfig(prev => ({ ...prev, designCount: count }))}
+                              className={`py-3 md:py-2 rounded-lg text-sm md:text-xs font-black transition-all ${config.designCount === count ? 'bg-amber-500 text-black shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10 active:scale-95'}`}
+                            >
+                              {count} {count === 1 ? 'foto' : 'fotos'}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+
+            {/* Desktop scroll-down hint — below quantity */}
+            <div className="hidden md:flex items-center justify-center gap-2 py-1 scroll-down-hint">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                <span className="text-amber-400 text-[10px] font-black uppercase tracking-wider">↓ Role para escolher o estilo ↓</span>
               </div>
             </div>
 
@@ -2277,48 +2615,144 @@ const App: React.FC = () => {
                   </div>
 
 
-                  {/* Category Tabs - Multiline */}
-                  <div className="flex flex-wrap gap-2 pb-2">
-                    {(() => {
-                      // Compute categories at render time (referrerPath is available here)
-                      const ref = referrerPath.current;
-                      let cats = [...allCategories];
-                      if (ref === '/ensaio-aniversario' || ref === '/ensaio-advogadas' || ref === '/ensaio-beleza') {
-                        cats = cats.filter(c => c !== 'Comercial');
-                      }
-                      if (ref === '/ensaio-advogadas' && !cats.includes('Advogado ⚖️')) {
-                        cats.unshift('Advogado ⚖️');
-                      }
-                      return cats;
-                    })().map(cat => {
-                      const isTikTok = cat.includes('TikTok');
-                      const isFeatured = (referrerPath.current === '/ensaio-aniversario' && cat === 'Aniversário') || (referrerPath.current === '/ensaios' && cat === 'Profissional') || (referrerPath.current === '/ensaio-advogadas' && cat === 'Advogado ⚖️') || (referrerPath.current === '/ensaio-estetica' && cat === 'Moda & Beleza') || (referrerPath.current === '/ensaio-beleza' && cat === 'Moda & Beleza') || (referrerPath.current === '/varejo' && cat === 'Varejo 🛍️') || (referrerPath.current === '/delivery' && cat === 'Delivery 🍕');
-                      return (
-                        <button
-                          key={cat}
-                          onClick={() => setSelectedCategory(cat)}
-                          className={`relative ${isFeatured ? 'px-4 py-2.5 md:px-4 md:py-2 text-[13px] md:text-[12px] ring-2 ring-amber-500/50 scale-105' : 'px-3 py-1.5 md:px-2.5 md:py-1.5 text-[11px] md:text-[10px]'} rounded-lg md:rounded-lg font-bold whitespace-nowrap transition-all border ${isTikTok && selectedCategory !== cat
-                            ? 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-white border-pink-500/50 hover:border-pink-400 hover:shadow-[0_0_16px_rgba(236,72,153,0.3)] animate-pulse-slow'
-                            : selectedCategory === cat
-                              ? 'bg-amber-500 text-black border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
-                              : 'bg-white/5 text-white/50 border-white/10 hover:border-amber-500/40 hover:text-white/80 hover:bg-white/10'
-                            }`}
+                  {/* Category Ribbon — Horizontal Scroll */}
+                  {(() => {
+                    const ref = referrerPath.current;
+                    let cats = [...allCategories];
+                    if (ref === '/ensaio-aniversario' || ref === '/ensaio-advogadas' || ref === '/ensaio-beleza') {
+                      cats = cats.filter(c => c !== 'Comercial');
+                    }
+                    if (ref === '/ensaio-advogadas' && !cats.includes('Advogado ⚖️')) {
+                      cats.unshift('Advogado ⚖️');
+                    }
+                    if (ref === '/ensaio-pet') {
+                      const petAllowed = ['Pet 🐾', 'Família', 'Aniversário', 'Inspiracional'];
+                      cats = cats.filter(c => petAllowed.includes(c) || c.includes('TikTok'));
+                    }
+
+                    const categoryIcons: Record<string, string> = {
+                      'Populares ⭐': '⭐',
+                      'Profissional': '💼',
+                      'Moda & Beleza': '✨',
+                      'Lifestyle': '☀️',
+                      'Família': '👨‍👩‍👧',
+                      'Aniversário': '🎂',
+                      'Comercial': '🏪',
+                      'Criativo': '🎨',
+                      'Político': '🏛️',
+                      'Restauração': '🔄',
+                      'Palco & Oratória': '🎤',
+                      'Ofícios & Serviços': '🔧',
+                      'TikTok Viral 🔥': '📱',
+                      'Inspiracional': '🔥',
+                      'Advogado ⚖️': '⚖️',
+                      'Pet 🐾': '🐾',
+                      'Varejo 🛍️': '🛍️',
+                      'Delivery 🍕': '🍕',
+                      'Formatura': '🎓',
+                    };
+
+                    const categoryLabels: Record<string, string> = {
+                      'Populares ⭐': 'Populares',
+                      'Profissional': 'Profissional',
+                      'Moda & Beleza': 'Beleza',
+                      'Lifestyle': 'Lifestyle',
+                      'Família': 'Família',
+                      'Aniversário': 'Aniversário',
+                      'Comercial': 'Comercial',
+                      'Criativo': 'Criativo',
+                      'Político': 'Político',
+                      'Restauração': 'Restauração',
+                      'Palco & Oratória': 'Palco',
+                      'Ofícios & Serviços': 'Ofícios',
+                      'TikTok Viral 🔥': 'TikTok',
+                      'Inspiracional': 'Inspiração',
+                      'Advogado ⚖️': 'Advogado',
+                      'Pet 🐾': 'Pet',
+                      'Varejo 🛍️': 'Varejo',
+                      'Delivery 🍕': 'Delivery',
+                      'Formatura': 'Formatura',
+                    };
+
+                    const isFeaturedCat = (cat: string) => {
+                      return (ref === '/ensaio-aniversario' && cat === 'Aniversário') || (ref === '/ensaios' && cat === 'Profissional') || (ref === '/ensaio-advogadas' && cat === 'Advogado ⚖️') || (ref === '/ensaio-estetica' && cat === 'Moda & Beleza') || (ref === '/ensaio-beleza' && cat === 'Moda & Beleza') || (ref === '/varejo' && cat === 'Varejo 🛍️') || (ref === '/delivery' && cat === 'Delivery 🍕') || (ref === '/ensaio-pet' && cat === 'Pet 🐾');
+                    };
+
+                    return (
+                      <div className="space-y-1.5">
+                        {/* Ribbon header */}
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[9px] md:text-[8px] text-white/20 font-bold uppercase tracking-widest">{cats.length} temas disponíveis</span>
+                          <span className="text-[9px] text-amber-500/50 font-bold flex items-center gap-1 scroll-hint-arrow md:hidden">
+                            deslize →
+                          </span>
+                        </div>
+
+                        {/* Scrollable ribbon */}
+                        <div
+                          className="ribbon-container at-start"
+                          ref={(el) => {
+                            if (!el) return;
+                            const ribbon = el.querySelector('.category-ribbon');
+                            if (!ribbon) return;
+                            const updateFade = () => {
+                              const { scrollLeft, scrollWidth, clientWidth } = ribbon;
+                              el.classList.toggle('at-start', scrollLeft < 8);
+                              el.classList.toggle('at-end', scrollLeft + clientWidth >= scrollWidth - 8);
+                            };
+                            ribbon.addEventListener('scroll', updateFade, { passive: true });
+                            // Initial check
+                            requestAnimationFrame(updateFade);
+                          }}
                         >
-                          {getTranslatedCategory(cat)}
-                          {isTikTok && (
-                            <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-lg animate-bounce" style={{ animationDuration: '2s' }}>
-                              QUENTE
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                          <div className="category-ribbon">
+                            {cats.map(cat => {
+                              const isActive = selectedCategory === cat;
+                              const isTikTok = cat.includes('TikTok');
+                              const featured = isFeaturedCat(cat);
+                              return (
+                                <div
+                                  key={cat}
+                                  onClick={() => setSelectedCategory(cat)}
+                                  className={`cat-pill ${isActive ? 'active' : ''} ${featured && !isActive ? 'ring-1 ring-amber-500/30' : ''}`}
+                                >
+                                  <div className={`cat-icon ${isTikTok && !isActive ? '!bg-gradient-to-br from-pink-500/20 to-purple-500/20 !border-pink-500/30' : ''}`}>
+                                    {categoryIcons[cat] || '📷'}
+                                  </div>
+                                  <span className="cat-label">{categoryLabels[cat] || cat}</span>
+                                  {isTikTok && (
+                                    <span className="absolute -top-1 -right-0.5 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[6px] font-black px-1 py-0.5 rounded-full shadow-lg" style={{ lineHeight: 1 }}>
+                                      HOT
+                                    </span>
+                                  )}
+                                  {featured && !isActive && (
+                                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[5px] font-black px-1.5 py-0.5 rounded-full" style={{ lineHeight: 1 }}>
+                                      ★
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Desktop scroll-down indicator */}
+                  <div className="hidden md:flex items-center justify-center gap-2 py-2 scroll-down-hint">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      <span className="text-amber-400 text-[10px] font-black uppercase tracking-wider">Role para ver estilos</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </div>
                   </div>
 
                   {/* Style Grid */}
                   <div className="grid grid-cols-2 gap-2">
                     {Object.values(StudioStyle)
-                      .filter(style => selectedCategory === 'Advogado ⚖️' ? ADVOGADO_CURATED_STYLES.includes(style) : StudioStyleMeta[style]?.category === selectedCategory)
+                      .filter(style => selectedCategory === 'Advogado ⚖️' ? ADVOGADO_CURATED_STYLES.includes(style) : selectedCategory === 'Populares ⭐' ? POPULARES_CURATED_STYLES.includes(style) : StudioStyleMeta[style]?.category === selectedCategory)
                       .map((style) => {
                         const meta = StudioStyleMeta[style];
                         if (!meta) return null;
@@ -2349,42 +2783,6 @@ const App: React.FC = () => {
                       })}
                   </div>
 
-                  {/* BIRTHDAY AGE FIELD - Only when birthday style selected */}
-                  {config.studioStyle && (config.studioStyle as string).includes('Aniver') && (
-                    <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-amber-500/10 border border-pink-500/20 space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-pink-400/80 flex items-center gap-1.5">
-                        🎂 Idade do Aniversariante
-                      </p>
-                      <input
-                        type="number"
-                        min="1"
-                        max="120"
-                        value={config.birthdayAge || ''}
-                        onChange={(e) => setConfig(prev => ({ ...prev, birthdayAge: e.target.value }))}
-                        placeholder="Ex: 25, 30, 50..."
-                        className="w-full p-3 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-white/20 focus:border-pink-500 focus:bg-black/60 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <p className="text-[8px] text-white/30">A idade aparecerá nos balões numéricos e decorações</p>
-                    </div>
-                  )}
-
-                  {/* CUSTOM INSTRUCTIONS BOX */}
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-purple-500/10 border border-amber-500/30 space-y-3 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-amber-400 text-sm">✨</span>
-                      <p className="text-[11px] md:text-[10px] font-black uppercase tracking-wider text-amber-400">Instruções extras (opcional)</p>
-                    </div>
-                    <p className="text-[10px] md:text-[9px] text-white/50 leading-relaxed">
-                      Descreva cenário, roupa, fundo ou atmosfera — a IA cria o que você imaginar!
-                    </p>
-                    <textarea
-                      value={config.customInstructions || ''}
-                      onChange={(e) => setConfig(prev => ({ ...prev, customInstructions: e.target.value }))}
-                      placeholder={"Ex: Escritório moderno, blazer azul\n\nEx: Praia ao pôr do sol, roupa branca"}
-                      className="w-full h-24 md:h-28 p-3 rounded-lg bg-black/50 border border-amber-500/20 text-sm md:text-xs text-white placeholder-white/25 focus:border-amber-500 focus:bg-black/60 outline-none resize-none transition-all"
-                    />
-                  </div>
                 </div>
               ) : isMascotMode ? (
                 // MASCOT STYLE SELECTOR
@@ -2433,6 +2831,45 @@ const App: React.FC = () => {
                 ))
               )}
             </div>
+
+            {/* BIRTHDAY AGE FIELD - Outside disabled grid, always active even with reference photo */}
+            {(selectedCategory === 'Aniversário' || (config.studioStyle && (config.studioStyle as string).includes('Aniver'))) && (
+              <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-amber-500/10 border border-pink-500/20 space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-wider text-pink-400/80 flex items-center gap-1.5">
+                  🎂 Idade do Aniversariante
+                </p>
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={config.birthdayAge || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, birthdayAge: e.target.value }))}
+                  placeholder="Ex: 25, 30, 50..."
+                  className="w-full p-3 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-white/20 focus:border-pink-500 focus:bg-black/60 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <p className="text-[8px] text-white/30">A idade aparecerá nos balões numéricos e decorações</p>
+              </div>
+            )}
+
+            {/* CUSTOM INSTRUCTIONS BOX — always active, even with reference photo */}
+            {isStudioMode && (
+              <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-purple-500/10 border border-amber-500/30 space-y-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl" />
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-400 text-sm">✨</span>
+                  <p className="text-[11px] md:text-[10px] font-black uppercase tracking-wider text-amber-400">Instruções extras (opcional)</p>
+                </div>
+                <p className="text-[10px] md:text-[9px] text-white/50 leading-relaxed">
+                  Descreva cenário, roupa, fundo ou atmosfera — a IA cria o que você imaginar!
+                </p>
+                <textarea
+                  value={config.customInstructions || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, customInstructions: e.target.value }))}
+                  placeholder={"Ex: Escritório moderno, blazer azul\n\nEx: Praia ao pôr do sol, roupa branca"}
+                  className="w-full h-24 md:h-28 p-3 rounded-lg bg-black/50 border border-amber-500/20 text-sm md:text-xs text-white placeholder-white/25 focus:border-amber-500 focus:bg-black/60 outline-none resize-none transition-all"
+                />
+              </div>
+            )}
           </section>
 
           {/* STEP 03 REMOVED completely as requested */}

@@ -1,57 +1,20 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import {
-    Camera, ArrowRight, Shield, Sparkles,
+    ArrowRight, Shield, Sparkles,
     DollarSign, Clock, Download, Eye,
     TrendingUp, Image as ImageIcon,
-    Target, Award, Flame, Zap, Star, Upload, Loader2
+    Target, Award, Flame, Zap, Star
 } from 'lucide-react';
 import FAQSection, { deliveryFaqs } from './FAQSection';
-import { DeliveryStyle, DeliveryStyleMetaMap } from '../types';
 
 interface DeliveryLandingPageProps {
     onGetStarted: () => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
-    onFreeTrialGenerate?: (parts: any[], aspectRatio: string, deliveryStyle: string) => void;
-    isTrialGenerating?: boolean;
-    trialError?: string;
+
 }
 
-export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin, onFreeTrialGenerate, isTrialGenerating, trialError }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [trialPhoto, setTrialPhoto] = useState<string | null>(null);
-    const [trialPhotoName, setTrialPhotoName] = useState<string>('');
-    const [showTrialUpload, setShowTrialUpload] = useState(false);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setTrialPhotoName(file.name);
-        const reader = new FileReader();
-        reader.onload = (ev) => { setTrialPhoto(ev.target?.result as string); };
-        reader.readAsDataURL(file);
-    };
-
-    const handleStartTrial = () => {
-        if (!trialPhoto || !onFreeTrialGenerate) return;
-        // Build parts for generate-trial (same format as generateDeliveryCreative)
-        const extractBase64 = (dataUrl: string) => {
-            const parts = dataUrl.split(',');
-            if (parts.length < 2) return null;
-            const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-            return { data: parts[1], mimeType: mime };
-        };
-        const prod = extractBase64(trialPhoto);
-        const defaultStyle = DeliveryStyle.FOOD_STUDIO_DARK;
-        const styleMeta = DeliveryStyleMetaMap[defaultStyle];
-        const parts: any[] = [];
-        if (prod) {
-            parts.push({ text: `[FOOD PRODUCT IMAGE — CRITICALLY IMPORTANT]\n>>> STEP 1: CAREFULLY IDENTIFY what food/dish is in this image.\n>>> STEP 2: Use this EXACT food as the HERO of the output image.\n>>> NEVER replace the food with a different dish.\n>>> This is what the customer ordered — they need to be able to recognize it.` });
-            parts.push({ inlineData: prod });
-        }
-        parts.push({ text: `${styleMeta.prompt}\n\nUNIVERSAL FOOD PHOTOGRAPHY RULES:\n- The food must be the hero of every composition\n- Colors must be vibrant, saturated, and appetizing\n- OUTPUT FORMAT: Photorealistic photograph. NOT cartoon, NOT illustration.` });
-        onFreeTrialGenerate(parts, '1:1', defaultStyle);
-    };
+export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
 
     const scrollToPricing = () => {
         const el = document.getElementById('pricing-section');
@@ -65,6 +28,9 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
         { icon: '🍰', title: 'Confeitaria & Doces', desc: 'Brigadeiros, bolos e sobremesas irresistíveis.', image: '/delivery/depois-bolo.png', lifestyle: '', hot: true },
         { icon: '🥗', title: 'Saudável & Bowls', desc: 'Cores vibrantes que atraem o público fitness.', image: '/delivery/pro-bowl.png', lifestyle: '', hot: false },
         { icon: '🥩', title: 'Churrasco & Grill', desc: 'Carnes na brasa com textura e suculência.', image: '/delivery/pro-prato.png', lifestyle: '', hot: false },
+        { icon: '🥟', title: 'Salgadinhos', desc: 'Coxinhas, pastéis e esfihas com textura crocante que vende.', image: '/delivery/food_salgadinhos.png', lifestyle: '', hot: true },
+        { icon: '🍇', title: 'Açaí', desc: 'Cores vibrantes e toppings irresistíveis. Foto que refresca.', image: '/delivery/food_acai.png', lifestyle: '', hot: false },
+        { icon: '🍱', title: 'Marmitex', desc: 'Comida caseira com apresentação de restaurante premium.', image: '/delivery/food_marmitex.png', lifestyle: '', hot: false },
     ];
 
     const steps = [
@@ -86,6 +52,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
         { before: '/delivery/antes-burger.png', after: '/delivery/depois-burger.png', label: 'Hambúrguer' },
         { before: '/delivery/antes-pizza.png', after: '/delivery/depois-pizza.png', label: 'Pizza' },
         { before: '/delivery/antes-bolo.png', after: '/delivery/depois-bolo.png', label: 'Bolo' },
+        { before: '/delivery/antes-salgadinhos.png', after: '/delivery/depois-salgadinhos.png', label: 'Salgadinhos' },
     ];
 
     const beforeAfterPairs = [
@@ -114,10 +81,10 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
             <nav className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 w-auto object-contain" />
+                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 md:h-10 w-auto object-contain" />
                         <div className="flex flex-col leading-none">
-                            <span className="text-[11px] font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
-                            <span className="text-[7px] font-black uppercase tracking-[0.15em] text-emerald-400">🍔 Delivery</span>
+                            <span className="text-[11px] md:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500">LUMI<span className="text-white">IA</span></span>
+                            <span className="text-[7px] md:text-[11px] font-black uppercase tracking-[0.15em] text-emerald-400">🍔 Delivery</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -135,15 +102,15 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                     <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/8 blur-[180px] rounded-full" />
                 </div>
 
-                <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-16">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div className="text-center lg:text-left">
+                        <div className="text-center lg:text-left min-w-0 overflow-hidden">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-black uppercase tracking-[0.15em] mb-6">
                                 <Flame size={14} />
                                 Para Restaurantes & Delivery
                             </div>
 
-                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.9] tracking-tight mb-6">
+                            <h1 className="text-[1.6rem] sm:text-3xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.9] tracking-tight mb-6 break-words">
                                 Seu prato{' '}
                                 <span className="text-orange-400">concorre</span>
                                 <br />com +5 mil{' '}
@@ -153,7 +120,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 <br />vende.
                             </h1>
 
-                            <p className="text-base md:text-lg text-white/50 max-w-xl mb-6 leading-relaxed">
+                            <p className="text-sm sm:text-base md:text-lg text-white/50 max-w-full md:max-w-xl mb-6 leading-relaxed break-words">
                                 Em <strong className="text-white/80">30 segundos</strong>, a IA transforma qualquer foto tirada com celular em <strong className="text-white/80">foto profissional pela LumiPhotoIA</strong> — o tipo que faz o cliente travar o scroll, salivar e pedir na hora.
                             </p>
 
@@ -172,64 +139,28 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 </span>
                             </div>
 
-                            {/* ── FREE TRIAL CTA ─────────────────────────── */}
-                            {!showTrialUpload ? (
-                                <div className="flex flex-col items-center lg:items-start gap-3 w-full lg:w-auto">
-                                    <button
-                                        onClick={() => setShowTrialUpload(true)}
-                                        className="group relative px-10 py-5 rounded-2xl font-black text-lg uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-3 w-full justify-center lg:w-auto overflow-hidden"
-                                        style={{ background: 'linear-gradient(135deg, #ff6b35, #f59e0b)', boxShadow: '0 0 0 2px rgba(245,158,11,0.4), 0 20px 60px rgba(255,107,53,0.4)' }}
-                                    >
-                                        <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                        <Zap size={22} className="text-black" />
-                                        <span className="text-black">Teste Grátis Agora</span>
-                                        <ArrowRight size={22} className="text-black group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                    <p className="text-white/30 text-[11px] font-bold text-center lg:text-left">Gere 3 fotos profissionais grátis. Sem cadastro. Só enviar a foto do prato.</p>
-                                    <button onClick={scrollToPricing} className="text-white/30 text-xs underline hover:text-white/60 transition-colors">
-                                        ou ver pacotes completos →
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="w-full lg:w-auto">
-                                    <div className="p-5 rounded-2xl border border-orange-500/30 bg-orange-500/5 backdrop-blur">
-                                        <p className="text-orange-400 text-[11px] font-black uppercase tracking-wider mb-3">📸 Envie a foto do seu prato</p>
-                                        {!trialPhoto ? (
-                                            <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-orange-500/30 rounded-xl cursor-pointer hover:border-orange-500/60 transition-colors">
-                                                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                                                <Upload size={28} className="text-orange-400" />
-                                                <span className="text-white/60 text-sm font-bold text-center">Toque para selecionar<br /><span className="text-white/30 text-[10px]">JPG, PNG, WEBP</span></span>
-                                            </label>
-                                        ) : (
-                                            <div className="flex items-center gap-3">
-                                                <img src={trialPhoto} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-orange-500/30" />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-white text-xs font-bold truncate">{trialPhotoName}</p>
-                                                    <p className="text-green-400 text-[10px] mt-0.5">✓ Foto selecionada</p>
-                                                    <button onClick={() => { setTrialPhoto(null); setTrialPhotoName(''); }} className="text-white/30 text-[10px] hover:text-white/60 mt-1">Trocar foto</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {trialError && <p className="text-red-400 text-xs mt-2 font-bold">{trialError}</p>}
-                                        <button
-                                            onClick={handleStartTrial}
-                                            disabled={!trialPhoto || isTrialGenerating}
-                                            className="mt-3 w-full py-3 rounded-xl font-black text-sm uppercase text-black bg-gradient-to-r from-orange-500 to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] transition-all flex items-center justify-center gap-2"
-                                        >
-                                            {isTrialGenerating ? (
-                                                <><Loader2 size={16} className="animate-spin" /> Gerando 3 fotos... ~30s</>
-                                            ) : (
-                                                <><Zap size={16} /> Gerar 3 Fotos Grátis</>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                            {/* ── CTA BUTTON ─────────────────────────── */}
+                            <div className="flex flex-col items-center lg:items-start gap-3 w-full lg:w-auto">
+                                <button
+                                    onClick={scrollToPricing}
+                                    className="group relative px-10 py-5 rounded-2xl font-black text-lg uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-3 w-full justify-center lg:w-auto overflow-hidden"
+                                    style={{ background: 'linear-gradient(135deg, #ff6b35, #f59e0b)', boxShadow: '0 0 0 2px rgba(245,158,11,0.4), 0 20px 60px rgba(255,107,53,0.4)' }}
+                                >
+                                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                    <Zap size={22} className="text-black" />
+                                    <span className="text-black">Criar Fotos Profissionais</span>
+                                    <ArrowRight size={22} className="text-black group-hover:translate-x-1 transition-transform" />
+                                </button>
+                                <p className="text-white/30 text-[11px] font-bold text-center lg:text-left">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
+                                <button onClick={scrollToPricing} className="text-white/30 text-xs underline hover:text-white/60 transition-colors">
+                                    ver pacotes completos →
+                                </button>
+                            </div>
 
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mt-1">
-                                <span className="flex items-center gap-1.5 text-white/40 text-xs"><span className="text-green-400">✓</span> 3 fotos grátis sem cadastro</span>
                                 <span className="flex items-center gap-1.5 text-white/40 text-xs"><span className="text-green-400">✓</span> Resultado em 30 segundos</span>
-                                <span className="flex items-center gap-1.5 text-white/40 text-xs"><span className="text-green-400">✓</span> HD disponível após pagamento</span>
+                                <span className="flex items-center gap-1.5 text-white/40 text-xs"><span className="text-green-400">✓</span> Resolução HD profissional</span>
+                                <span className="flex items-center gap-1.5 text-white/40 text-xs"><span className="text-green-400">✓</span> Direto para iFood & Rappi</span>
                             </div>
                         </div>
 
@@ -250,7 +181,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 </div>
                             </div>
                             {/* More before/after pairs */}
-                            <div className="grid grid-cols-2 gap-2 mt-4">
+                            <div className="grid grid-cols-3 gap-2 mt-4">
                                 <div className="relative rounded-xl overflow-hidden border border-red-500/20">
                                     <div className="flex relative">
                                         <div className="w-1/2 relative">
@@ -282,6 +213,22 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                         </div>
                                     </div>
                                     <p className="text-center text-[8px] font-black text-white/50 py-1 bg-black/40">🍰 Bolo</p>
+                                </div>
+                                <div className="relative rounded-xl overflow-hidden border border-red-500/20">
+                                    <div className="flex relative">
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/antes-salgadinhos.png" alt="Antes salgadinhos" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-red-500/70 text-[7px] font-black text-white uppercase rounded">antes</span>
+                                        </div>
+                                        <div className="w-1/2 relative">
+                                            <img src="/delivery/depois-salgadinhos.png" alt="Depois salgadinhos" className="w-full h-20 object-cover" />
+                                            <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-orange-500/90 text-[7px] font-black text-black uppercase rounded">depois</span>
+                                        </div>
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-lg z-10">
+                                            <ArrowRight size={8} className="text-black" />
+                                        </div>
+                                    </div>
+                                    <p className="text-center text-[8px] font-black text-white/50 py-1 bg-black/40">🥟 Salgadinhos</p>
                                 </div>
                             </div>
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/80 backdrop-blur-xl border border-orange-500/30 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
@@ -569,7 +516,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {segments.map((seg, i) => {
                             const showLifestyle = seg.lifestyle && seg.lifestyle !== seg.image;
-                            const stats = ['+280%', '+340%', '+190%', '+420%', '+250%', '+310%'];
+                            const stats = ['+280%', '+340%', '+190%', '+420%', '+250%', '+310%', '+370%', '+260%', '+290%'];
                             return (
                                 <div key={i} className="relative rounded-2xl overflow-hidden border border-white/5 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer">
                                     {seg.hot && (
@@ -604,6 +551,24 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                 </div>
                             );
                         })}
+
+                        {/* Catch-all: Any food card */}
+                        <div className="relative rounded-2xl overflow-hidden border border-dashed border-orange-500/30 hover:border-orange-500/50 transition-all duration-300 group cursor-pointer col-span-2 md:col-span-3 bg-gradient-to-r from-orange-500/[0.04] via-transparent to-orange-500/[0.04]">
+                            <div className="p-8 md:p-10 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-3xl">
+                                    🍽️
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-white font-black text-lg mb-1">Qualquer tipo de comida. <span className="text-orange-400">Qualquer.</span></h3>
+                                    <p className="text-white/40 text-sm leading-relaxed">Pastel, tapioca, crepe, yakisoba, caldos, espetinhos, comida árabe, mexicana, vegana, fit... Se é comida e cabe numa foto, <strong className="text-white/60">a IA transforma em foto profissional.</strong></p>
+                                </div>
+                                <div className="flex flex-wrap justify-center md:justify-end gap-2">
+                                    {['🥘', '🌮', '🧁', '🍝', '🥙', '🍜', '🫔', '🥪'].map((e, i) => (
+                                        <span key={i} className="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-center text-lg group-hover:bg-orange-500/10 transition-colors">{e}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

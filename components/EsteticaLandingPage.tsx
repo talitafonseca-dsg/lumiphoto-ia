@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState } from 'react';
 import {
     Camera, Check, ArrowRight, Shield, Sparkles,
@@ -7,18 +7,14 @@ import {
     Eye, Target, TrendingUp, Palette, Crown, Gem
 } from 'lucide-react';
 import FAQSection, { esteticaFaqs } from './FAQSection';
-import StudioTrialUpload from './StudioTrialUpload';
 
 interface EsteticaLandingPageProps {
     onGetStarted: () => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
-    onFreeTrialGenerate?: (parts: any[], aspectRatio: string, trialType: string) => void;
-    isTrialGenerating?: boolean;
-    trialError?: string;
 }
 
-export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin, onFreeTrialGenerate, isTrialGenerating, trialError }) => {
+export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
 
 
     const scrollToPricing = () => {
@@ -33,7 +29,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
             price: 57,
             perCredit: '1.90',
             popular: false,
-            features: ['30 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
+            features: ['30 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
         },
         {
             name: 'Pro',
@@ -41,7 +37,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
             price: 97,
             perCredit: '1.21',
             popular: true,
-            features: ['80 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benefício'],
+            features: ['80 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benef├¡cio'],
         },
         {
             name: 'Business',
@@ -49,7 +45,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
             price: 297,
             perCredit: '1.49',
             popular: false,
-            features: ['200 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Ideal para equipes'],
+            features: ['200 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte priorit├írio', 'Ideal para equipes'],
         },
     ];
 
@@ -60,18 +56,15 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
 
             {/* ===== STICKY HEADER ===== */}
             <nav className="sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5">
-                <div className="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-5 w-auto object-contain" />
-                        <div className="flex flex-col leading-none">
-                            <span className="text-[11px] font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-400">LUMI<span className="text-white">IA</span></span>
-                            <span className="text-[7px] font-black uppercase tracking-[0.15em] text-rose-300">🌸 Estética</span>
-                        </div>
+                <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <img src="/logo-gold.png" alt="LumiphotoIA" className="h-7 w-auto object-contain" />
+                        <span className="hidden sm:inline text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-400">LUMIPHOTO<span className="text-white">IA</span></span>
                     </div>
-                    <div className="flex items-center gap-1">
-                        <button onClick={onLogin || onGetStarted} className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap">Entrar</button>
-                        <button onClick={onViewStudio || onGetStarted} className="px-2 py-1.5 text-white/50 text-[10px] font-bold hover:text-white/80 transition-colors whitespace-nowrap">Estúdio</button>
-                        <button onClick={scrollToPricing} className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-400 rounded-lg font-black text-[10px] text-white uppercase tracking-wide hover:shadow-[0_0_20px_rgba(236,72,153,0.4)] transition-all whitespace-nowrap">Ver Pacotes</button>
+                    <div className="flex items-center gap-3">
+                        <button onClick={onLogin || onGetStarted} className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors">Entrar</button>
+                        <button onClick={onViewStudio || onGetStarted} className="px-4 py-2 text-white/50 text-xs font-bold hover:text-white/80 transition-colors">Ver Est├║dio</button>
+                        <button onClick={scrollToPricing} className="px-5 py-2 bg-gradient-to-r from-pink-500 to-rose-400 rounded-lg font-black text-xs text-white uppercase tracking-wider hover:shadow-[0_0_20px_rgba(236,72,153,0.4)] transition-all">Escolher Pacote</button>
                     </div>
                 </div>
             </nav>
@@ -104,10 +97,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             </h1>
 
                             <p className="text-base md:text-lg text-white/50 max-w-xl mb-6 leading-relaxed">
-                                No mundo da estética, <strong className="text-white/80">imagem é tudo</strong>.
+                                No mundo da est├®tica, <strong className="text-white/80">imagem ├® tudo</strong>.
                                 Suas clientes escolhem maquiadoras, cabeleireiras e designers de unhas pelo{' '}
                                 <strong className="text-white/80">visual do perfil</strong>.
-                                Tenha fotos de estúdio em <strong className="text-pink-400">30 segundos</strong>.
+                                Tenha fotos de est├║dio em <strong className="text-pink-400">30 segundos</strong>.
                             </p>
 
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8">
@@ -127,25 +120,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <ArrowRight size={22} />
                             </button>
 
-                            <p className="text-white/20 text-xs mt-4">A partir de R$ 57 • Pagamento único • Sem mensalidade</p>
-
-                            {/* FREE TRIAL CTA */}
-                            {onFreeTrialGenerate && (
-                                <div className="mt-8 p-5 rounded-2xl border border-rose-500/20 bg-rose-500/[0.04]">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="px-3 py-1 bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase rounded-full border border-rose-500/30">🎁 TESTE GRÁTIS</span>
-                                        <span className="text-white/30 text-[10px]">Sem cadastro, sem cartão</span>
-                                    </div>
-                                    <StudioTrialUpload
-                                        onTrialGenerate={onFreeTrialGenerate}
-                                        isGenerating={isTrialGenerating}
-                                        error={trialError}
-                                        accentColor="from-rose-500 to-pink-400"
-                                        ctaLabel="Gerar 3 Ensaios Grátis"
-                                        descriptionLabel="Envie uma selfie e veja 3 estilos: Executivo, Família Studio e Inspiracional Dourado"
-                                    />
-                                </div>
-                            )}
+                            <p className="text-white/20 text-xs mt-4">A partir de R$ 57 ÔÇó Pagamento ├║nico ÔÇó Sem mensalidade</p>
                         </div>
 
                         {/* Right: Image showcase */}
@@ -165,7 +140,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 ))}
                             </div>
                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/80 backdrop-blur-xl border border-pink-500/30 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-                                <p className="text-pink-400 text-xs font-black text-center">💅 Fotos que atraem clientes</p>
+                                <p className="text-pink-400 text-xs font-black text-center">­ƒÆà Fotos que atraem clientes</p>
                             </div>
                         </div>
 
@@ -191,20 +166,20 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
-            {/* ===== DOR: SUA FOTO NÃO COMBINA COM SEU TALENTO ===== */}
-            < section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden" >
+            {/* ===== DOR: SUA FOTO N├âO COMBINA COM SEU TALENTO ===== */}
+            <section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-pink-500/5 blur-[150px] rounded-full pointer-events-none" />
 
                 <div className="max-w-6xl mx-auto px-6 relative z-10">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
-                            Seu talento é incrível. Sua <span className="text-pink-400">foto</span> mostra isso?
+                            Seu talento ├® incr├¡vel. Sua <span className="text-pink-400">foto</span> mostra isso?
                         </h2>
                         <p className="text-white/40 max-w-2xl mx-auto">
-                            Você faz trabalhos lindos, mas se o perfil não tem fotos profissionais,
-                            a cliente nem chega a te conhecer. A primeira impressão é visual.
+                            Voc├¬ faz trabalhos lindos, mas se o perfil n├úo tem fotos profissionais,
+                            a cliente nem chega a te conhecer. A primeira impress├úo ├® visual.
                         </p>
                     </div>
 
@@ -214,16 +189,16 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <img src="/ensaios/selfie-aesthetics.png" alt="Selfie amadora" className="w-full aspect-[3/4] object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-red-900/60 to-transparent" />
                                 <div className="absolute bottom-2 left-2 right-2 text-center">
-                                    <span className="text-red-300 text-[9px] font-black uppercase">❌ Selfie do salão</span>
+                                    <span className="text-red-300 text-[9px] font-black uppercase">ÔØî Selfie do sal├úo</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
-                                { icon: Eye, title: 'Primeira Impressão', desc: 'A cliente escolhe pela foto antes de ver seu trabalho.', color: 'text-red-400', bg: 'from-red-500/20' },
-                                { icon: TrendingUp, title: 'Concorrência', desc: 'Profissionais com fotos bonitas lotam a agenda. As outras perdem espaço.', color: 'text-orange-400', bg: 'from-orange-500/20' },
-                                { icon: Target, title: 'Valor Percebido', desc: 'Foto profissional = percepção de qualidade = cliente paga mais.', color: 'text-pink-400', bg: 'from-pink-500/20' },
+                                { icon: Eye, title: 'Primeira Impress├úo', desc: 'A cliente escolhe pela foto antes de ver seu trabalho.', color: 'text-red-400', bg: 'from-red-500/20' },
+                                { icon: TrendingUp, title: 'Concorr├¬ncia', desc: 'Profissionais com fotos bonitas lotam a agenda. As outras perdem espa├ºo.', color: 'text-orange-400', bg: 'from-orange-500/20' },
+                                { icon: Target, title: 'Valor Percebido', desc: 'Foto profissional = percep├º├úo de qualidade = cliente paga mais.', color: 'text-pink-400', bg: 'from-pink-500/20' },
                             ].map((item, i) => (
                                 <div key={i} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-pink-500/20 transition-all">
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.bg} to-transparent border border-white/5 flex items-center justify-center mb-3`}>
@@ -240,23 +215,23 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <img src="/studio-styles/glow_beauty.png" alt="Ensaio profissional" className="w-full aspect-[3/4] object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-pink-900/60 to-transparent" />
                                 <div className="absolute bottom-2 left-2 right-2 text-center">
-                                    <span className="text-pink-300 text-[9px] font-black uppercase">✅ Ensaio profissional</span>
+                                    <span className="text-pink-300 text-[9px] font-black uppercase">Ô£à Ensaio profissional</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== BEFORE/AFTER IMPACTANTE ===== */}
-            < section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden">
                 <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-pink-500/5 blur-[200px] rounded-full pointer-events-none" />
 
                 <div className="max-w-6xl mx-auto px-6 relative z-10">
                     <div className="text-center mb-12">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
                             <Sparkles size={12} fill="currentColor" />
-                            Transformação Instantânea
+                            Transforma├º├úo Instant├ónea
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tight mb-4">
                             De selfie a foto de <span className="text-pink-400">capa de revista</span>
@@ -264,7 +239,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                     </div>
 
                     <div className="relative rounded-3xl overflow-hidden border border-pink-500/20 shadow-[0_0_40px_rgba(236,72,153,0.1)] mb-8">
-                        <img src="/ensaios/beauty-before-after.png" alt="Antes e depois — transformação profissional" className="w-full h-auto object-cover" />
+                        <img src="/ensaios/beauty-before-after.png" alt="Antes e depois ÔÇö transforma├º├úo profissional" className="w-full h-auto object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -272,14 +247,14 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                     <Sparkles size={18} className="text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-white font-black text-sm">Selfie → Ensaio profissional</p>
-                                    <p className="text-white/50 text-xs">Mesmo rosto, cenário de estúdio premium</p>
+                                    <p className="text-white font-black text-sm">Selfie ÔåÆ Ensaio profissional</p>
+                                    <p className="text-white/50 text-xs">Mesmo rosto, cen├írio de est├║dio premium</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {['30 segundos', 'Sem fotógrafo', 'Qualidade HD'].map((t, i) => (
+                                {['30 segundos', 'Sem fot├│grafo', 'Qualidade HD'].map((t, i) => (
                                     <span key={i} className="px-3 py-1.5 bg-pink-500/20 border border-pink-500/30 rounded-full text-pink-400 text-[9px] font-black uppercase">
-                                        ✓ {t}
+                                        Ô£ô {t}
                                     </span>
                                 ))}
                             </div>
@@ -290,31 +265,31 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         <div className="flex items-center gap-3">
                             <Clock size={20} className="text-pink-400 flex-shrink-0" />
                             <div>
-                                <p className="text-pink-400 font-black text-sm">💡 Um ensaio fotográfico custa de R$ 500 a R$ 2.000</p>
-                                <p className="text-white/40 text-xs">Com a LumiphotoIA, faça por menos de R$ 2 por foto. Na hora que quiser.</p>
+                                <p className="text-pink-400 font-black text-sm">­ƒÆí Um ensaio fotogr├ífico custa de R$ 500 a R$ 2.000</p>
+                                <p className="text-white/40 text-xs">Com a LumiphotoIA, fa├ºa por menos de R$ 2 por foto. Na hora que quiser.</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== ESTILOS PARA CADA NICHO ====== */}
-            < section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden">
                 <div className="max-w-6xl mx-auto px-6 relative z-10">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
                             Estilos Para <span className="text-pink-400">Cada Especialidade</span>
                         </h2>
                         <p className="text-white/40 max-w-xl mx-auto">
-                            Maquiadora, cabeleireira, nail designer, design de sobrancelha — cada nicho,
+                            Maquiadora, cabeleireira, nail designer, design de sobrancelha ÔÇö cada nicho,
                             um visual perfeito para atrair suas clientes
                         </p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {[
-                            { img: '/studio-styles/maquiadora.png', label: 'Maquiadora', desc: 'Ambiente com make e pincéis' },
-                            { img: '/studio-styles/glow_beauty.png', label: 'Cabeleireira', desc: 'Visual glamouroso de salão' },
+                            { img: '/studio-styles/maquiadora.png', label: 'Maquiadora', desc: 'Ambiente com make e pinc├®is' },
+                            { img: '/studio-styles/glow_beauty.png', label: 'Cabeleireira', desc: 'Visual glamouroso de sal├úo' },
                             { img: '/studio-styles/insp_golden_hour.png', label: 'Nail Designer', desc: 'Luz dourada sofisticada' },
                             { img: '/studio-styles/insp_editorial_elegante.png', label: 'Sobrancelhista', desc: 'Ensaio editorial elegante' },
                             { img: '/studio-styles/insp_luz_natural.png', label: 'Esteticista', desc: 'Ambiente clean e profissional' },
@@ -334,10 +309,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         ))}
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== COMO FUNCIONA ===== */}
-            < section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden">
                 <div className="max-w-5xl mx-auto px-6 relative z-10">
                     <div className="text-center mb-16">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
@@ -345,7 +320,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             3 Cliques
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tight mb-4">
-                            Mais Fácil que Postar no <span className="text-pink-400">Instagram</span>
+                            Mais F├ícil que Postar no <span className="text-pink-400">Instagram</span>
                         </h2>
                     </div>
 
@@ -358,7 +333,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <Smartphone size={36} className="text-pink-400" />
                             </div>
                             <h3 className="text-white font-bold text-lg mb-2">Envie uma selfie</h3>
-                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">Qualquer foto do celular. Não precisa de maquiagem perfeita.</p>
+                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">Qualquer foto do celular. N├úo precisa de maquiagem perfeita.</p>
                         </div>
 
                         <div className="relative text-center group">
@@ -367,7 +342,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <Palette size={36} className="text-pink-400" />
                             </div>
                             <h3 className="text-white font-bold text-lg mb-2">Escolha o visual</h3>
-                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">Glow Beauty, Editorial, Golden Hour, Estúdio Clean e +120 opções.</p>
+                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">Glow Beauty, Editorial, Golden Hour, Est├║dio Clean e +120 op├º├Áes.</p>
                         </div>
 
                         <div className="relative text-center group">
@@ -376,14 +351,14 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <Download size={36} className="text-rose-400" />
                             </div>
                             <h3 className="text-white font-bold text-lg mb-2">Baixe e poste</h3>
-                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">3 variações em HD prontas para stories, feed e materiais do salão.</p>
+                            <p className="text-white/35 text-sm leading-relaxed max-w-[250px] mx-auto">3 varia├º├Áes em HD prontas para stories, feed e materiais do sal├úo.</p>
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== ONDE USAR ===== */}
-            < section className="py-24 bg-[#050505] border-t border-white/5" >
+            <section className="py-24 bg-[#050505] border-t border-white/5">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
@@ -395,10 +370,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         {[
                             { img: '/studio-styles/glow_beauty.png', title: 'Instagram Feed', desc: 'Fotos que param o scroll e atraem seguidores', icon: Camera, color: 'text-pink-400', border: 'border-pink-500/30' },
                             { img: '/studio-styles/maquiadora.png', title: 'Stories & Reels', desc: 'Capas profissionais para destaques do perfil', icon: Heart, color: 'text-red-400', border: 'border-red-500/30' },
-                            { img: '/studio-styles/insp_golden_hour.png', title: 'Google Meu Negócio', desc: 'Foto profissional gera mais agendamentos', icon: Star, color: 'text-amber-400', border: 'border-amber-500/30' },
-                            { img: '/studio-styles/insp_editorial_elegante.png', title: 'Cartão Digital', desc: 'Visual de luxo no cartão de visitas digital', icon: Gem, color: 'text-purple-400', border: 'border-purple-500/30' },
-                            { img: '/studio-styles/insp_power_portrait.png', title: 'Banner do Salão', desc: 'Foto impactante para materiais impressos', icon: Award, color: 'text-emerald-400', border: 'border-emerald-500/30' },
-                            { img: '/studio-styles/insp_luz_natural.png', title: 'TikTok', desc: 'Capas profissionais para vídeos virais', icon: TrendingUp, color: 'text-cyan-400', border: 'border-cyan-500/30' },
+                            { img: '/studio-styles/insp_golden_hour.png', title: 'Google Meu Neg├│cio', desc: 'Foto profissional gera mais agendamentos', icon: Star, color: 'text-amber-400', border: 'border-amber-500/30' },
+                            { img: '/studio-styles/insp_editorial_elegante.png', title: 'Cart├úo Digital', desc: 'Visual de luxo no cart├úo de visitas digital', icon: Gem, color: 'text-purple-400', border: 'border-purple-500/30' },
+                            { img: '/studio-styles/insp_power_portrait.png', title: 'Banner do Sal├úo', desc: 'Foto impactante para materiais impressos', icon: Award, color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                            { img: '/studio-styles/insp_luz_natural.png', title: 'TikTok', desc: 'Capas profissionais para v├¡deos virais', icon: TrendingUp, color: 'text-cyan-400', border: 'border-cyan-500/30' },
                         ].map((item, i) => (
                             <div key={i} className={`relative rounded-2xl overflow-hidden ${item.border} border group cursor-pointer`}>
                                 <img src={item.img} alt={item.title} className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -414,10 +389,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         ))}
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== ZERO PROMPT ===== */}
-            < section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden">
                 <div className="absolute bottom-0 left-1/3 w-[500px] h-[500px] bg-purple-500/5 blur-[200px] rounded-full pointer-events-none" />
 
                 <div className="max-w-6xl mx-auto px-6 relative z-10">
@@ -429,12 +404,12 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 </div>
                                 <div>
                                     <h3 className="text-white font-black text-2xl">Zero Prompt. Zero Curso.</h3>
-                                    <p className="text-pink-400/60 text-xs font-bold uppercase tracking-wider">Mais fácil que WhatsApp</p>
+                                    <p className="text-pink-400/60 text-xs font-bold uppercase tracking-wider">Mais f├ícil que WhatsApp</p>
                                 </div>
                             </div>
                             <p className="text-white/50 text-base leading-relaxed mb-5">
-                                Você é especialista em beleza, não em tecnologia. A LumiphotoIA é{' '}
-                                <strong className="text-white/70">ridiculamente simples</strong>. Sem comandos, sem edição, sem inglês.
+                                Voc├¬ ├® especialista em beleza, n├úo em tecnologia. A LumiphotoIA ├®{' '}
+                                <strong className="text-white/70">ridiculamente simples</strong>. Sem comandos, sem edi├º├úo, sem ingl├¬s.
                             </p>
 
                             <div className="space-y-3 mb-6">
@@ -447,13 +422,13 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                     <span className="text-white/70 text-sm"><strong className="text-white">Escolhe</strong> o visual que combina com seu nicho</span>
                                 </div>
                                 <div className="flex items-center gap-4 p-3 rounded-xl bg-pink-600/10 border border-pink-600/20">
-                                    <div className="w-8 h-8 rounded-full bg-green-500 text-white text-sm font-black flex items-center justify-center flex-shrink-0">✓</div>
+                                    <div className="w-8 h-8 rounded-full bg-green-500 text-white text-sm font-black flex items-center justify-center flex-shrink-0">Ô£ô</div>
                                     <span className="text-pink-400 text-sm font-bold">3 fotos profissionais em 30 segundos</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Caixinha Mágica */}
+                        {/* Caixinha M├ígica */}
                         <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.5)] bg-gradient-to-br from-pink-500/5 to-transparent">
                             <div className="p-6 space-y-3">
                                 <div className="flex justify-end">
@@ -463,7 +438,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 </div>
                                 <div className="flex justify-start">
                                     <div className="px-4 py-2 rounded-2xl rounded-bl-sm bg-pink-500/10 border border-pink-400/15 text-pink-400/80 text-sm max-w-[80%]">
-                                        ✨ Pronto! Fundo rosa com ring light aplicado, iluminação beauty perfeita.
+                                        Ô£¿ Pronto! Fundo rosa com ring light aplicado, ilumina├º├úo beauty perfeita.
                                     </div>
                                 </div>
                                 <div className="flex justify-end">
@@ -473,7 +448,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 </div>
                                 <div className="flex justify-start">
                                     <div className="px-4 py-2 rounded-2xl rounded-bl-sm bg-pink-500/10 border border-pink-400/15 text-pink-400/80 text-sm max-w-[80%]">
-                                        ✨ Visual glam aplicado mantendo sua identidade facial!
+                                        Ô£¿ Visual glam aplicado mantendo sua identidade facial!
                                     </div>
                                 </div>
                                 <div className="flex justify-end">
@@ -483,20 +458,20 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 </div>
                                 <div className="flex justify-start">
                                     <div className="px-4 py-2 rounded-2xl rounded-bl-sm bg-pink-500/10 border border-pink-400/15 text-pink-400/80 text-sm max-w-[80%]">
-                                        ✨ Visual editorial com fundo neutro e luz natural. Premium!
+                                        Ô£¿ Visual editorial com fundo neutro e luz natural. Premium!
                                     </div>
                                 </div>
                             </div>
                             <div className="p-4 border-t border-white/5 text-center">
-                                <p className="text-pink-400/60 text-[10px] font-black uppercase tracking-widest">🪄 Caixinha Mágica — Personalize tudo em português</p>
+                                <p className="text-pink-400/60 text-[10px] font-black uppercase tracking-widest">­ƒ¬ä Caixinha M├ígica ÔÇö Personalize tudo em portugu├¬s</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== 100% FIDELIDADE ===== */}
-            < section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-[#050505] border-t border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/5 blur-[200px] rounded-full pointer-events-none" />
 
                 <div className="max-w-6xl mx-auto px-6 relative z-10">
@@ -509,7 +484,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             100% <span className="text-emerald-400">Fidelidade</span> Facial
                         </h2>
                         <p className="text-white/40 max-w-2xl mx-auto text-base">
-                            Suas clientes vão reconhecer você. A IA muda o cenário e a iluminação,
+                            Suas clientes v├úo reconhecer voc├¬. A IA muda o cen├írio e a ilumina├º├úo,
                             mas <strong className="text-white/70">nunca muda seu rosto</strong>.
                         </p>
                     </div>
@@ -518,8 +493,8 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         <img src="/ensaios/beauty-gallery.png" alt="Galeria de resultados profissionais" className="w-full h-auto object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-6 text-center">
-                            <p className="text-white font-black text-lg mb-1">Cada rosto é único. Cada resultado é fiel.</p>
-                            <p className="text-white/40 text-sm">A IA não inventa, não mistura, não deforma. É você — em um cenário profissional.</p>
+                            <p className="text-white font-black text-lg mb-1">Cada rosto ├® ├║nico. Cada resultado ├® fiel.</p>
+                            <p className="text-white/40 text-sm">A IA n├úo inventa, n├úo mistura, n├úo deforma. ├ë voc├¬ ÔÇö em um cen├írio profissional.</p>
                         </div>
                     </div>
 
@@ -544,10 +519,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                     <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <Shield size={22} className="text-emerald-400 flex-shrink-0" />
-                            <p className="text-white/40 text-xs">🔒 Identidade preservada: mudamos só cenário, roupa e iluminação. Seu rosto permanece 100% fiel.</p>
+                            <p className="text-white/40 text-xs">­ƒöÆ Identidade preservada: mudamos s├│ cen├írio, roupa e ilumina├º├úo. Seu rosto permanece 100% fiel.</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            {['100% Fiel', 'Sem deformação', 'Natural', 'HD'].map((t, i) => (
+                            {['100% Fiel', 'Sem deforma├º├úo', 'Natural', 'HD'].map((t, i) => (
                                 <span key={i} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400/80 text-[10px] font-bold">
                                     <Check size={10} className="inline mr-1" />{t}
                                 </span>
@@ -555,28 +530,28 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         </div>
                     </div>
                 </div>
-            </section >
+            </section>
 
-            {/* ===== TAMBÉM FAZ: TIKTOK ===== */}
-            < section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden" >
+            {/* ===== TAMB├ëM FAZ: TIKTOK ===== */}
+            <section className="py-24 bg-[#0a0a0a] border-t border-white/5 relative overflow-hidden">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="text-center mb-12">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
                             <TrendingUp size={12} />
-                            Tendência
+                            Tend├¬ncia
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black uppercase text-white tracking-tight mb-4">
                             Fotos para <span className="text-purple-400">TikTok & Reels</span>
                         </h2>
                         <p className="text-white/40 max-w-xl mx-auto">
-                            Capas profissionais para seus conteúdos virais. Mostre para suas clientes
-                            que você também domina as tendências.
+                            Capas profissionais para seus conte├║dos virais. Mostre para suas clientes
+                            que voc├¬ tamb├®m domina as tend├¬ncias.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                         {[
-                            { img: '/studio-styles/tiktok_cafe.png', label: 'Café' },
+                            { img: '/studio-styles/tiktok_cafe.png', label: 'Caf├®' },
                             { img: '/studio-styles/tiktok_mirror.png', label: 'Mirror' },
                             { img: '/studio-styles/tiktok_morning.png', label: 'Morning' },
                             { img: '/studio-styles/tiktok_ootd.png', label: 'OOTD' },
@@ -590,10 +565,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         ))}
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== PRICING ===== */}
-            < section id="pricing-section" className="py-24 bg-gradient-to-b from-[#050505] to-[#0a0a0a] border-t border-white/5 relative" >
+            <section id="pricing-section" className="py-24 bg-gradient-to-b from-[#050505] to-[#0a0a0a] border-t border-white/5 relative">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="text-center mb-16 space-y-4">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-black uppercase tracking-[0.2em]">
@@ -604,10 +579,10 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             Invista no Seu <span className="text-pink-400">Visual</span>
                         </h2>
                         <p className="text-white/30 max-w-lg mx-auto text-sm">
-                            Ensaio fotográfico profissional custa de R$ 500 a R$ 2.000. Com a LumiphotoIA, comece por R$ 57.
+                            Ensaio fotogr├ífico profissional custa de R$ 500 a R$ 2.000. Com a LumiphotoIA, comece por R$ 57.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold"><Check size={12} strokeWidth={3} /> Pagamento único</span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold"><Check size={12} strokeWidth={3} /> Pagamento ├║nico</span>
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-pink-500/15 border border-pink-500/30 rounded-full text-pink-400 text-xs font-bold"><Shield size={12} /> Sem mensalidade</span>
                         </div>
                     </div>
@@ -619,12 +594,12 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 : 'bg-white/[0.02] border-white/5 hover:border-white/15'
                                 }`}>
                                 {plan.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-pink-600 to-rose-500 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-lg">⭐ Mais Vendido</div>
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-pink-600 to-rose-500 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-lg">Ô¡É Mais Vendido</div>
                                 )}
                                 <div className="text-center mb-6">
                                     <h3 className={`text-lg font-black ${plan.popular ? 'text-pink-400' : 'text-white/70'}`}>{plan.name}</h3>
                                     <div className="mt-3"><span className="text-4xl font-black text-white">R$ {plan.price}</span></div>
-                                    <p className="text-white/30 text-xs mt-1">{plan.credits} créditos • R$ {plan.perCredit}/foto</p>
+                                    <p className="text-white/30 text-xs mt-1">{plan.credits} cr├®ditos ÔÇó R$ {plan.perCredit}/foto</p>
                                 </div>
                                 <div className="space-y-2 mb-6">
                                     {plan.features.map((f, j) => (
@@ -641,74 +616,55 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-white/20 text-xs mt-8">Pagamento seguro via Mercado Pago • Cartão, Pix ou Boleto</p>
+                    <p className="text-center text-white/20 text-xs mt-8">Pagamento seguro via Mercado Pago ÔÇó Cart├úo, Pix ou Boleto</p>
                 </div>
-            </section >
+            </section>
 
             {/* ===== CTA FINAL ===== */}
-            < section className="py-24 bg-gradient-to-b from-[#0a0a0a] to-[#050505] border-t border-white/5 relative overflow-hidden" >
+            <section className="py-24 bg-gradient-to-b from-[#0a0a0a] to-[#050505] border-t border-white/5 relative overflow-hidden">
                 <div className="absolute inset-0">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-600/8 blur-[200px] rounded-full" />
                 </div>
                 <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-                    <p className="text-white/30 text-sm mb-6 uppercase tracking-widest font-bold">Sua agenda cheia começa pela sua imagem</p>
+                    <p className="text-white/30 text-sm mb-6 uppercase tracking-widest font-bold">Sua agenda cheia come├ºa pela sua imagem</p>
                     <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tight mb-6 leading-tight">
                         Profissionais de{' '}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-400">sucesso</span>{' '}
                         investem no visual
                     </h2>
                     <p className="text-white/40 text-lg mb-10 max-w-xl mx-auto">
-                        Enquanto outras profissionais usam selfies do salão, você vai transmitir glamour e profissionalismo em cada plataforma.
+                        Enquanto outras profissionais usam selfies do sal├úo, voc├¬ vai transmitir glamour e profissionalismo em cada plataforma.
                     </p>
                     <button onClick={scrollToPricing} className="px-12 py-5 bg-gradient-to-r from-pink-600 to-rose-500 rounded-2xl font-black text-lg text-white uppercase tracking-wider hover:shadow-[0_0_60px_rgba(236,72,153,0.4)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 inline-flex items-center gap-3 mb-6">
                         Criar Meu Ensaio Profissional
                         <ArrowRight size={22} />
                     </button>
                     <div className="flex flex-wrap justify-center gap-4 text-xs text-white/25">
-                        <span className="flex items-center gap-1"><Check size={12} className="text-pink-500" /> Pagamento único</span>
+                        <span className="flex items-center gap-1"><Check size={12} className="text-pink-500" /> Pagamento ├║nico</span>
                         <span className="flex items-center gap-1"><Check size={12} className="text-pink-500" /> Sem mensalidade</span>
                         <span className="flex items-center gap-1"><Check size={12} className="text-pink-500" /> 100% fidelidade</span>
                         <span className="flex items-center gap-1"><Check size={12} className="text-pink-500" /> 30 segundos</span>
                     </div>
                 </div>
-            </section >
+            </section>
 
             {/* ===== FAQ ===== */}
-            < FAQSection extraFaqs={esteticaFaqs} accentColor="pink" />
+            <FAQSection extraFaqs={esteticaFaqs} accentColor="pink" />
 
             {/* ===== FOOTER ===== */}
-            < footer className="border-t border-white/5 bg-[#030303] py-8" >
+            <footer className="border-t border-white/5 bg-[#030303] py-8">
                 <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <img src="/logo-gold.png" alt="LumiphotoIA" className="h-6 w-auto object-contain opacity-30" />
-                        <span className="text-white/15 text-[10px] uppercase tracking-widest">© {new Date().getFullYear()} LumiphotoIA</span>
+                        <span className="text-white/15 text-[10px] uppercase tracking-widest">┬® {new Date().getFullYear()} LumiphotoIA</span>
                     </div>
                     <div className="flex items-center gap-4 text-white/15 text-[10px]">
                         <span>suporte@lumiphotoia.online</span>
-                        <span>•</span>
+                        <span>ÔÇó</span>
                         <span>www.lumiphotoia.online</span>
                     </div>
                 </div>
-            </footer >
-
-            {/* ===== MP CREDIBILITY BAR ===== */}
-            < div className="border-t border-white/5 bg-[#050505] py-5 px-6" >
-                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-                    <div className="flex items-center gap-2">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="opacity-50"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#00B1EA" stroke="none" /></svg>
-                        <span className="text-white/40 text-[11px] font-bold">Mercado Pago</span>
-                        <span className="text-white/20 text-[10px]">— Pagamento 100% Seguro</span>
-                    </div>
-                    <span className="text-white/10 hidden sm:block">|</span>
-                    <span className="text-white/25 text-[10px] flex items-center gap-1">🔒 Criptografia SSL</span>
-                    <span className="text-white/10 hidden sm:block">|</span>
-                    <span className="text-white/25 text-[10px] flex items-center gap-1">🛡️ Garantia 7 dias</span>
-                    <span className="text-white/10 hidden sm:block">|</span>
-                    <span className="text-white/25 text-[10px] flex items-center gap-1">⚡ Acesso imediato</span>
-                    <span className="text-white/10 hidden sm:block">|</span>
-                    <span className="text-white/25 text-[10px] flex items-center gap-1">💳 Cartão, Pix ou Boleto</span>
-                </div>
-            </div >
-        </div >
+            </footer>
+        </div>
     );
 };

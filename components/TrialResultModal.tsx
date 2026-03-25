@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Download, Lock, Zap, Clock, CheckCircle, Loader2, Star, Package } from 'lucide-react';
+import { X, Lock, Zap, Clock, CheckCircle, Loader2, Star, Package, Unlock, ShieldCheck, Mail, Sparkles } from 'lucide-react';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -31,6 +31,7 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
     const [error, setError] = useState('');
     const [secondsLeft, setSecondsLeft] = useState(TIMER_MINUTES * 60);
     const [isExpired, setIsExpired] = useState(false);
+    const [showEmailFor, setShowEmailFor] = useState<number | null>(null); // which image index needs email
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // ── Timer ─────────────────────────────────────────────────────────────────
@@ -59,12 +60,13 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
     };
 
     // ── Checkout ──────────────────────────────────────────────────────────────
-    const handlePay = useCallback(async (mode: 'single' | 'pack') => {
+    const handlePay = useCallback(async (mode: 'single' | 'pack', imageIdx?: number) => {
         if (!email || !email.includes('@')) {
             setError('Insira um email válido para receber suas fotos em HD');
             return;
         }
-        if (mode === 'single' && selectedImageIndex === null) {
+        const idx = imageIdx ?? selectedImageIndex;
+        if (mode === 'single' && idx === null) {
             setError('Selecione qual foto deseja liberar em HD');
             return;
         }
@@ -74,6 +76,7 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
         }
 
         setIsCreatingCheckout(true);
+        setPaymentMode(mode);
         setError('');
 
         try {
@@ -88,7 +91,7 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
                     session_id: sessionId,
                     product_type: mode,
                     payer_email: email,
-                    selected_image_index: mode === 'single' ? selectedImageIndex : null,
+                    selected_image_index: mode === 'single' ? idx : null,
                 }),
             });
 
@@ -107,6 +110,20 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
         }
     }, [email, selectedImageIndex, generationId, sessionId, isExpired]);
 
+    const handleUnlockClick = (imageIndex: number) => {
+        if (isExpired) return;
+        setSelectedImageIndex(imageIndex);
+        if (!email || !email.includes('@')) {
+            setShowEmailFor(imageIndex);
+            // Scroll to email input
+            setTimeout(() => {
+                document.getElementById('trial-email-input')?.focus();
+            }, 100);
+        } else {
+            handlePay('single', imageIndex);
+        }
+    };
+
     if (!isOpen) return null;
 
     const timerUrgent = secondsLeft < 60;
@@ -117,7 +134,7 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
 
-            <div className="relative w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-3xl bg-[#111] border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-300">
+            <div className="relative w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-3xl bg-[#0a0a0a] border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.8)]" style={{ animation: 'fadeInUp 0.4s ease-out' }}>
 
                 {/* Close button */}
                 <button
@@ -128,23 +145,28 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
                 </button>
 
                 {/* ── Header ─────────────────────────────────────────────────────── */}
-                <div className="p-6 pb-4">
+                <div className="p-5 sm:p-6 pb-3 sm:pb-4">
                     <div className="flex items-start justify-between gap-4 pr-8">
                         <div>
-                            <p className="text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">🔥 LumiPhotoIA — Teste Grátis</p>
-                            <h2 className="text-white font-black text-xl leading-tight">
-                                Suas fotos estão prontas!<br />
-                                <span className="text-orange-400">Libere em HD agora.</span>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-amber-400 rounded-lg flex items-center justify-center">
+                                    <Sparkles size={12} className="text-black" />
+                                </div>
+                                <p className="text-orange-400 text-[10px] font-black uppercase tracking-[0.2em]">LumiPhotoIA • Resultado</p>
+                            </div>
+                            <h2 className="text-white font-black text-lg sm:text-xl leading-tight">
+                                Suas fotos ficaram incríveis! ✨<br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">Libere em HD por apenas R$5</span>
                             </h2>
                         </div>
 
                         {/* Timer */}
-                        <div className={`flex-shrink-0 flex flex-col items-center p-3 rounded-2xl border ${isExpired ? 'border-red-500/50 bg-red-500/10' : timerUrgent ? 'border-red-500/40 bg-red-500/10 animate-pulse' : timerWarning ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
-                            <Clock size={12} className={isExpired ? 'text-red-400' : timerWarning ? 'text-amber-400' : 'text-white/40'} />
-                            <p className={`font-black text-lg leading-none mt-1 ${isExpired ? 'text-red-400' : timerUrgent ? 'text-red-400' : timerWarning ? 'text-amber-400' : 'text-white'}`}>
+                        <div className={`flex-shrink-0 flex flex-col items-center p-2.5 rounded-2xl border ${isExpired ? 'border-red-500/50 bg-red-500/10' : timerUrgent ? 'border-red-500/40 bg-red-500/10 animate-pulse' : timerWarning ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-white/[0.03]'}`}>
+                            <Clock size={11} className={isExpired ? 'text-red-400' : timerWarning ? 'text-amber-400' : 'text-white/40'} />
+                            <p className={`font-black text-base leading-none mt-0.5 ${isExpired ? 'text-red-400' : timerUrgent ? 'text-red-400' : timerWarning ? 'text-amber-400' : 'text-white'}`}>
                                 {isExpired ? 'EXPIROU' : formatTime(secondsLeft)}
                             </p>
-                            <p className="text-[8px] text-white/30 font-bold uppercase mt-0.5">preview</p>
+                            <p className="text-[7px] text-white/30 font-bold uppercase mt-0.5">expira</p>
                         </div>
                     </div>
 
@@ -155,169 +177,190 @@ export const TrialResultModal: React.FC<TrialResultModalProps> = ({
                     )}
                 </div>
 
-                {/* ── Photo Grid ─────────────────────────────────────────────────── */}
+                {/* ── Email Input (compact, above images) ─────────────────────── */}
+                <div className="px-5 sm:px-6 pb-3">
+                    <div className="flex items-center gap-2 p-2 bg-white/[0.04] rounded-xl border border-white/8">
+                        <Mail size={14} className="text-white/30 ml-1 flex-shrink-0" />
+                        <input
+                            id="trial-email-input"
+                            type="email"
+                            value={email}
+                            onChange={e => { setEmail(e.target.value); setError(''); }}
+                            placeholder="Seu email para receber as fotos HD"
+                            disabled={isExpired}
+                            className="flex-1 bg-transparent outline-none text-sm text-white placeholder-white/25 disabled:opacity-40"
+                        />
+                        {email.includes('@') && <CheckCircle size={14} className="text-green-400 flex-shrink-0 mr-1" />}
+                    </div>
+                    {showEmailFor !== null && !email.includes('@') && (
+                        <p className="text-amber-400 text-[10px] font-bold mt-1.5 ml-1 animate-pulse">
+                            ☝️ Insira seu email acima para desbloquear a foto
+                        </p>
+                    )}
+                </div>
+
+                {error && (
+                    <div className="px-5 sm:px-6 pb-2">
+                        <p className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">⚠️ {error}</p>
+                    </div>
+                )}
+
+                {/* ── Photo Cards with individual unlock buttons ────────────────── */}
                 <div className="px-4 sm:px-6 pb-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {images.map((img, i) => (
-                            <div
-                                key={img.index}
-                                onClick={() => !isExpired && setSelectedImageIndex(i)}
-                                className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 group sm:aspect-[3/4] ${selectedImageIndex === i && paymentMode === 'single' ? 'ring-2 ring-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.4)]' : 'ring-1 ring-white/10 hover:ring-white/30'}`}
-                                style={{ aspectRatio: '3/4' }}
-                            >
-                                <img
-                                    src={img.url}
-                                    alt={`Foto ${i + 1}`}
-                                    className="w-full h-full object-cover object-top"
-                                    style={{ filter: isExpired ? 'grayscale(100%) brightness(0.5)' : undefined }}
-                                    draggable={false}
-                                    onContextMenu={e => e.preventDefault()}
-                                />
+                        {images.map((img, i) => {
+                            const isUnlocking = isCreatingCheckout && paymentMode === 'single' && selectedImageIndex === i;
+                            return (
+                                <div key={img.index} className="rounded-2xl overflow-hidden bg-white/[0.03] border border-white/8 transition-all hover:border-white/20">
+                                    {/* Image container */}
+                                    <div
+                                        className="relative cursor-pointer group"
+                                        style={{ aspectRatio: '3/4' }}
+                                        onClick={() => !isExpired && setSelectedImageIndex(i)}
+                                    >
+                                        <img
+                                            src={img.url}
+                                            alt={`Foto ${i + 1}`}
+                                            className="w-full h-full object-cover object-top"
+                                            style={{ filter: isExpired ? 'grayscale(100%) brightness(0.5)' : undefined }}
+                                            draggable={false}
+                                            onContextMenu={e => e.preventDefault()}
+                                        />
 
-                                {/* Watermark overlay — tiled to prevent screenshot theft */}
-                                {!isExpired && (
-                                    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-                                        {/* Semi-transparent dark veil */}
-                                        <div className="absolute inset-0 bg-black/25" />
-                                        {/* Tiled watermark grid */}
-                                        <div className="absolute inset-0 flex flex-col justify-around items-center gap-0 py-2">
-                                            {[0, 1, 2, 3].map(row => (
-                                                <div key={row} className="flex justify-around w-full px-1">
-                                                    {[0, 1].map(col => (
-                                                        <div
-                                                            key={col}
-                                                            style={{ transform: 'rotate(-30deg)', whiteSpace: 'nowrap' }}
-                                                            className="text-white/40 text-[7px] font-black uppercase tracking-widest select-none"
-                                                        >
-                                                            LUMIPHOTO IA • PREVIEW
+                                        {/* Watermark overlay */}
+                                        {!isExpired && (
+                                            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+                                                <div className="absolute inset-0 bg-black/20" />
+                                                <div className="absolute inset-0 flex flex-col justify-around items-center gap-0 py-2">
+                                                    {[0, 1, 2, 3].map(row => (
+                                                        <div key={row} className="flex justify-around w-full px-1">
+                                                            {[0, 1].map(col => (
+                                                                <div
+                                                                    key={col}
+                                                                    style={{ transform: 'rotate(-30deg)', whiteSpace: 'nowrap' }}
+                                                                    className="text-white/35 text-[6px] font-black uppercase tracking-widest select-none"
+                                                                >
+                                                                    LUMIPHOTO IA • PREVIEW
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     ))}
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {/* Extra bold watermark centered on face/top area */}
-                                        <div className="absolute top-[20%] left-0 right-0 flex justify-center">
-                                            <div
-                                                style={{ transform: 'rotate(-20deg)', whiteSpace: 'nowrap' }}
-                                                className="text-white/50 text-[8px] font-black uppercase tracking-[0.25em] select-none bg-black/30 px-3 py-1 rounded"
-                                            >
-                                                PREVIEW • LUMIPHOTO IA • PREVIEW
+                                            </div>
+                                        )}
+
+                                        {/* Lock badge */}
+                                        <div className="absolute top-2 right-2">
+                                            <div className="w-6 h-6 bg-black/70 backdrop-blur rounded-full flex items-center justify-center border border-white/10">
+                                                <Lock size={10} className="text-white/70" />
                                             </div>
                                         </div>
-                                    </div>
-                                )}
 
-                                {/* Lock icon */}
-                                <div className="absolute top-2 right-2">
-                                    <div className="w-5 h-5 bg-black/60 backdrop-blur rounded-full flex items-center justify-center">
-                                        <Lock size={9} className="text-white/60" />
+                                        {/* Hover overlay */}
+                                        {!isExpired && (
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                                <span className="text-white text-xs font-bold flex items-center gap-1.5">
+                                                    <Unlock size={12} /> Desbloquear em HD
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* ★ UNLOCK BUTTON — Below each image ★ */}
+                                    <div className="p-2.5">
+                                        <button
+                                            onClick={() => handleUnlockClick(i)}
+                                            disabled={isExpired || isUnlocking}
+                                            className={`w-full py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${isExpired
+                                                ? 'bg-white/5 text-white/20 cursor-not-allowed'
+                                                : isUnlocking
+                                                    ? 'bg-orange-500/20 text-orange-400'
+                                                    : 'bg-gradient-to-r from-orange-500 to-amber-400 text-black hover:from-orange-400 hover:to-amber-300 hover:scale-[1.02] active:scale-[0.97] shadow-[0_4px_20px_rgba(249,115,22,0.3)]'
+                                                }`}
+                                        >
+                                            {isUnlocking ? (
+                                                <><Loader2 size={12} className="animate-spin" /> Aguarde...</>
+                                            ) : (
+                                                <><Unlock size={11} /> <span className="hidden sm:inline">Desbloquear</span><span className="sm:hidden">Desbloquear foto</span> → R$5</>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
-
-                                {/* Selected badge */}
-                                {selectedImageIndex === i && paymentMode === 'single' && (
-                                    <div className="absolute top-2 left-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                                        <CheckCircle size={10} className="text-black" />
-                                    </div>
-                                )}
-
-                                {/* Style label */}
-                                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                                    <p className="text-[8px] text-white/60 font-black uppercase text-center tracking-wide">
-                                        {i === 0 ? '🔴 Ensaio Vermelho' : i === 1 ? '🏠 Casual em Casa' : '✨ Inspiracional Dourado'}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
-
-                    <p className="text-center text-white/25 text-[10px] mt-2 select-none">
-                        🔒 Fotos com marca d'água. Libere em HD após o pagamento.
-                    </p>
                 </div>
 
-                {/* ── Purchase Section ───────────────────────────────────────────── */}
-                <div className="px-6 pb-6 space-y-3">
-                    {/* Email input */}
-                    <div>
-                        <label className="block text-[10px] font-black uppercase text-white/50 tracking-wider mb-1.5">
-                            📧 Seu email (as fotos HD chegam aqui)
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="seuemail@exemplo.com"
-                            disabled={isExpired}
-                            className="w-full bg-white/[0.05] border border-white/10 focus:border-orange-500/60 outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 transition-all disabled:opacity-40"
-                        />
-                    </div>
+                {/* ── PACK Offer — Maximum value CTA ──────────────────────────────── */}
+                <div className="px-5 sm:px-6 pb-5 space-y-3">
+                    {/* Pack highlight */}
+                    <div className="relative rounded-2xl border-2 border-orange-500/40 bg-gradient-to-b from-orange-500/10 to-transparent overflow-hidden">
+                        {/* Best value badge */}
+                        <div className="absolute top-0 right-0 bg-gradient-to-l from-orange-500 to-amber-400 text-black text-[9px] font-black uppercase px-3 py-1 rounded-bl-xl">
+                            ⭐ Melhor custo-benefício
+                        </div>
 
-                    {error && (
-                        <p className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">⚠️ {error}</p>
-                    )}
+                        <div className="p-4 pt-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-400 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                                    <Package size={20} className="text-black" />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-black text-base leading-tight">Pack 10 Fotos HD</h3>
+                                    <p className="text-white/40 text-[10px] font-bold">
+                                        3 fotos HD agora + 7 créditos para gerar mais
+                                    </p>
+                                </div>
+                                <div className="ml-auto text-right flex-shrink-0">
+                                    <p className="text-white/30 text-[10px] line-through">R$50</p>
+                                    <p className="text-orange-400 text-xl font-black leading-none">R$37</p>
+                                    <p className="text-white/30 text-[9px] font-bold">R$3,70/foto</p>
+                                </div>
+                            </div>
 
-                    {/* CTA Buttons */}
-                    <div className="grid grid-cols-1 gap-3">
-                        {/* PACK — Primary CTA */}
-                        <button
-                            onClick={() => { setPaymentMode('pack'); handlePay('pack'); }}
-                            disabled={isExpired || isCreatingCheckout}
-                            className={`relative w-full py-4 rounded-2xl font-black text-sm transition-all overflow-hidden ${isExpired ? 'bg-white/5 text-white/20 cursor-not-allowed' : 'bg-gradient-to-r from-orange-600 to-amber-500 text-black shadow-[0_10px_40px_rgba(245,158,11,0.35)] hover:shadow-[0_15px_50px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98]'}`}
-                        >
-                            {isCreatingCheckout && paymentMode === 'pack' ? (
-                                <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Aguarde...</span>
-                            ) : (
-                                <span className="flex flex-col items-center">
-                                    <span className="flex items-center gap-2 text-base">
-                                        <Package size={18} />
-                                        Pack 10 Fotos HD — <span className="text-xl font-black">R$37</span>
+                            <button
+                                onClick={() => {
+                                    if (!email || !email.includes('@')) {
+                                        setError('Insira um email válido acima');
+                                        document.getElementById('trial-email-input')?.focus();
+                                        return;
+                                    }
+                                    handlePay('pack');
+                                }}
+                                disabled={isExpired || (isCreatingCheckout && paymentMode === 'pack')}
+                                className={`w-full py-3.5 rounded-xl font-black text-sm transition-all ${isExpired
+                                    ? 'bg-white/5 text-white/20 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-orange-500 to-amber-400 text-black shadow-[0_8px_30px_rgba(249,115,22,0.4)] hover:shadow-[0_12px_40px_rgba(249,115,22,0.5)] hover:scale-[1.01] active:scale-[0.99]'
+                                    }`}
+                            >
+                                {isCreatingCheckout && paymentMode === 'pack' ? (
+                                    <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Aguarde...</span>
+                                ) : (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Package size={16} />
+                                        Liberar Pack Completo → R$37
                                     </span>
-                                    <span className="text-[10px] font-bold mt-0.5 opacity-80">3 fotos HD agora + conta com 7 créditos para gerar mais</span>
-                                </span>
-                            )}
-                            {/* Best value badge */}
-                            <span className="absolute top-2 right-3 bg-black/30 text-[8px] font-black uppercase text-white/90 px-2 py-0.5 rounded-full">⭐ Melhor custo</span>
-                        </button>
-
-                        {/* SINGLE — Secondary CTA */}
-                        <button
-                            onClick={() => { setPaymentMode('single'); }}
-                            disabled={isExpired}
-                            className={`w-full py-3 rounded-2xl font-black text-sm border transition-all ${isExpired ? 'border-white/5 text-white/20 cursor-not-allowed bg-transparent' : paymentMode === 'single' ? 'border-orange-500/50 bg-orange-500/10 text-orange-400' : 'border-white/15 bg-white/[0.03] text-white/70 hover:border-white/30 hover:bg-white/[0.06]'}`}
-                        >
-                            {paymentMode === 'single' ? (
-                                <span className="flex flex-col items-center gap-1">
-                                    <span className="text-base">Liberar 1 foto em HD — R$5</span>
-                                    {selectedImageIndex === null ? (
-                                        <span className="text-[9px] font-bold opacity-70 text-amber-400">⬆️ Toque numa foto acima para selecionar</span>
-                                    ) : (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handlePay('single'); }}
-                                            disabled={isCreatingCheckout}
-                                            className="mt-1 px-6 py-2 bg-orange-500 text-black rounded-xl font-black text-xs hover:bg-orange-400 transition-colors disabled:opacity-50"
-                                        >
-                                            {isCreatingCheckout ? <Loader2 size={12} className="animate-spin inline" /> : `✓ Liberar Foto ${(selectedImageIndex ?? 0) + 1} — R$5`}
-                                        </button>
-                                    )}
-                                </span>
-                            ) : (
-                                <span className="flex items-center justify-center gap-2">
-                                    <Zap size={14} />
-                                    Liberar 1 foto em HD — R$5
-                                </span>
-                            )}
-                        </button>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Trust signals */}
-                    <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                        <span className="flex items-center gap-1 text-white/30 text-[10px] font-bold"><CheckCircle size={10} className="text-green-400" /> Pagamento seguro MP</span>
-                        <span className="flex items-center gap-1 text-white/30 text-[10px] font-bold"><Star size={10} className="text-amber-400" /> Fotos chegam por email</span>
-                        <span className="flex items-center gap-1 text-white/30 text-[10px] font-bold"><Download size={10} className="text-blue-400" /> HD sem marca d'água</span>
+                    <div className="flex flex-wrap items-center justify-center gap-4 pt-1">
+                        <span className="flex items-center gap-1.5 text-white/30 text-[10px] font-bold"><ShieldCheck size={11} className="text-green-400" /> Pagamento seguro</span>
+                        <span className="flex items-center gap-1.5 text-white/30 text-[10px] font-bold"><Mail size={11} className="text-blue-400" /> Entrega por email</span>
+                        <span className="flex items-center gap-1.5 text-white/30 text-[10px] font-bold"><Star size={11} className="text-amber-400" /> HD sem marca d'água</span>
                     </div>
                 </div>
             </div>
+
+            {/* Animation keyframe */}
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}</style>
         </div>
     );
 };

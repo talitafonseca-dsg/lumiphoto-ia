@@ -89,6 +89,15 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
 
     // Fire InitiateCheckout via TrackPro on page load (Pixel + CAPI)
     useEffect(() => {
+        // Recover identity for returning visitors (e.g. came back from MP)
+        try {
+            const cachedEmail = localStorage.getItem('_tp_cached_email');
+            if (cachedEmail && typeof (window as any).trackProUpdateIdentity === 'function') {
+                const cachedPhone = localStorage.getItem('_tp_cached_phone') || undefined;
+                (window as any).trackProUpdateIdentity(cachedEmail, cachedPhone);
+            }
+        } catch { /* ignore */ }
+
         if (typeof (window as any).trackPro === 'function') {
             (window as any).trackPro('InitiateCheckout', {
                 custom_data: {
@@ -116,6 +125,37 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
         setLoading(true);
         setError(null);
 
+        // Update Pixel identity with user-provided email/phone
+        try {
+            if (typeof (window as any).trackProUpdateIdentity === 'function') {
+                (window as any).trackProUpdateIdentity(email, whatsapp || undefined);
+            }
+        } catch { /* ignore */ }
+
+        // Save email/phone for Pixel advanced matching when user returns
+        try {
+            localStorage.setItem('lumiphoto_recent_purchase', JSON.stringify({
+                email,
+                phone: whatsapp ? whatsapp.replace(/\D/g, '') : null,
+                timestamp: Date.now(),
+            }));
+        } catch { /* ignore */ }
+
+        // Fire enriched InitiateCheckout with user data
+        if (typeof (window as any).trackPro === 'function') {
+            (window as any).trackPro('InitiateCheckout', {
+                email,
+                phone: whatsapp ? whatsapp.replace(/\D/g, '') : undefined,
+                custom_data: {
+                    value: PLANS[selectedPlan].price,
+                    currency: 'BRL',
+                    content_name: PLANS[selectedPlan].name,
+                    content_ids: [PLANS[selectedPlan].id],
+                    num_items: PLANS[selectedPlan].credits,
+                },
+            });
+        }
+
         try {
             // Chamar Edge Function para criar preferência
             const response = await fetch(
@@ -135,6 +175,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
                         utm_source: localStorage.getItem('utm_source') || undefined,
                         utm_medium: localStorage.getItem('utm_medium') || undefined,
                         utm_campaign: localStorage.getItem('utm_campaign') || undefined,
+                        fbp: document.cookie.match(/(?:^| )_fbp=([^;]+)/)?.[1] || undefined,
+                        fbc: document.cookie.match(/(?:^| )_fbc=([^;]+)/)?.[1] || undefined,
                     }),
                 }
             );
@@ -190,7 +232,21 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
                         {Object.values(PLANS).map((p) => (
                             <button
                                 key={p.id}
-                                onClick={() => setSelectedPlan(p.id as any)}
+                                onClick={() => {
+                                    setSelectedPlan(p.id as any);
+                                    // Track AddToCart when user selects a different plan
+                                    if (typeof (window as any).trackPro === 'function' && p.id !== selectedPlan) {
+                                        (window as any).trackPro('AddToCart', {
+                                            custom_data: {
+                                                value: p.price,
+                                                currency: 'BRL',
+                                                content_name: p.name,
+                                                content_ids: [p.id],
+                                                num_items: p.credits,
+                                            },
+                                        });
+                                    }
+                                }}
                                 className={`w-full relative p-4 rounded-xl border-2 transition-all duration-300 text-left group ${selectedPlan === p.id
                                     ? 'border-amber-500 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
                                     : 'border-white/10 bg-white/5 hover:border-white/20'
