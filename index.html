@@ -288,11 +288,14 @@
         return digits;
       }
 
-      // Detect if current page is Moda niche
+      // Detect if current page is Moda niche (URL or persisted source)
       function isModaPage() {
         var p = window.location.pathname.toLowerCase();
         var h = window.location.hash.toLowerCase();
-        return p.indexOf('/moda') >= 0 || h.indexOf('moda') >= 0;
+        if (p.indexOf('/moda') >= 0 || h.indexOf('moda') >= 0) return true;
+        // Persist across checkout/success: check stored source_page
+        try { var sp = localStorage.getItem('source_page'); if (sp && sp.toLowerCase().indexOf('moda') >= 0) return true; } catch(e){}
+        return false;
       }
 
       // Single fbq('init') — called ONCE on boot with best available data

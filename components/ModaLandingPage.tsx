@@ -39,6 +39,19 @@ export const ModaLandingPage: React.FC<ModaLandingPageProps> = ({ onGetStarted, 
         else video.addEventListener('loadeddata', tryPlay, { once: true });
     }, []);
 
+    // Track ViewContent for Meta Pixel (Moda niche)
+    useEffect(() => {
+        if (typeof (window as any).trackPro === 'function') {
+            (window as any).trackPro('ViewContent', {
+                custom_data: {
+                    content_name: 'LumiPhoto Moda',
+                    content_category: 'moda',
+                    content_type: 'product',
+                },
+            });
+        }
+    }, []);
+
     const handleVideoClick = async () => {
         const video = videoRef.current;
         if (!video) return;
