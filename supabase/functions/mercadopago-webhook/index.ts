@@ -14,6 +14,17 @@ const TRACKPRO_ENDPOINT = "https://obzvzudlfftyjwgemdhx.supabase.co/functions/v1
 const TRACKPRO_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienZ6dWRsZmZ0eWp3Z2VtZGh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMzY0NjYsImV4cCI6MjA4NzgxMjQ2Nn0.iSgCV7hYpR4UKm0Twok4AmBFzhQqThpFSx6AQaNFKkI";
 const TRACKPRO_USER_ID = "844b2e8d-36b7-438b-93d4-2bc9cee6118d";
 
+// Per-niche pixel IDs
+const MAIN_PIXEL_ID = '4260013394267682';
+const MODA_PIXEL_ID = '2128280607956363';
+
+function getPixelIdsForSource(sourcePage: string): string[] {
+    const ids = [MAIN_PIXEL_ID];
+    const path = (sourcePage || '').toLowerCase();
+    if (path === 'moda' || path === '/moda') ids.push(MODA_PIXEL_ID);
+    return ids;
+}
+
 const PLAN_PRICES: Record<string, number> = {
     starter: 37, essencial: 57, pro: 80, premium: 117,
 };
@@ -418,6 +429,7 @@ Deno.serve(async (req: Request) => {
                 lastName: payment.payer?.last_name || null,
                 fbp: refData.fbp || null,
                 fbc: refData.fbc || null,
+                pixelIds: getPixelIdsForSource(sourcePage),
             });
         } else {
             console.log("⚡ Purchase tracking already sent for this payment, skipping duplicate");
@@ -633,6 +645,7 @@ async function handleTrialPayment(
         lastName: null,
         fbp: refData.fbp || null,
         fbc: refData.fbc || null,
+        pixelIds: getPixelIdsForSource(refData.source_page || ''),
     });
 
     console.log(`🎉 Trial unlocked: ${signedUrls.length} HD photos for ${payerEmail}`);
@@ -721,6 +734,7 @@ interface TrackExtraData {
     lastName?: string | null;
     fbp?: string | null;
     fbc?: string | null;
+    pixelIds?: string[];
 }
 
 async function trackServerPurchase(email: string, plan: string, amount: number, paymentId: string, extra?: TrackExtraData) {
@@ -747,6 +761,7 @@ async function trackServerPurchase(email: string, plan: string, amount: number, 
             user_id: TRACKPRO_USER_ID,
             ...(extra?.fbp ? { fbp: extra.fbp } : {}),
             ...(extra?.fbc ? { fbc: extra.fbc } : {}),
+            ...(extra?.pixelIds ? { pixel_ids: extra.pixelIds } : {}),
             user_data: {
                 email: email?.toLowerCase().trim() || null,
                 phone: normPhone,

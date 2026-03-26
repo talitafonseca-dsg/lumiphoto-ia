@@ -16,6 +16,8 @@
     }(window, document, 'script',
       'https://connect.facebook.net/en_US/fbevents.js');
     // fbq('init') é feito UMA vez dentro do TrackPro com advanced matching
+    // Moda pixel ID — only initialized when path contains /moda
+    var MODA_PIXEL_ID = '2128280607956363';
   </script>
   <!-- End Meta Pixel Code -->
 
@@ -286,6 +288,13 @@
         return digits;
       }
 
+      // Detect if current page is Moda niche
+      function isModaPage() {
+        var p = window.location.pathname.toLowerCase();
+        var h = window.location.hash.toLowerCase();
+        return p.indexOf('/moda') >= 0 || h.indexOf('moda') >= 0;
+      }
+
       // Single fbq('init') — called ONCE on boot with best available data
       var _fbqInitDone = false;
       var _lastMatchEmail = null;
@@ -303,6 +312,10 @@
           if (normEmail) advancedMatch.em = normEmail;
           if (normPhone) advancedMatch.ph = normPhone;
           fbq('init', '4260013394267682', advancedMatch);
+          // Moda pixel — init alongside main pixel on Moda pages
+          if (isModaPage()) {
+            fbq('init', MODA_PIXEL_ID, advancedMatch);
+          }
         }
       }
 
@@ -321,6 +334,9 @@
           advancedMatch.em = normEmail;
           if (normPhone) advancedMatch.ph = normPhone;
           fbq('init', '4260013394267682', advancedMatch);
+          if (isModaPage()) {
+            fbq('init', MODA_PIXEL_ID, advancedMatch);
+          }
           console.log('🔄 Pixel re-init with email:', normEmail);
         }
         // Also persist for future page loads
@@ -340,6 +356,10 @@
         // Ensure Pixel is initialized (once) with best data
         ensureFbqInit(resolvedEmail, resolvedPhone);
 
+        // Build list of pixel IDs for this event
+        var activePixels = ['4260013394267682'];
+        if (isModaPage()) activePixels.push(MODA_PIXEL_ID);
+
         var payload = {
           event_name: eventName,
           event_id: eventId,
@@ -351,6 +371,7 @@
           fbp: getFbp(),
           fbc: getFbc(),
           fb_login_id: fbLoginId,
+          pixel_ids: activePixels,
           user_data: {
             email: resolvedEmail || null,
             phone: resolvedPhone || null,
@@ -381,6 +402,10 @@
         // Fire browser Pixel event (NO re-init — just track)
         if (typeof fbq === 'function') {
           fbq('trackSingle', '4260013394267682', eventName, params.custom_data || {}, { eventID: eventId });
+          // Also fire on Moda pixel when on Moda pages
+          if (isModaPage()) {
+            fbq('trackSingle', MODA_PIXEL_ID, eventName, params.custom_data || {}, { eventID: eventId });
+          }
         }
       };
 
@@ -630,6 +655,9 @@
   <!-- Meta Pixel noscript fallback -->
   <noscript><img height="1" width="1" style="display:none"
       src="https://www.facebook.com/tr?id=4260013394267682&ev=PageView&noscript=1" /></noscript>
+  <!-- Moda Pixel noscript fallback -->
+  <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=2128280607956363&ev=PageView&noscript=1" /></noscript>
   <div class="bg-mesh"></div>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
