@@ -71,7 +71,10 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
                                 value: purchaseValue,
                                 currency: 'BRL',
                                 content_name: extractedPlan || 'LumiPhoto Credits',
+                                content_category: 'credits',
                                 content_type: 'product',
+                                content_ids: [extractedPlan || 'starter'],
+                                num_items: 1,
                                 order_id: paymentId,
                             },
                         });
