@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Check, Sparkles, Shield, Clock, Zap, ArrowRight, CreditCard, Phone } from 'lucide-react';
+import { Check, Sparkles, Shield, Clock, Zap, ArrowRight, CreditCard, Phone } from 'lucide-react';
 
 interface CheckoutPageProps {
     onBack?: () => void;
@@ -18,6 +18,13 @@ interface PlanType {
 }
 
 const STARTER_PRICE_PER_PHOTO = 3.70;
+
+const ASSINY_LINKS: Record<string, string> = {
+    starter: 'https://pay.assiny.com.br/17421c/node/q1x0kg',
+    essencial: 'https://pay.assiny.com.br/D_XuR4/node/-Fs-4I',
+    pro: 'https://pay.assiny.com.br/Z6Wh7C/node/jgGWaF',
+    premium: 'https://pay.assiny.com.br/BZpzMK/node/6cL1LH',
+};
 
 const PLANS: Record<string, PlanType> = {
     starter: {
@@ -75,7 +82,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
     const [selectedPlan, setSelectedPlan] = useState<'starter' | 'essencial' | 'pro' | 'premium'>('pro');
     const [email, setEmail] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Capture referral code from URL or localStorage
@@ -113,7 +119,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
         }
     }, []);
 
-    const handleCheckout = async () => {
+    const handleCheckout = () => {
         if (!email) {
             setError('Por favor, insira seu email');
             return;
@@ -124,7 +130,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
             return;
         }
 
-        setLoading(true);
         setError(null);
 
         // Update Pixel identity with user-provided email/phone
@@ -134,11 +139,25 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
             }
         } catch { /* ignore */ }
 
-        // Save email/phone for Pixel advanced matching when user returns
+        // Save checkout intent for webhook reconciliation (email → source_page → segment)
         try {
             localStorage.setItem('lumiphoto_recent_purchase', JSON.stringify({
                 email,
                 phone: whatsapp ? whatsapp.replace(/\D/g, '') : null,
+                timestamp: Date.now(),
+            }));
+            localStorage.setItem('lumiphoto_checkout_intent', JSON.stringify({
+                email,
+                plan: selectedPlan,
+                whatsapp: whatsapp || null,
+                source_page: localStorage.getItem('source_page') || null,
+                referral_code: localStorage.getItem('referral_code') || null,
+                affiliate_code: localStorage.getItem('affiliate_code') || null,
+                utm_source: localStorage.getItem('utm_source') || null,
+                utm_medium: localStorage.getItem('utm_medium') || null,
+                utm_campaign: localStorage.getItem('utm_campaign') || null,
+                fbp: document.cookie.match(/(?:^| )_fbp=([^;]+)/)?.[1] || null,
+                fbc: document.cookie.match(/(?:^| )_fbc=([^;]+)/)?.[1] || null,
                 timestamp: Date.now(),
             }));
         } catch { /* ignore */ }
@@ -160,46 +179,12 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
             });
         }
 
-        try {
-            // Chamar Edge Function para criar preferência
-            const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-preference`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        plan: selectedPlan,
-                        payer_email: email,
-                        referral_code: localStorage.getItem('referral_code') || undefined,
-                        affiliate_code: localStorage.getItem('affiliate_code') || undefined,
-                        whatsapp: whatsapp || undefined,
-                        source_page: localStorage.getItem('source_page') || undefined,
-                        utm_source: localStorage.getItem('utm_source') || undefined,
-                        utm_medium: localStorage.getItem('utm_medium') || undefined,
-                        utm_campaign: localStorage.getItem('utm_campaign') || undefined,
-                        fbp: document.cookie.match(/(?:^| )_fbp=([^;]+)/)?.[1] || undefined,
-                        fbc: document.cookie.match(/(?:^| )_fbc=([^;]+)/)?.[1] || undefined,
-                    }),
-                }
-            );
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Erro ao processar pagamento');
-            }
-
-            const data = await response.json();
-
-
-            // Redirecionar para o Mercado Pago
-            window.location.href = data.init_point;
-        } catch (err: any) {
-            console.error('Checkout error:', err);
-            setError(err.message || 'Erro ao processar. Tente novamente.');
-        } finally {
-            setLoading(false);
+        // Redirect to Assiny checkout
+        const assinyUrl = ASSINY_LINKS[selectedPlan];
+        if (assinyUrl) {
+            window.location.href = assinyUrl;
+        } else {
+            setError('Link de checkout não encontrado. Tente novamente.');
         }
     };
 
@@ -393,17 +378,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
 
                             <button
                                 onClick={handleCheckout}
-                                disabled={loading}
-                                className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all disabled:opacity-50 text-white"
+                                className="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all text-white"
                             >
-                                {loading ? (
-                                    <Loader2 size={24} className="animate-spin" />
-                                ) : (
-                                    <>
-                                        <span>Pagar com Mercado Pago</span>
-                                        <ArrowRight size={20} />
-                                    </>
-                                )}
+                                <span>Comprar Agora</span>
+                                <ArrowRight size={20} />
                             </button>
 
                             <div className="text-center space-y-2 pt-2">

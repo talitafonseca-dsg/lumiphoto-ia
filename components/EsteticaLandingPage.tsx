@@ -1,5 +1,5 @@
-﻿
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
     Camera, Check, ArrowRight, Shield, Sparkles,
     Clock, MessageCircle, Download,
@@ -15,6 +15,18 @@ interface EsteticaLandingPageProps {
 }
 
 export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+
+    useEffect(() => {
+        if (typeof (window as any).trackPro === 'function') {
+            (window as any).trackPro('ViewContent', {
+                custom_data: {
+                    content_name: 'LumiPhoto Estética',
+                    content_category: 'estetica',
+                    content_type: 'product',
+                },
+            });
+        }
+    }, []);
 
 
     const scrollToPricing = () => {
@@ -616,7 +628,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-white/20 text-xs mt-8">Pagamento seguro via Mercado Pago ÔÇó Cart├úo, Pix ou Boleto</p>
+                    <p className="text-center text-white/20 text-xs mt-8">Pagamento seguro e criptografado ÔÇó Cart├úo, Pix ou Boleto</p>
                 </div>
             </section>
 

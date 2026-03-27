@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     ArrowRight, Shield, Sparkles, Clock, Download, Eye,
     TrendingUp, Star, Camera, Heart, Zap, Check, Gem,
@@ -15,6 +15,18 @@ interface PetLandingPageProps {
 }
 
 export const PetLandingPage: React.FC<PetLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+
+    useEffect(() => {
+        if (typeof (window as any).trackPro === 'function') {
+            (window as any).trackPro('ViewContent', {
+                custom_data: {
+                    content_name: 'LumiPhoto Pet',
+                    content_category: 'pet',
+                    content_type: 'product',
+                },
+            });
+        }
+    }, []);
 
     const heroPairs = [
         { before: '/pets/caramelo-antes.png', after: '/pets/caramelo-depois.png', label: 'Vira-lata Caramelo' },

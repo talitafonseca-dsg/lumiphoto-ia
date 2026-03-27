@@ -1629,13 +1629,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
 
                         {/* Mercado Pago Badge - Official Logo */}
                         <div className="mt-6 flex items-center justify-center gap-3">
-                            <div className="px-5 py-2.5 bg-[#00b1ea]/10 border border-[#00b1ea]/20 rounded-xl flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-[#00b1ea] flex items-center justify-center flex-shrink-0">
-                                    <span className="text-white text-sm">🤝</span>
+                            <div className="px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-white text-sm">🔒</span>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-[#00b1ea]">Mercado Pago</p>
-                                    <p className="text-[9px] text-white/30">Pagamento processado com segurança</p>
+                                    <p className="text-xs font-bold text-emerald-400">Pagamento Seguro</p>
+                                    <p className="text-[9px] text-white/30">Checkout protegido e criptografado</p>
                                 </div>
                             </div>
                         </div>

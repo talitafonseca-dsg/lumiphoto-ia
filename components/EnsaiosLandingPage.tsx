@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Camera, Check, Star, Zap, ArrowRight, Shield, Sparkles,
     Users, DollarSign, Clock, Download, Eye, MessageCircle,
@@ -25,6 +25,18 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying2, setIsPlaying2] = useState(true);
     const [isMuted2, setIsMuted2] = useState(true);
+
+    useEffect(() => {
+        if (typeof (window as any).trackPro === 'function') {
+            (window as any).trackPro('ViewContent', {
+                custom_data: {
+                    content_name: 'LumiPhoto Ensaios',
+                    content_category: 'ensaios',
+                    content_type: 'product',
+                },
+            });
+        }
+    }, []);
 
     const scrollToPricing = () => {
         const el = document.getElementById('pricing-section');
@@ -1263,9 +1275,9 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
             <div className="border-t border-white/5 bg-[#050505] py-5 px-6">
                 <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
                     <div className="flex items-center gap-2">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="opacity-50"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#00B1EA" stroke="none" /></svg>
-                        <span className="text-white/40 text-[11px] font-bold">Mercado Pago</span>
-                        <span className="text-white/20 text-[10px]">— Pagamento 100% Seguro</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="opacity-50"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#10B981" stroke="none" /></svg>
+                        <span className="text-white/40 text-[11px] font-bold">Pagamento Seguro</span>
+                        <span className="text-white/20 text-[10px]">— Checkout 100% Protegido</span>
                     </div>
                     <span className="text-white/10 hidden sm:block">|</span>
                     <span className="text-white/25 text-[10px] flex items-center gap-1">🔒 Criptografia SSL</span>
