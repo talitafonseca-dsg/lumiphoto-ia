@@ -1401,8 +1401,37 @@ const App: React.FC = () => {
   }, []);
 
   const navigateTo = (path: string) => {
+    // Fire InitiateCheckout tracking when navigating to checkout from any landing page
+    const pathname = path.split('?')[0];
+    if (pathname === '/checkout') {
+      try {
+        if (typeof (window as any).trackPro === 'function') {
+          // Extract plan from URL query if present (e.g. /checkout?plan=pro)
+          const queryString = path.includes('?') ? path.split('?')[1] : '';
+          const params = new URLSearchParams(queryString);
+          const plan = params.get('plan') || 'pro';
+          const planPrices: Record<string, number> = { starter: 37, essencial: 57, pro: 97, premium: 117 };
+          const planCredits: Record<string, number> = { starter: 10, essencial: 30, pro: 80, premium: 100 };
+          const sourcePage = localStorage.getItem('source_page') || referrerPath.current || window.location.pathname;
+
+          (window as any).trackPro('InitiateCheckout', {
+            custom_data: {
+              value: planPrices[plan] || 97,
+              currency: 'BRL',
+              content_name: plan.charAt(0).toUpperCase() + plan.slice(1),
+              content_category: 'credits',
+              content_type: 'product',
+              content_ids: [plan],
+              num_items: planCredits[plan] || 80,
+              source_page: sourcePage,
+            },
+          });
+        }
+      } catch { /* ignore tracking errors */ }
+    }
+
     window.history.pushState({}, '', path);
-    setCurrentPath(path);
+    setCurrentPath(pathname);
   };
 
   // NICHE LANDING PAGES
@@ -1420,6 +1449,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <EnsaiosLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaios'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaios'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('ensaios', () => { referrerPath.current = '/ensaios'; navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1464,6 +1494,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <AniversarioLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaio-aniversario'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaio-aniversario'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('aniversario', () => { referrerPath.current = '/ensaio-aniversario'; setSelectedCategory('Aniversário'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1508,6 +1539,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <AdvogadasLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaio-advogadas'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaio-advogadas'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('advogadas', () => { referrerPath.current = '/ensaio-advogadas'; setSelectedCategory('Advogado ⚖️'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1552,6 +1584,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <EsteticaLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaio-estetica'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaio-estetica'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('estetica', () => { referrerPath.current = '/ensaio-estetica'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1595,6 +1628,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <BeautyLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaio-beleza'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaio-beleza'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('beleza', () => { referrerPath.current = '/ensaio-beleza'; setSelectedCategory('Moda & Beleza'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1638,6 +1672,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <VarejoLandingPage
           onGetStarted={() => { referrerPath.current = '/varejo'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/varejo'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('varejo', () => { referrerPath.current = '/varejo'; setSelectedCategory('Varejo 🛍️'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
         />
@@ -1734,6 +1769,7 @@ const App: React.FC = () => {
         <UrgencyBanner />
         <ModaLandingPage
           onGetStarted={() => { referrerPath.current = '/moda'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/moda'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => { referrerPath.current = '/moda'; setShowSalesPage(false); }}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1780,6 +1816,7 @@ const App: React.FC = () => {
       <>
         <DeliveryLandingPage
           onGetStarted={() => { referrerPath.current = '/delivery'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/delivery'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('delivery', () => { referrerPath.current = '/delivery'; setSelectedCategory('Delivery 🍕'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1822,6 +1859,7 @@ const App: React.FC = () => {
       <>
         <PetLandingPage
           onGetStarted={() => { referrerPath.current = '/ensaio-pet'; navigateTo('/checkout'); }}
+          onPlanSelect={(plan) => { referrerPath.current = '/ensaio-pet'; navigateTo(`/checkout?plan=${plan}`); }}
           onViewStudio={() => handleViewStudio('pet', () => { referrerPath.current = '/ensaio-pet'; setSelectedCategory('Pet 🐾'); navigateTo('/'); setShowSalesPage(false); })}
           onLogin={() => setShowAuth(true)}
           onFreeTrialGenerate={handleTrialGenerate}
@@ -1893,7 +1931,7 @@ const App: React.FC = () => {
     if (showAuth) {
       return <AuthScreen onLogin={() => { }} onBack={() => setShowAuth(false)} />;
     }
-    return <SalesPage onGetStarted={() => navigateTo('/checkout')} onViewStudio={() => setShowSalesPage(false)} onLogin={() => setShowAuth(true)} />;
+    return <SalesPage onGetStarted={(plan) => navigateTo(`/checkout${plan ? `?plan=${plan}` : ''}`)} onViewStudio={() => setShowSalesPage(false)} onLogin={() => setShowAuth(true)} />;
   }
 
   return (

@@ -9,12 +9,13 @@ import FAQSection, { petFaqs } from './FAQSection';
 
 interface PetLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (planId: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const PetLandingPage: React.FC<PetLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const PetLandingPage: React.FC<PetLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     useEffect(() => {
         if (typeof (window as any).trackPro === 'function') {
@@ -581,7 +582,7 @@ export const PetLandingPage: React.FC<PetLandingPageProps> = ({ onGetStarted, on
                                         </li>
                                     ))}
                                 </ul>
-                                <button onClick={onGetStarted} className={`w-full py-3.5 rounded-full font-bold text-sm uppercase tracking-wider transition-all ${plan.featured ? 'bg-gradient-to-r from-[#00a5d1] to-[#008db5] text-black hover:shadow-[0_0_30px_rgba(0,165,209,0.4)]' : 'bg-white/[0.05] text-white border border-white/10 hover:border-orange-500/30 hover:text-orange-400'}`}>
+                                <button onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()} className={`w-full py-3.5 rounded-full font-bold text-sm uppercase tracking-wider transition-all ${plan.featured ? 'bg-gradient-to-r from-[#00a5d1] to-[#008db5] text-black hover:shadow-[0_0_30px_rgba(0,165,209,0.4)]' : 'bg-white/[0.05] text-white border border-white/10 hover:border-orange-500/30 hover:text-orange-400'}`}>
                                     {plan.featured ? 'Quero o Família Pet →' : `Começar com ${plan.name}`}
                                 </button>
                                 <p className="text-center text-white/20 text-[10px] mt-3">Pagamento único — sem mensalidade</p>

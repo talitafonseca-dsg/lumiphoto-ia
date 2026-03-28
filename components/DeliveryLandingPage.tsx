@@ -9,12 +9,13 @@ import FAQSection, { deliveryFaqs } from './FAQSection';
 
 interface DeliveryLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (planId: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     useEffect(() => {
         if (typeof (window as any).trackPro === 'function') {
@@ -1010,7 +1011,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                         </li>
                                     ))}
                                 </ul>
-                                <button onClick={onGetStarted} className="w-full py-4 rounded-2xl border border-orange-500/30 text-orange-400 font-black text-sm uppercase tracking-wider hover:bg-orange-500/10 transition-all">
+                                <button onClick={() => onPlanSelect ? onPlanSelect('essencial') : onGetStarted()} className="w-full py-4 rounded-2xl border border-orange-500/30 text-orange-400 font-black text-sm uppercase tracking-wider hover:bg-orange-500/10 transition-all">
                                     Começar →
                                 </button>
                             </div>
@@ -1058,7 +1059,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                             </li>
                                         ))}
                                     </ul>
-                                    <button onClick={onGetStarted} className="w-full py-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 text-black font-black text-base uppercase tracking-wider hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                    <button onClick={() => onPlanSelect ? onPlanSelect('pro') : onGetStarted()} className="w-full py-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 text-black font-black text-base uppercase tracking-wider hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all">
                                         🔥 Quero esse plano
                                     </button>
                                 </div>
@@ -1102,7 +1103,7 @@ export const DeliveryLandingPage: React.FC<DeliveryLandingPageProps> = ({ onGetS
                                         </li>
                                     ))}
                                 </ul>
-                                <button onClick={onGetStarted} className="w-full py-4 rounded-2xl border border-amber-500/30 text-amber-400 font-black text-sm uppercase tracking-wider hover:bg-amber-500/10 transition-all">
+                                <button onClick={() => onPlanSelect ? onPlanSelect('premium') : onGetStarted()} className="w-full py-4 rounded-2xl border border-amber-500/30 text-amber-400 font-black text-sm uppercase tracking-wider hover:bg-amber-500/10 transition-all">
                                     Escolher Premium →
                                 </button>
                             </div>

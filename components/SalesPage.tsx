@@ -4,7 +4,7 @@ import { Camera, Check, Star, Zap, Image as ImageIcon, Briefcase, Heart, Instagr
 import FAQSection from './FAQSection';
 
 interface SalesPageProps {
-    onGetStarted: () => void;
+    onGetStarted: (plan?: string) => void;
     onViewStudio: () => void;
     onLogin: () => void;
 }
@@ -1274,7 +1274,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
                                 <p className="text-4xl font-black text-white mb-1">R$ 37<span className="text-lg font-normal text-white/40">,00</span></p>
                                 <p className="text-sm text-amber-400 font-bold mb-2">10 Fotos</p>
                                 <p className="text-xs text-white/40 mb-6">R$ 3,70 por foto</p>
-                                <button onClick={onGetStarted} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
+                                <button onClick={() => onGetStarted('starter')} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
                                     Comprar
                                 </button>
                             </div>
@@ -1297,7 +1297,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
                                     <span className="text-xs text-white/20 line-through">R$ 3,70</span>
                                     <span className="text-xs font-bold text-emerald-400">R$ 1,90 por foto</span>
                                 </div>
-                                <button onClick={onGetStarted} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
+                                <button onClick={() => onGetStarted('essencial')} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
                                     Comprar
                                 </button>
                             </div>
@@ -1323,7 +1323,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
                                     <span className="text-xs text-white/20 line-through">R$ 3,70</span>
                                     <span className="text-xs font-bold text-emerald-400">R$ 1,21 por foto</span>
                                 </div>
-                                <button onClick={onGetStarted} className="mt-auto w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold text-sm hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:from-amber-400 hover:to-yellow-300 active:scale-[0.98] transition-all duration-300">
+                                <button onClick={() => onGetStarted('pro')} className="mt-auto w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold text-sm hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:from-amber-400 hover:to-yellow-300 active:scale-[0.98] transition-all duration-300">
                                     Comprar Agora
                                 </button>
                             </div>
@@ -1346,7 +1346,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ onGetStarted, onViewStudio
                                     <span className="text-xs text-white/20 line-through">R$ 3,70</span>
                                     <span className="text-xs font-bold text-emerald-400">R$ 1,17 por foto</span>
                                 </div>
-                                <button onClick={onGetStarted} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
+                                <button onClick={() => onGetStarted('premium')} className="mt-auto w-full py-3.5 rounded-xl bg-white/[0.08] backdrop-blur-sm border border-white/10 text-white font-bold text-sm hover:bg-white/[0.15] hover:border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-all duration-300">
                                     Comprar
                                 </button>
                             </div>

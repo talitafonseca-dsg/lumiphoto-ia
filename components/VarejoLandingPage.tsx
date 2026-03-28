@@ -10,11 +10,12 @@ import FAQSection, { varejoFaqs } from './FAQSection';
 
 interface VarejoLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (planId: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 }
 
-export const VarejoLandingPage: React.FC<VarejoLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const VarejoLandingPage: React.FC<VarejoLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     useEffect(() => {
         if (typeof (window as any).trackPro === 'function') {

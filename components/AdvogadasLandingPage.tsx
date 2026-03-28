@@ -13,12 +13,13 @@ import FAQSection, { advogadoFaqs } from './FAQSection';
 
 interface AdvogadasLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (plan: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     useEffect(() => {
         if (typeof (window as any).trackPro === 'function') {
@@ -41,6 +42,14 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
     const plans = [
         {
             name: 'Starter',
+            credits: 10,
+            price: 37,
+            perCredit: '3.70',
+            popular: false,
+            features: ['10 fotos profissionais', 'Todos os estilos jurídicos', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
+        },
+        {
+            name: 'Essencial',
             credits: 30,
             price: 57,
             perCredit: '1.90',
@@ -56,12 +65,12 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
             features: ['80 fotos profissionais', 'Todos os estilos jurídicos', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benefício'],
         },
         {
-            name: 'Business',
-            credits: 200,
-            price: 297,
-            perCredit: '1.49',
+            name: 'Premium',
+            credits: 100,
+            price: 117,
+            perCredit: '1.17',
             popular: false,
-            features: ['200 fotos profissionais', 'Todos os estilos jurídicos', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Ideal para escritórios'],
+            features: ['100 fotos profissionais', 'Todos os estilos jurídicos', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Ideal para escritórios'],
         },
     ];
 
@@ -137,7 +146,7 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
                                 <ArrowRight size={22} />
                             </button>
 
-                            <p className="text-white/20 text-xs mt-4">A partir de R$ 57 • Pagamento único • Sem mensalidade</p>
+                            <p className="text-white/20 text-xs mt-4">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
 
 
                         </div>
@@ -706,7 +715,7 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
                             Invista na Sua <span className="text-amber-400">Imagem</span>
                         </h2>
                         <p className="text-white/30 max-w-lg mx-auto text-sm">
-                            Um ensaio fotográfico profissional custa de R$ 500 a R$ 2.000. Com a LumiphotoIA, comece por R$ 57.
+                            Um ensaio fotográfico profissional custa de R$ 500 a R$ 2.000. Com a LumiphotoIA, comece por R$ 37.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold">
@@ -718,7 +727,7 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {plans.map((plan, i) => (
                             <div key={i} className={`relative rounded-2xl p-6 border transition-all duration-300 ${plan.popular
                                 ? 'bg-gradient-to-b from-amber-600/10 to-transparent border-amber-600/30 shadow-[0_0_40px_rgba(217,119,6,0.15)] scale-[1.02]'
@@ -747,7 +756,7 @@ export const AdvogadasLandingPage: React.FC<AdvogadasLandingPageProps> = ({ onGe
                                     ))}
                                 </div>
 
-                                <button onClick={onGetStarted} className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${plan.popular
+                                <button onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()} className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${plan.popular
                                     ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:shadow-[0_0_30px_rgba(217,119,6,0.4)] hover:scale-[1.02]'
                                     : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
                                     }`}>

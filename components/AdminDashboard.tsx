@@ -22,10 +22,15 @@ interface Stats {
         repeatRate: number;
         repeatBuyers: number;
         uniqueBuyers: number;
+        // Checkout funnel
+        totalCheckouts?: number;
+        checkoutsToday?: number;
+        checkoutsLast7days?: number;
+        checkoutConversionRate?: number;
     };
     salesByPlan: Record<string, { count: number; revenue: number }>;
     salesByDay: Record<string, { count: number; revenue: number }>;
-    recentSales: Array<{ id: string; email: string; plan: string; amount: number; date: string; source_page?: string | null; utm_source?: string | null }>;
+    recentSales: Array<{ id: string; email: string; plan: string; amount: number; date: string; source_page?: string | null; utm_source?: string | null; gateway?: string }>;
     generationStats: {
         totalGenerations: number;
         totalPhotos: number;
@@ -37,6 +42,14 @@ interface Stats {
     salesBySourcePage?: Record<string, { count: number; revenue: number }>;
     salesByUtmSource?: Record<string, { count: number; revenue: number }>;
     trialRawData?: Array<{ id: string; ip_hash: string; session_id: string; status: string; delivery_style: string; created_at: string }>;
+    checkoutStats?: {
+        total: number;
+        today: number;
+        last7days: number;
+        byPlan: Record<string, number>;
+        bySource: Record<string, number>;
+        byDay: Record<string, number>;
+    };
 }
 
 export const AdminDashboard: React.FC = () => {
@@ -1413,6 +1426,14 @@ export const AdminDashboard: React.FC = () => {
                             <KpiCard icon={Star} label="Instruções Custom" value={String(stats.generationStats.hasCustomInstructions)} sub="usaram texto personalizado" color="cyan" small />
                         </div>
 
+                        {/* ===== CHECKOUT FUNNEL ===== */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                            <KpiCard icon={Target} label="InitiateCheckout" value={String(stats.overview.totalCheckouts || 0)} sub={`${stats.overview.checkoutsToday || 0} hoje`} color="rose" small />
+                            <KpiCard icon={CreditCard} label="Vendas Completadas" value={String(displaySalesCount)} sub={`de ${stats.overview.totalCheckouts || 0} checkouts`} color="emerald" small />
+                            <KpiCard icon={Percent} label="Conversão Checkout" value={`${stats.overview.checkoutConversionRate || 0}%`} sub="checkout → compra" color="violet" small />
+                            <KpiCard icon={Wallet} label="Gateway" value="Assiny" sub="PIX 100%" color="blue" small />
+                        </div>
+
                         {/* ===== SALES CHART + SALES BY PLAN ===== */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             {/* Sales Chart */}
@@ -1487,6 +1508,11 @@ export const AdminDashboard: React.FC = () => {
                                                     '/ensaio-aniversario': '🎂 Aniversário',
                                                     '/ensaio-estetica': '💆 Estética',
                                                     '/ensaio-beleza': '💄 Beleza',
+                                                    '/ensaio-pet': '🐾 Pet',
+                                                    '/moda': '👗 Moda',
+                                                    '/delivery': '🍕 Delivery',
+                                                    '/varejo': '🛍️ Varejo',
+                                                    'assiny': '💳 Assiny (direto)',
                                                     'direto': '🔗 Direto / Desconhecido',
                                                 };
                                                 return (
@@ -1628,6 +1654,7 @@ export const AdminDashboard: React.FC = () => {
                                             <th className="text-left py-2 px-3">Email</th>
                                             <th className="text-left py-2 px-3">Plano</th>
                                             <th className="text-right py-2 px-3">Valor</th>
+                                            <th className="text-left py-2 px-3">Gateway</th>
                                             <th className="text-left py-2 px-3">Origem</th>
                                             <th className="text-left py-2 px-3">Tráfego</th>
                                             <th className="text-right py-2 px-3">Data</th>
@@ -1641,6 +1668,11 @@ export const AdminDashboard: React.FC = () => {
                                                     <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-md text-[10px] font-bold uppercase">{sale.plan}</span>
                                                 </td>
                                                 <td className="py-2.5 px-3 text-right text-emerald-400 font-bold text-xs">{fmt(sale.amount)}</td>
+                                                <td className="py-2.5 px-3 text-xs">
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${sale.gateway === 'Assiny' ? 'bg-violet-500/10 text-violet-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                                                        {sale.gateway || 'MP'}
+                                                    </span>
+                                                </td>
                                                 <td className="py-2.5 px-3 text-xs">
                                                     {(sale as any).source_page ? (
                                                         <span className="px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-md text-[10px] font-bold">{(sale as any).source_page}</span>
@@ -1659,7 +1691,7 @@ export const AdminDashboard: React.FC = () => {
                                             </tr>
                                         ))}
                                         {stats.recentSales.length === 0 && (
-                                            <tr><td colSpan={6} className="text-center py-8 text-white/30">Nenhuma venda registrada</td></tr>
+                                            <tr><td colSpan={7} className="text-center py-8 text-white/30">Nenhuma venda registrada</td></tr>
                                         )}
                                     </tbody>
                                 </table>

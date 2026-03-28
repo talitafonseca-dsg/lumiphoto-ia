@@ -12,12 +12,13 @@ import FAQSection, { ensaioFaqs } from './FAQSection';
 
 interface EnsaiosLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (plan: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
     const [selectedScenario, setSelectedScenario] = useState(1);
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoRef2 = useRef<HTMLVideoElement>(null);
@@ -1193,7 +1194,7 @@ export const EnsaiosLandingPage: React.FC<EnsaiosLandingPageProps> = ({ onGetSta
                                     </div>
 
                                     <button
-                                        onClick={onGetStarted}
+                                        onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()}
                                         className={`mt-auto w-full py-3.5 rounded-xl font-bold text-sm active:scale-[0.98] transition-all duration-300 ${plan.popular
                                             ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:shadow-[0_0_30px_rgba(245,158,11,0.5)]'
                                             : 'bg-white/[0.08] border border-white/10 text-white hover:bg-white/[0.15]'

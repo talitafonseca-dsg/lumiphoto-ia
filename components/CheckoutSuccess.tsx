@@ -95,6 +95,22 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ onGoToLogin })
             }
         }
 
+        // Fallback: read email from localStorage checkout intent (saved by CheckoutPage before Assiny redirect)
+        if (!extractedEmail) {
+            try {
+                const intent = JSON.parse(localStorage.getItem('lumiphoto_checkout_intent') || '{}');
+                if (intent.email) { extractedEmail = intent.email; setBuyerEmail(intent.email); }
+                if (intent.plan) { extractedPlan = intent.plan; setPlanName(intent.plan); }
+                if (intent.source_page) { setSourcePage(intent.source_page); }
+            } catch { /* ignore */ }
+        }
+        if (!extractedEmail) {
+            try {
+                const recent = JSON.parse(localStorage.getItem('lumiphoto_recent_purchase') || '{}');
+                if (recent.email) { extractedEmail = recent.email; setBuyerEmail(recent.email); }
+            } catch { /* ignore */ }
+        }
+
         if (currentStatus === 'success') {
             localStorage.setItem('lumiphoto_recent_purchase', JSON.stringify({
                 email: extractedEmail, password: DEFAULT_PASSWORD, timestamp: Date.now(),

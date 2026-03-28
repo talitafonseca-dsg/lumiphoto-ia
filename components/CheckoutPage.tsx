@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Sparkles, Shield, Clock, Zap, ArrowRight, CreditCard, Phone } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface CheckoutPageProps {
     onBack?: () => void;
@@ -79,7 +85,14 @@ const BENEFITS = [
 ];
 
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
-    const [selectedPlan, setSelectedPlan] = useState<'starter' | 'essencial' | 'pro' | 'premium'>('pro');
+    const [selectedPlan, setSelectedPlan] = useState<'starter' | 'essencial' | 'pro' | 'premium'>(() => {
+        const params = new URLSearchParams(window.location.search);
+        const planParam = params.get('plan');
+        if (planParam && ['starter', 'essencial', 'pro', 'premium'].includes(planParam)) {
+            return planParam as 'starter' | 'essencial' | 'pro' | 'premium';
+        }
+        return 'pro';
+    });
     const [email, setEmail] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -119,7 +132,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
         }
     }, []);
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (!email) {
             setError('Por favor, insira seu email');
             return;
@@ -141,11 +154,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
 
         // Save checkout intent for webhook reconciliation (email → source_page → segment)
         try {
-            localStorage.setItem('lumiphoto_recent_purchase', JSON.stringify({
-                email,
-                phone: whatsapp ? whatsapp.replace(/\D/g, '') : null,
-                timestamp: Date.now(),
-            }));
             localStorage.setItem('lumiphoto_checkout_intent', JSON.stringify({
                 email,
                 plan: selectedPlan,
@@ -177,6 +185,25 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack }) => {
                     num_items: PLANS[selectedPlan].credits,
                 },
             });
+        }
+
+        // Track InitiateCheckout event in database
+        try {
+            await supabase.from('checkout_events').insert({
+                email: email.toLowerCase().trim(),
+                plan_type: selectedPlan,
+                source_page: localStorage.getItem('source_page') || window.location.pathname || 'direto',
+                utm_source: localStorage.getItem('utm_source') || null,
+                utm_medium: localStorage.getItem('utm_medium') || null,
+                utm_campaign: localStorage.getItem('utm_campaign') || null,
+                device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+                session_id: localStorage.getItem('session_id') || null,
+                event_type: 'InitiateCheckout',
+                gateway: 'assiny',
+            });
+            console.log('✅ Checkout event tracked');
+        } catch (e) {
+            console.warn('Checkout tracking failed (non-blocking):', e);
         }
 
         // Redirect to Assiny checkout

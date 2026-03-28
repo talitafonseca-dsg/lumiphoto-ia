@@ -12,12 +12,13 @@ import FAQSection, { aniversarioFaqs } from './FAQSection';
 
 interface AniversarioLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (plan: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
     const [isMuted, setIsMuted] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -67,6 +68,14 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
     const plans = [
         {
             name: 'Starter',
+            credits: 10,
+            price: 37,
+            perCredit: '3.70',
+            popular: false,
+            features: ['10 fotos profissionais', 'Todos os estilos de aniversário', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
+        },
+        {
+            name: 'Essencial',
             credits: 30,
             price: 57,
             perCredit: '1.90',
@@ -82,12 +91,12 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
             features: ['80 fotos profissionais', 'Todos os estilos de aniversário', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benefício'],
         },
         {
-            name: 'Business',
-            credits: 200,
-            price: 297,
-            perCredit: '1.49',
+            name: 'Premium',
+            credits: 100,
+            price: 117,
+            perCredit: '1.17',
             popular: false,
-            features: ['200 fotos profissionais', 'Todos os estilos de aniversário', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Menor custo por foto'],
+            features: ['100 fotos profissionais', 'Todos os estilos de aniversário', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Menor custo por foto'],
         },
     ];
 
@@ -167,7 +176,7 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
                                 <ArrowRight size={22} />
                             </button>
 
-                            <p className="text-white/20 text-xs mt-4">A partir de R$ 57 • Pagamento único • Sem mensalidade</p>
+                            <p className="text-white/20 text-xs mt-4">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
 
 
                         </div>
@@ -784,7 +793,7 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {plans.map((plan, i) => (
                             <div
                                 key={i}
@@ -817,7 +826,7 @@ export const AniversarioLandingPage: React.FC<AniversarioLandingPageProps> = ({ 
                                 </div>
 
                                 <button
-                                    onClick={onGetStarted}
+                                    onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()}
                                     className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${plan.popular
                                         ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white hover:shadow-[0_0_30px_rgba(236,72,153,0.4)] hover:scale-[1.02]'
                                         : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'

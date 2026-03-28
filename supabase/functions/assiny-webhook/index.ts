@@ -239,6 +239,7 @@ Deno.serve(async (req: Request) => {
             status: "approved",
             metadata: body,
             source_page: "assiny",
+            purchase_tracked: false,
         }, { onConflict: "mercadopago_payment_id" });
 
         // Atomic claim

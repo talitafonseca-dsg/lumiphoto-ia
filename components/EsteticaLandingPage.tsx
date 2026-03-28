@@ -10,11 +10,12 @@ import FAQSection, { esteticaFaqs } from './FAQSection';
 
 interface EsteticaLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (planId: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 }
 
-export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     useEffect(() => {
         if (typeof (window as any).trackPro === 'function') {
@@ -37,11 +38,19 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
     const plans = [
         {
             name: 'Starter',
+            credits: 10,
+            price: 37,
+            perCredit: '3.70',
+            popular: false,
+            features: ['10 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
+        },
+        {
+            name: 'Essencial',
             credits: 30,
             price: 57,
             perCredit: '1.90',
             popular: false,
-            features: ['30 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
+            features: ['30 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp'],
         },
         {
             name: 'Pro',
@@ -49,15 +58,15 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
             price: 97,
             perCredit: '1.21',
             popular: true,
-            features: ['80 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benef├¡cio'],
+            features: ['80 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte por WhatsApp', 'Melhor custo-benefício'],
         },
         {
-            name: 'Business',
-            credits: 200,
-            price: 297,
-            perCredit: '1.49',
+            name: 'Premium',
+            credits: 100,
+            price: 117,
+            perCredit: '1.17',
             popular: false,
-            features: ['200 fotos profissionais', 'Todos os estilos de beleza', 'Resolu├º├úo HD', 'Uso comercial liberado', 'Suporte priorit├írio', 'Ideal para equipes'],
+            features: ['100 fotos profissionais', 'Todos os estilos de beleza', 'Resolução HD', 'Uso comercial liberado', 'Suporte prioritário', 'Ideal para equipes'],
         },
     ];
 
@@ -132,7 +141,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                 <ArrowRight size={22} />
                             </button>
 
-                            <p className="text-white/20 text-xs mt-4">A partir de R$ 57 ÔÇó Pagamento ├║nico ÔÇó Sem mensalidade</p>
+                            <p className="text-white/20 text-xs mt-4">A partir de R$ 37 • Pagamento único • Sem mensalidade</p>
                         </div>
 
                         {/* Right: Image showcase */}
@@ -599,7 +608,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {plans.map((plan, i) => (
                             <div key={i} className={`relative rounded-2xl p-6 border transition-all duration-300 ${plan.popular
                                 ? 'bg-gradient-to-b from-pink-600/10 to-transparent border-pink-600/30 shadow-[0_0_40px_rgba(236,72,153,0.15)] scale-[1.02]'
@@ -621,7 +630,7 @@ export const EsteticaLandingPage: React.FC<EsteticaLandingPageProps> = ({ onGetS
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={onGetStarted} className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${plan.popular
+                                <button onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()} className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${plan.popular
                                     ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white hover:shadow-[0_0_30px_rgba(236,72,153,0.4)] hover:scale-[1.02]'
                                     : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
                                     }`}>Escolher {plan.name}</button>

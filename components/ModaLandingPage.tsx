@@ -12,12 +12,13 @@ import FAQSection, { varejoFaqs } from './FAQSection';
 
 interface ModaLandingPageProps {
     onGetStarted: () => void;
+    onPlanSelect?: (plan: string) => void;
     onViewStudio?: () => void;
     onLogin?: () => void;
 
 }
 
-export const ModaLandingPage: React.FC<ModaLandingPageProps> = ({ onGetStarted, onViewStudio, onLogin }) => {
+export const ModaLandingPage: React.FC<ModaLandingPageProps> = ({ onGetStarted, onPlanSelect, onViewStudio, onLogin }) => {
 
     // Video demo state
     const [isMuted, setIsMuted] = useState(true);
@@ -1010,7 +1011,7 @@ export const ModaLandingPage: React.FC<ModaLandingPageProps> = ({ onGetStarted, 
                                 </div>
 
                                 <button
-                                    onClick={onGetStarted}
+                                    onClick={() => onPlanSelect ? onPlanSelect(plan.name.toLowerCase()) : onGetStarted()}
                                     className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-300 ${plan.popular
                                             ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] hover:scale-[1.03] active:scale-[0.97]'
                                             : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'
