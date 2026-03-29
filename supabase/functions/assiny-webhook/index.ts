@@ -110,6 +110,7 @@ Deno.serve(async (req: Request) => {
         // Assiny's exact payload format is not publicly documented.
         // We search common field patterns used by Brazilian checkout platforms.
         const payerEmail = (
+            body.data?.transaction?.customer?.email ||
             body.buyer?.email ||
             body.customer?.email ||
             body.data?.buyer?.email ||
@@ -121,6 +122,7 @@ Deno.serve(async (req: Request) => {
         ).toLowerCase().trim();
 
         const transactionId = (
+            body.data?.transaction?.id ||
             body.transaction ||
             body.transaction_id ||
             body.data?.purchase?.transaction ||
@@ -131,6 +133,7 @@ Deno.serve(async (req: Request) => {
         ).toString();
 
         const productName = (
+            body.data?.offer?.name ||
             body.product?.name ||
             body.data?.product?.name ||
             body.prod?.name ||
@@ -138,7 +141,9 @@ Deno.serve(async (req: Request) => {
             ""
         ).toLowerCase();
 
-        const amount = (
+        // Assiny sends amount in cents (e.g. 3700 = R$37)
+        const rawAmount = (
+            body.data?.offer?.amount ||
             body.purchase?.full_price?.value ||
             body.data?.purchase?.full_price?.value ||
             body.price ||
@@ -148,6 +153,10 @@ Deno.serve(async (req: Request) => {
             body.purchase?.price ||
             0
         );
+        // Convert cents to BRL if value >= 100 and looks like cents
+        const amount = (typeof rawAmount === 'number' && rawAmount >= 100 && rawAmount % 1 === 0 && rawAmount <= 100000)
+            ? rawAmount / 100
+            : rawAmount;
 
         const status = (
             body.event ||
@@ -155,9 +164,10 @@ Deno.serve(async (req: Request) => {
             body.data?.purchase?.status ||
             body.purchase?.status ||
             ""
-        ).toString().toUpperCase();
+        ).toString().toUpperCase().replace(/_/g, '_');
 
         const buyerName = (
+            body.data?.transaction?.customer?.name ||
             body.buyer?.name ||
             body.customer?.name ||
             body.data?.buyer?.name ||
@@ -166,6 +176,7 @@ Deno.serve(async (req: Request) => {
         );
 
         const buyerPhone = (
+            body.data?.transaction?.customer?.phone ||
             body.buyer?.phone ||
             body.customer?.phone ||
             body.data?.buyer?.phone ||
@@ -178,11 +189,11 @@ Deno.serve(async (req: Request) => {
         // ===== VALIDATE =====
         // Only process approved/completed purchases
         const isApproved = (
+            status === "APPROVED_PURCHASE" ||
             status.includes("APPROVED") ||
             status.includes("COMPLETED") ||
             status.includes("PURCHASE_APPROVED") ||
             status.includes("PAID") ||
-            status === "APPROVED" ||
             // If no status field, treat as approved (some platforms only send on approval)
             (!status && payerEmail && amount > 0)
         );
